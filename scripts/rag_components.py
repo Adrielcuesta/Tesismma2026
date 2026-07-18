@@ -3,8 +3,9 @@ import os
 from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import CrossEncoderReranker
+from langchain_core.retrievers import BaseRetriever 
+from langchain_classic.retrievers import ContextualCompressionRetriever # Las compresiones fueron movidas a classic
+from langchain_classic.retrievers.document_compressors import CrossEncoderReranker # Rerankers movidos a classic
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
 from .schemas import LLMResponse
