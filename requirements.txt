@@ -15,7 +15,9 @@ langchain-huggingface
 google-generativeai
 langchain-mistralai  
 langchain-cohere   
-pydantic>=2.0,<3.0
+pydantic>=2.0
+langchain-groq
+groq
 
 # --- Vector DB y Embeddings ---
 chromadb
@@ -32,6 +34,5 @@ datasets
 
 # --- Utilidades ---
 certifi
-numpy==1.26.4
+numpy
 pandas
-#numpy

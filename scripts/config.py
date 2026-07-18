@@ -1,4 +1,3 @@
-# scripts/config.py
 import os
 import certifi
 import logging
@@ -26,70 +25,26 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "datos")
 DIRECTORIO_BASE_CONOCIMIENTO = os.path.join(DATA_DIR, "BaseConocimiento")
 DIRECTORIO_PROYECTO_ANALIZAR = os.path.join(DATA_DIR, "ProyectoAnalizar")
 CHROMA_DB_PATH = os.path.join(DATA_DIR, "ChromaDB_V1")
-DIRECTORIO_RESULTADOS_BASE = os.path.join(DATA_DIR, "Resultados")
-MODELOS_LOCALES_PATH = os.path.join(PROJECT_ROOT, "modelos_locales")
-CACHE_DIR_HF = os.path.join(PROJECT_ROOT, ".cache", "huggingface_cache")
+DIRECTORIO_RESULTADOS_BASE = os.path.join(DATA_DIR, "resultados")
 
-# --- Lógica de selección del modelo de Embeddings ---
-DEFAULT_EMBEDDING_MODEL_HF_REPO_ID = 'sentence-transformers/all-MiniLM-L6-v2'
-MODEL_SAVE_SUBFOLDER = DEFAULT_EMBEDDING_MODEL_HF_REPO_ID.split('/')[-1]
-LOCAL_EMBEDDING_MODEL_PATH = os.path.join(MODELOS_LOCALES_PATH, MODEL_SAVE_SUBFOLDER)
+LOCAL_EMBEDDING_MODEL_PATH = os.path.join(PROJECT_ROOT, "modelos_locales", "all-MiniLM-L6-v2")
 
-if os.path.exists(LOCAL_EMBEDDING_MODEL_PATH):
-    EMBEDDING_MODEL_NAME_OR_PATH = LOCAL_EMBEDDING_MODEL_PATH
-else:
-    EMBEDDING_MODEL_NAME_OR_PATH = os.environ.get('EMBEDDING_MODEL_PATH', DEFAULT_EMBEDDING_MODEL_HF_REPO_ID).strip()
-
-# --- Configuración de RAG y Embeddings ---
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 100
-MAX_CHARS_PROYECTO = 12000
-RECREAR_DB = False
-MAX_PAGES_TO_CHECK_FOR_INDEX = 5
-
-# --- Configuración para el Re-ranker ---
+# --- Configuración RAG ---
 USE_RERANKER = True
-K_RETRIEVED_DOCS_BEFORE_RERANK = 50
 RERANKER_TOP_N = 4
+K_RETRIEVED_DOCS_BEFORE_RERANK = 10
 
-# --- Configuración de LLMs ---
-LLM_MODELS = {
+# --- Modelos LLM Soportados ---
+LLM_MODELS_CONFIG = {
     "gemini-1.5-flash": {
         "provider": "google",
-        "display_name": "Google Gemini 1.5 Flash (Recomendado)",
+        "display_name": "Google Gemini 1.5 Flash",
         "api_key_env": "GEMINI_API_KEY"
     },
-    "gemini-1.5-pro": {
-        "provider": "google",
-        "display_name": "Google Gemini 1.5 Pro",
-        "api_key_env": "GEMINI_API_KEY"
-    },
-    "gpt-4o": {
-        "provider": "openai",
-        "display_name": "OpenAI GPT-4o",
-        "api_key_env": "OPENAI_API_KEY"
-    },
-    "deepseek-chat": {
-        "provider": "openai_compatible",
-        "display_name": "DeepSeek Chat",
-        "api_key_env": "DEEPSEEK_API_KEY",
-        "base_url": "https://api.deepseek.com/v1"
-    },
-    "qwen-plus": {
-        "provider": "openai_compatible",
-        "display_name": "Qwen Plus (Alibaba)",
-        "api_key_env": "QWEN_API_KEY",
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    },
-    "mistral-large-latest": {
-        "provider": "mistral", # Corregido para mayor claridad
-        "display_name": "Mistral Large",
-        "api_key_env": "MISTRAL_API_KEY"
-    },
-    "command-r-plus": {
-        "provider": "cohere",
-        "display_name": "Cohere Command R+",
-        "api_key_env": "COHERE_API_KEY"
+    "llama3-70b-8192": {
+        "provider": "groq",
+        "display_name": "Llama 3 70B (vía Groq)",
+        "api_key_env": "GROQ_API_KEY"
     }
 }
 
@@ -105,16 +60,8 @@ INFO_TESIS = {
     "github_repo_url": "https://github.com/Adrielcuesta/tesismma"
 }
 
-# --- Funciones de Inicialización ---
-def inicializar_directorios_datos():
-    directorios_a_crear = [
-        DIRECTORIO_BASE_CONOCIMIENTO, DIRECTORIO_PROYECTO_ANALIZAR,
-        CHROMA_DB_PATH, DIRECTORIO_RESULTADOS_BASE, MODELOS_LOCALES_PATH, CACHE_DIR_HF
-    ]
-    try:
-        for dir_path in directorios_a_crear:
-            os.makedirs(dir_path, exist_ok=True)
-        return True
-    except OSError as e:
-        logger.error(f"Error al crear directorios: {e}")
-        return False
+def inicializar_directorios():
+    rutas = [DATA_DIR, DIRECTORIO_BASE_CONOCIMIENTO, DIRECTORIO_PROYECTO_ANALIZAR, CHROMA_DB_PATH, DIRECTORIO_RESULTADOS_BASE]
+    for ruta in rutas:
+        os.makedirs(ruta, exist_ok=True)
+    logger.info("Directorios verificados/creados exitosamente.")
