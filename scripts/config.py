@@ -59,7 +59,7 @@ LLM_MODELS = {
         "display_name": "Gemini 3.5 Flash (Gratuito - Recomendado)",
         "api_key_env": "GEMINI_API_KEY"
     },
-    "llama-3.3-70b-versatilidad": { 
+    "llama-3.3-70b-versatile": { 
         "provider": "groq",
         "display_name": "Llama 3.3 70B vía Groq (Gratuito)",
         "api_key_env": "GROQ_API_KEY"

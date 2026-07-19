@@ -1,34 +1,35 @@
 # --- Core Frameworks ---
-Flask>=2.0
-gunicorn>=20.0
-python-dotenv
+Flask==3.1.3
+gunicorn==26.0.0
+python-dotenv==1.2.2
 
 # --- LangChain y Ecosistema de IA ---
-langchain
-langchain-community
-langchain-core
-langchain-google-genai
-langchain-openai
-langchain-huggingface
-google-generativeai
-langchain-mistralai  
-langchain-cohere    
-pydantic>=2.0,<3.0
+langchain==1.3.14
+langchain-community==0.4.2
+langchain-core==1.4.9
+langchain-google-genai==4.2.7
+langchain-openai==1.3.5
+langchain-huggingface==1.2.2
+google-generativeai==0.8.6
+langchain-mistralai==1.1.6
+langchain-cohere==0.6.0
+pydantic==2.13.4
+langgraph==1.2.9
 
 # --- Vector DB y Embeddings ---
-chromadb
-sentence-transformers
-onnxruntime
+chromadb==1.5.9
+sentence-transformers==5.6.0
+onnxruntime==1.27.0
 
 # --- Procesamiento de Documentos ---
-pymupdf
+pymupdf==1.28.0
 
 # --- Framework de Evaluación RAG ---
-ragas
-datasets
+ragas==0.4.3
+datasets==5.0.0
 
 # --- Utilidades ---
-certifi
+certifi==2026.6.17
 numpy==1.26.4
-pandas
-weasyprint
+pandas==3.0.3
+weasyprint==69.0
