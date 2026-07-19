@@ -1,8 +1,8 @@
 # scripts/rag_components.py
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import CrossEncoderReranker
+from langchain_classic.chains import RetrievalQA
+from langchain_core.prompts import PromptTemplate
+from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
+from langchain_classic.retrievers.document_compressors.cross_encoder_rerank import CrossEncoderReranker
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 import logging
 import os
@@ -75,9 +75,19 @@ def get_llm_instance(model_id: str):
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
                 model=model_id,
-                google_api_key=api_key,
+                api_key=api_key,
                 temperature=0.2,
                 convert_system_message_to_human=True
+            )
+
+        elif provider == "groq":
+            # Opción A: Conexión nativa compatible con OpenAI (No requiere instalar librerías extra)
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(
+                model=model_id,
+                api_key=api_key,
+                base_url="https://api.groq.com/openai/v1",
+                temperature=0.2
             )
 
         elif provider in ["openai", "openai_compatible"]:
@@ -136,7 +146,6 @@ def crear_cadena_rag(llm, vector_db_instance):
 
         prompt = PromptTemplate(template=PROMPT_TEMPLATE_STR, input_variables=["context", "question"])
 
-  
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",

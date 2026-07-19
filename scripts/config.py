@@ -54,41 +54,41 @@ RERANKER_TOP_N = 4
 
 # --- Configuración de LLMs ---
 LLM_MODELS = {
-    "gemini-1.5-flash": {
+    "gemini-3.5-flash": {
         "provider": "google",
-        "display_name": "Google Gemini 1.5 Flash (Recomendado)",
+        "display_name": "Gemini 3.5 Flash (Gratuito - Recomendado)",
         "api_key_env": "GEMINI_API_KEY"
     },
-    "gemini-1.5-pro": {
-        "provider": "google",
-        "display_name": "Google Gemini 1.5 Pro",
-        "api_key_env": "GEMINI_API_KEY"
+    "llama-3.3-70b-versatilidad": { 
+        "provider": "groq",
+        "display_name": "Llama 3.3 70B vía Groq (Gratuito)",
+        "api_key_env": "GROQ_API_KEY"
     },
     "gpt-4o": {
         "provider": "openai",
-        "display_name": "OpenAI GPT-4o",
+        "display_name": "OpenAI GPT-4o (Suscripcion Requerida)",
         "api_key_env": "OPENAI_API_KEY"
     },
     "deepseek-chat": {
         "provider": "openai_compatible",
-        "display_name": "DeepSeek Chat",
+        "display_name": "DeepSeek Chat (Suscripción Requerida)",
         "api_key_env": "DEEPSEEK_API_KEY",
         "base_url": "https://api.deepseek.com/v1"
     },
     "qwen-plus": {
         "provider": "openai_compatible",
-        "display_name": "Qwen Plus (Alibaba)",
+        "display_name": "Qwen Plus (Alibaba) (Suscripción Requerida)",
         "api_key_env": "QWEN_API_KEY",
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
     },
     "mistral-large-latest": {
         "provider": "mistral", # Corregido para mayor claridad
-        "display_name": "Mistral Large",
+        "display_name": "Mistral Large  (Suscripción Requerida)",
         "api_key_env": "MISTRAL_API_KEY"
     },
     "command-r-plus": {
         "provider": "cohere",
-        "display_name": "Cohere Command R+",
+        "display_name": "Cohere Command R+ (Suscripción Requerida)",
         "api_key_env": "COHERE_API_KEY"
     }
 }
