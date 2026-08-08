@@ -46,6 +46,6 @@ temp_files/
 # DECISIÓN: Si tus PDFs de ejemplo en datos/BaseConocimiento y datos/ProyectoAnalizar
 # son pequeños y quieres que se incluyan en GitHub, comenta o elimina las siguientes líneas.
 # Si son grandes o no quieres incluirlos, déjalas.
-# *.pdf
+*ISO_31000_Gestion_de_Riesgos.pdf
 # *.docx
 # *.doc
