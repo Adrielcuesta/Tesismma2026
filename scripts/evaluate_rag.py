@@ -98,7 +98,7 @@ def main():
     final_df = pd.concat(all_results, ignore_index=True)
     cols = ['model_id', 'question', 'answer', 'contexts', 'ground_truth', 'faithfulness', 'answer_relevancy', 'context_recall', 'context_precision']
     final_df = final_df[[c for c in cols if c in final_df.columns]]
-    results_dir = os.path.join(config.DIRECTORIO_RESULTADOS, "evaluaciones_rag")
+    results_dir = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, "evaluaciones_rag")
     os.makedirs(results_dir, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = os.path.join(results_dir, f"ragas_eval_TODOS_{timestamp}.csv")
