@@ -137,7 +137,7 @@ def crear_cadena_rag(llm, vector_db_instance):
         if config.USE_RERANKER:
             logger.info("--- Habilitando Re-ranker (CrossEncoder) ---")
             try:
-                model = HuggingFaceCrossEncoder(model_name='BAAI/bge-reranker-base')
+                model = HuggingFaceCrossEncoder(model_name='BAAI/bge-reranker-v2-m3')
                 compressor = CrossEncoderReranker(model=model, top_n=config.RERANKER_TOP_N)
                 final_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
                 logger.info(f"--- Re-ranker configurado para devolver los mejores {config.RERANKER_TOP_N} fragmentos ---")

@@ -31,7 +31,14 @@ MODELOS_LOCALES_PATH = os.path.join(PROJECT_ROOT, "modelos_locales")
 CACHE_DIR_HF = os.path.join(PROJECT_ROOT, ".cache", "huggingface_cache")
 
 # --- Lógica de selección del modelo de Embeddings ---
-DEFAULT_EMBEDDING_MODEL_HF_REPO_ID = 'sentence-transformers/all-MiniLM-L6-v2'
+# Cambiado de 'all-MiniLM-L6-v2' (mayormente inglés) a BGE-M3, multilingüe de
+# primera línea: toda la Base de Conocimiento y las descripciones de proyecto
+# están en español, y el modelo anterior probablemente no capturaba bien los
+# matices semánticos del español (context_precision venía casi en 0 en las 5
+# corridas previas, señal de recuperación débil, no de un problema del LLM
+# evaluado). BGE-M3 pesa más (~2.2GB) y tarda más en bajar/indexar que el
+# anterior, pero funciona como reemplazo directo sin tocar el resto del código.
+DEFAULT_EMBEDDING_MODEL_HF_REPO_ID = 'BAAI/bge-m3'
 MODEL_SAVE_SUBFOLDER = DEFAULT_EMBEDDING_MODEL_HF_REPO_ID.split('/')[-1]
 LOCAL_EMBEDDING_MODEL_PATH = os.path.join(MODELOS_LOCALES_PATH, MODEL_SAVE_SUBFOLDER)
 
@@ -54,43 +61,70 @@ RERANKER_TOP_N = 4
 
 # --- Configuración de LLMs ---
 LLM_MODELS = {
+    # --- CORRIDA FINAL: los 7 modelos que sabemos que funcionan, activos juntos.
     "gemini-3.5-flash": {
         "provider": "google",
         "display_name": "Gemini 3.5 Flash (Gratuito - Recomendado)",
         "api_key_env": "GEMINI_API_KEY"
     },
-    "llama-3.3-70b-versatile": { 
+    "llama-3.3-70b-versatile": {
         "provider": "groq",
         "display_name": "Llama 3.3 70B vía Groq (Gratuito)",
         "api_key_env": "GROQ_API_KEY"
     },
-    "gpt-4o": {
-        "provider": "openai",
-        "display_name": "OpenAI GPT-4o (Suscripcion Requerida)",
-        "api_key_env": "OPENAI_API_KEY"
-    },
-    "deepseek-chat": {
+    "qwen2.5:7b-instruct": {
         "provider": "openai_compatible",
-        "display_name": "DeepSeek Chat (Suscripción Requerida)",
-        "api_key_env": "DEEPSEEK_API_KEY",
-        "base_url": "https://api.deepseek.com/v1"
+        "display_name": "Qwen2.5 7B (Local, sin costo)",
+        "api_key_env": "OLLAMA_API_KEY",
+        "base_url": "http://localhost:11434/v1"
     },
-    "qwen-plus": {
+    "llama3.1:8b": {
         "provider": "openai_compatible",
-        "display_name": "Qwen Plus (Alibaba) (Suscripción Requerida)",
-        "api_key_env": "QWEN_API_KEY",
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        "display_name": "Llama 3.1 8B (Local, sin costo)",
+        "api_key_env": "OLLAMA_API_KEY",
+        "base_url": "http://localhost:11434/v1"
+    },
+    "mistral:7b": {
+        "provider": "openai_compatible",
+        "display_name": "Mistral 7B (Local, sin costo)",
+        "api_key_env": "OLLAMA_API_KEY",
+        "base_url": "http://localhost:11434/v1"
+    },
+    "gemma2:9b": {
+        "provider": "openai_compatible",
+        "display_name": "Gemma 2 9B (Local, sin costo)",
+        "api_key_env": "OLLAMA_API_KEY",
+        "base_url": "http://localhost:11434/v1"
     },
     "mistral-large-latest": {
-        "provider": "mistral", # Corregido para mayor claridad
+        "provider": "mistral",
         "display_name": "Mistral Large  (Suscripción Requerida)",
         "api_key_env": "MISTRAL_API_KEY"
     },
-    "command-r-plus": {
-        "provider": "cohere",
-        "display_name": "Cohere Command R+ (Suscripción Requerida)",
-        "api_key_env": "COHERE_API_KEY"
-    }
+    # --- Comentados a propósito: sin saldo (DeepSeek), clave inválida (Qwen-plus),
+    # sin suscripción (GPT-4o), o modelo dado de baja por el proveedor (Cohere).
+    # "gpt-4o": {
+    #     "provider": "openai",
+    #     "display_name": "OpenAI GPT-4o (Suscripcion Requerida)",
+    #     "api_key_env": "OPENAI_API_KEY"
+    # },
+    # "deepseek-chat": {
+    #     "provider": "openai_compatible",
+    #     "display_name": "DeepSeek Chat (Suscripción Requerida)",
+    #     "api_key_env": "DEEPSEEK_API_KEY",
+    #     "base_url": "https://api.deepseek.com/v1"
+    # },
+    # "qwen-plus": {
+    #     "provider": "openai_compatible",
+    #     "display_name": "Qwen Plus (Alibaba) (Suscripción Requerida)",
+    #     "api_key_env": "QWEN_API_KEY",
+    #     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    # },
+    # "command-r-plus": {
+    #     "provider": "cohere",
+    #     "display_name": "Cohere Command R+ (Suscripción Requerida)",
+    #     "api_key_env": "COHERE_API_KEY"
+    # }
 }
 
 # --- Información de la Tesis ---

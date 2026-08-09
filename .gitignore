@@ -15,6 +15,7 @@ ENV/
 __pycache__/
 *.py[cod]
 *$py.class
+.cache/
 
 # Bases de datos locales generadas y cachés de ChromaDB
 datos/ChromaDB_V1/
