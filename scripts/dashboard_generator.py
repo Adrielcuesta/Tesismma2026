@@ -133,6 +133,7 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
                         <p><span class="detail-label">Impacto:</span> {escape(riesgo.get("impacto_estimado","N/A"))}</p>
                         <p><span class="detail-label">Probabilidad:</span> {escape(riesgo.get("probabilidad_estimada","N/A"))}</p>
                         <p><span class="detail-label">Responsable:</span> {escape(riesgo.get("responsable_accidente", "N/A"))}</p>
+                        <p><span class="detail-label">Acción:</span> {escape(riesgo.get("accion_mitigacion", "N/A"))}</p>
                     </div>
                     <div class="risk-card-confidence">
                         <span class="confidence-score {conf_class}">{score_display}</span>
@@ -159,6 +160,8 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
                 <p><span class="detail-label">Impacto:</span> {escape(riesgo.get("impacto_estimado","N/A"))} | <span class="detail-label">Probabilidad:</span> {escape(riesgo.get("probabilidad_estimada","N/A"))}</p>
                 <p><span class="detail-label">Responsable (Mitigación):</span> {escape(riesgo.get("responsabilidad_mitigacion", "N/A"))}</p>
                 <p><span class="detail-label">Responsable (Accidente):</span> {escape(riesgo.get("responsable_accidente", "N/A"))}</p>
+                <p><span class="detail-label">Acción de Mitigación:</span> {escape(riesgo.get("accion_mitigacion", "N/A"))}</p>
+                <p><span class="detail-label">Umbral de Alerta:</span> {escape(riesgo.get("umbral_alerta", "N/A"))}</p>
                 <p><span class="detail-label">Tipo de Riesgo:</span> {escape(riesgo.get("tipo_de_riesgo", "N/A"))}</p>
                 <p><span class="detail-label">Score de Confianza:</span> <span class="confidence-score {conf_class}">{score_display}</span></p>
             </div>'''
@@ -214,9 +217,9 @@ if __name__ == '__main__':
     dummy_data = {
         "nombre_proyecto_analizado": "Proyecto de Prueba de Diseño (Final)",
         "riesgos_identificados_estructurados": [
-            {"descripcion_riesgo": "Fallo crítico en sistema por sobrecalentamiento", "tipo_de_riesgo": "Implícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Alto", "probabilidad_estimada": "Alta", "estado_RAG_sugerido": "Rojo", "score_confianza_compuesto": 0.85, "responsabilidad_mitigacion": "Mantenimiento", "responsable_accidente": "Jefe de Operaciones"},
-            {"descripcion_riesgo": "Retrasos en la entrega de componentes clave", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Medio", "probabilidad_estimada": "Media", "estado_RAG_sugerido": "Ámbar", "score_confianza_compuesto": 0.65, "responsabilidad_mitigacion": "Compras", "responsable_accidente": "Logística"},
-            {"descripcion_riesgo": "Documentación del manual de usuario incompleta", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Bajo", "probabilidad_estimada": "Baja", "estado_RAG_sugerido": "Verde", "score_confianza_compuesto": 0.30, "responsabilidad_mitigacion": "Ingeniería", "responsable_accidente": "Equipo de Proyecto"}
+            {"descripcion_riesgo": "Fallo crítico en sistema por sobrecalentamiento", "tipo_de_riesgo": "Implícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Alto", "probabilidad_estimada": "Alta", "estado_RAG_sugerido": "Rojo", "score_confianza_compuesto": 0.85, "responsabilidad_mitigacion": "Mantenimiento", "responsable_accidente": "Jefe de Operaciones", "accion_mitigacion": "Instalar sensores de temperatura con corte automático y realizar inspección semanal.", "umbral_alerta": "Temperatura de operación superior a 80°C sostenida por más de 5 minutos."},
+            {"descripcion_riesgo": "Retrasos en la entrega de componentes clave", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Medio", "probabilidad_estimada": "Media", "estado_RAG_sugerido": "Ámbar", "score_confianza_compuesto": 0.65, "responsabilidad_mitigacion": "Compras", "responsable_accidente": "Logística", "accion_mitigacion": "Confirmar stock de proveedor alternativo antes del inicio de obra.", "umbral_alerta": "Confirmación de entrega no recibida 10 días antes de la fecha planificada."},
+            {"descripcion_riesgo": "Documentación del manual de usuario incompleta", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Bajo", "probabilidad_estimada": "Baja", "estado_RAG_sugerido": "Verde", "score_confianza_compuesto": 0.30, "responsabilidad_mitigacion": "Ingeniería", "responsable_accidente": "Equipo de Proyecto", "accion_mitigacion": "Revisar manual contra checklist de contenidos mínimos antes de la entrega.", "umbral_alerta": "Menos de 5 días hábiles restantes antes de la fecha de entrega sin revisión completada."}
         ],
         "fragmentos_fuente": [{"nombre_documento_fuente": "Manual_Tecnico.pdf"}]
     }

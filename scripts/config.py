@@ -50,7 +50,7 @@ else:
 # --- Configuración de RAG y Embeddings ---
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 100
-MAX_CHARS_PROYECTO = 12000
+MAX_CHARS_PROYECTO = 15000
 RECREAR_DB = False
 MAX_PAGES_TO_CHECK_FOR_INDEX = 5
 
@@ -61,17 +61,17 @@ RERANKER_TOP_N = 4
 
 # --- Configuración de LLMs ---
 LLM_MODELS = {
-    # --- CORRIDA FINAL: los 7 modelos que sabemos que funcionan, activos juntos.
-    "gemini-3.5-flash": {
-        "provider": "google",
-        "display_name": "Gemini 3.5 Flash (Gratuito - Recomendado)",
-        "api_key_env": "GEMINI_API_KEY"
-    },
-    "llama-3.3-70b-versatile": {
-        "provider": "groq",
-        "display_name": "Llama 3.3 70B vía Groq (Gratuito)",
-        "api_key_env": "GROQ_API_KEY"
-    },
+    # --- Modelos disponibles ---
+    # "gemini-3.5-flash": {
+    #     "provider": "google",
+    #     "display_name": "Gemini 3.5 Flash (Gratuito - Recomendado)",
+    #     "api_key_env": "GEMINI_API_KEY"
+    # },
+    # "llama-3.3-70b-versatile": {
+    #     "provider": "groq",
+    #     "display_name": "Llama 3.3 70B vía Groq (Gratuito)",
+    #     "api_key_env": "GROQ_API_KEY"
+    # },
     "qwen2.5:7b-instruct": {
         "provider": "openai_compatible",
         "display_name": "Qwen2.5 7B (Local, sin costo)",
@@ -96,11 +96,11 @@ LLM_MODELS = {
         "api_key_env": "OLLAMA_API_KEY",
         "base_url": "http://localhost:11434/v1"
     },
-    "mistral-large-latest": {
-        "provider": "mistral",
-        "display_name": "Mistral Large  (Suscripción Requerida)",
-        "api_key_env": "MISTRAL_API_KEY"
-    },
+    # "mistral-large-latest": {
+    #     "provider": "mistral",
+    #     "display_name": "Mistral Large  (Suscripción Requerida)",
+    #     "api_key_env": "MISTRAL_API_KEY"
+    # },
     # --- Comentados a propósito: sin saldo (DeepSeek), clave inválida (Qwen-plus),
     # sin suscripción (GPT-4o), o modelo dado de baja por el proveedor (Cohere).
     # "gpt-4o": {

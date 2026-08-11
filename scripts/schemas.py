@@ -23,6 +23,9 @@ class RiskItem(BaseModel):
     probabilidad_estimada: ProbabilidadEstimada = Field(description="Probabilidad de ocurrencia del riesgo. Debe ser 'Baja', 'Media', o 'Alta'.")
     responsabilidad_mitigacion: str = Field(description="Rol o departamento responsable de las tareas de mitigación preventivas.")
     responsable_accidente: str = Field(description="Rol o departamento que asumiría la responsabilidad principal si el riesgo se materializa.")
+    # --- NUEVO: pedido explícito de Paolo — acción concreta y umbral de alerta, no solo un rol responsable ---
+    accion_mitigacion: str = Field(description="Acción concreta y específica recomendada para prevenir o mitigar el riesgo (una tarea accionable, no un rol ni un departamento).")
+    umbral_alerta: str = Field(description="Indicador o condición medible cuyo cumplimiento debería disparar una alerta o escalamiento (ej. una métrica, un plazo, un valor límite concreto).")
     explicacion_riesgo: str = Field(description="Breve explicación de por qué esto es un riesgo, citando evidencia del contexto.")
     score_confianza_compuesto: Optional[float] = Field(default=None, description="Confianza calculada para el riesgo, combinando la relevancia de la evidencia con la severidad del riesgo (0 a 1).")
 

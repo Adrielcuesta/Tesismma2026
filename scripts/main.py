@@ -25,7 +25,8 @@ def run_analysis(
     is_evaluation_mode: bool = False,
     eval_question: Optional[str] = None,
     eval_ground_truth: Optional[str] = None,
-    db_connection: Optional[object] = None
+    db_connection: Optional[object] = None,
+    usar_rag: bool = True,
 ):
     if not is_evaluation_mode: logger.info(f"--- INICIANDO ANÁLISIS (Modelo: {selected_llm_model_id}) ---")
     try:
@@ -56,14 +57,19 @@ def run_analysis(
         
         if not descripcion_nuevo_proyecto: logger.error("La descripción del proyecto está vacía."); return None
         
-        qa_chain = rag_components.crear_cadena_rag(llm, vector_db)
-        if not qa_chain: return None
-        
-        logger.info("Invocando la cadena RAG principal...")
-        respuesta_rag_dict = qa_chain.invoke({"query": descripcion_nuevo_proyecto})
-        
-        # --- INICIO DE LA CORRECCIÓN: Parseo manual de la respuesta del LLM ---
-        raw_json_string = respuesta_rag_dict.get("result", "{}")
+        if usar_rag:
+            qa_chain = rag_components.crear_cadena_rag(llm, vector_db)
+            if not qa_chain: return None
+            logger.info("Invocando la cadena RAG principal...")
+            respuesta_rag_dict = qa_chain.invoke({"query": descripcion_nuevo_proyecto})
+            raw_json_string = respuesta_rag_dict.get("result", "{}")
+            fuentes_docs = respuesta_rag_dict.get("source_documents", [])
+        else:
+            cadena_sin_rag = rag_components.crear_cadena_sin_rag(llm)
+            if not cadena_sin_rag: return None
+            logger.info("Invocando la cadena SIN RAG (ablation, sin contexto recuperado)...")
+            raw_json_string = cadena_sin_rag.invoke({"question": descripcion_nuevo_proyecto})
+            fuentes_docs = []  # Sin RAG, por diseño, no hay fragmentos recuperados
         
         # Limpiar el string en caso de que el LLM devuelva markdown
         if "```json" in raw_json_string:
@@ -80,10 +86,21 @@ def run_analysis(
         except (json.JSONDecodeError, ValidationError) as e:
             logger.error(f"Error CRÍTICO al parsear o validar la respuesta JSON del LLM: {e}")
             logger.error(f"Respuesta recibida del LLM (string crudo):\n---INICIO---\n{raw_json_string}\n---FIN---")
-            raise  # Re-lanzamos la excepción para que el error sea visible en la app
+            if is_evaluation_mode:
+                # En modo evaluación NO abortamos la pregunta: la registramos como
+                # fallo de cumplimiento de esquema, para poder medir la tasa real en
+                # evaluate_rag.py en vez de perder el dato en un log de error.
+                return {
+                    "question": eval_question,
+                    "answer": raw_json_string,
+                    "contexts": [doc.page_content for doc in fuentes_docs],
+                    "ground_truth": eval_ground_truth,
+                    "schema_valido": False,
+                    "usa_rag": usar_rag,
+                }
+            raise  # Fuera de modo evaluación se mantiene el comportamiento original (visible en la app)
         # --- FIN DE LA CORRECCIÓN ---
             
-        fuentes_docs = respuesta_rag_dict.get("source_documents", [])
         logger.info(f"Metadatos de la evidencia recuperada: {[doc.metadata for doc in fuentes_docs]}")
         
         logger.info("Calculando score de confianza compuesto...")
@@ -94,7 +111,14 @@ def run_analysis(
             riesgo.score_confianza_compuesto = min((max_relevance_score * 0.6) + (severity_score * 0.4), 1.0)
             
         if is_evaluation_mode:
-            return {"question": eval_question, "answer": llm_response_obj.model_dump_json(), "contexts": [doc.page_content for doc in fuentes_docs], "ground_truth": eval_ground_truth}
+            return {
+                "question": eval_question,
+                "answer": llm_response_obj.model_dump_json(),
+                "contexts": [doc.page_content for doc in fuentes_docs],
+                "ground_truth": eval_ground_truth,
+                "schema_valido": True,
+                "usa_rag": usar_rag,
+            }
         
         logger.info("Ensamblando el reporte final...")
         

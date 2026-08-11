@@ -12,6 +12,19 @@ from . import config
 
 logger = logging.getLogger(__name__)
 
+# --- Caché del modelo de re-ranker a nivel de módulo: tanto app.py como
+# evaluate_rag.py son procesos que quedan corriendo durante muchas preguntas
+# seguidas. Sin esto, HuggingFaceCrossEncoder se recargaba desde cero en
+# CADA pregunta (~3-4 segundos perdidos cada vez, medido en las ejecuciones
+# de evaluación). Con el caché, solo se carga una vez por proceso.
+_reranker_model_cache = {}
+
+def _get_reranker_model(model_name: str):
+    if model_name not in _reranker_model_cache:
+        logger.info(f"--- Cargando modelo de re-ranker '{model_name}' por primera vez en este proceso (se reutilizará en las siguientes preguntas) ---")
+        _reranker_model_cache[model_name] = HuggingFaceCrossEncoder(model_name=model_name)
+    return _reranker_model_cache[model_name]
+
 PROMPT_TEMPLATE_STR = """
 Eres un asistente de IA experto en la identificación y evaluación de riesgos para proyectos de instalación de maquinaria industrial.
 Tu tarea es analizar la descripción del "NUEVO PROYECTO" y, basándote ÚNICAMENTE en el "CONTEXTO PROPORCIONADO", identificar una lista de posibles riesgos.
@@ -25,7 +38,7 @@ INSTRUCCIONES ESTRICTAS PARA LA RESPUESTA:
 1.  Tu respuesta DEBE ser un único objeto JSON. NO incluyas ningún texto antes o después del objeto JSON.
 2.  El objeto JSON debe tener UNA SOLA CLAVE PRINCIPAL: "riesgos_identificados".
 3.  El valor de "riesgos_identificados" debe ser una lista de objetos.
-4.  Cada objeto de la lista representa un riesgo y debe contener EXACTAMENTE los siguientes 7 campos:
+4.  Cada objeto de la lista representa un riesgo y debe contener EXACTAMENTE los siguientes 9 campos:
     a. "descripcion_riesgo": Una descripción clara y concisa del riesgo.
     b. "tipo_de_riesgo": Clasificación del riesgo. Opciones válidas: "Explícito" (si el contexto lo menciona directamente) o "Implícito" (si se deduce lógicamente del contexto).
     c. "explicacion_riesgo": Una breve explicación de por qué es un riesgo, citando evidencia específica del "CONTEXTO PROPORCIONADO".
@@ -33,6 +46,8 @@ INSTRUCCIONES ESTRICTAS PARA LA RESPUESTA:
     e. "probabilidad_estimada": Opciones válidas: "Baja", "Media", "Alta".
     f. "responsabilidad_mitigacion": El rol o departamento responsable de las tareas de mitigación preventivas (ej. "Ingeniería de Planta").
     g. "responsable_accidente": El rol o departamento que asumiría la responsabilidad si el riesgo se materializa (ej. "Jefe de Producción").
+    h. "accion_mitigacion": Una acción CONCRETA y específica para prevenir o mitigar el riesgo (una tarea accionable, ej. "Realizar estudio de suelo y reforzar cimentación antes del montaje"). NO repitas un rol o departamento acá, eso va en los campos f y g.
+    i. "umbral_alerta": Un indicador o condición medible que, de cumplirse, debería disparar una alerta o escalamiento (ej. "Vibración medida superior a 5 mm/s en la base del equipo" o "Desvío de cronograma mayor a 2 semanas respecto del plan").
 5.  Si, basándote estrictamente en el contexto, no se detecta ningún riesgo relevante, debes devolver una lista vacía para el campo `riesgos_identificados`. No inventes riesgos.
 
 LA RESPUESTA DEBE SER UN OBJETO JSON VÁLIDO, SIGUIENDO ESTRICTAMENTE EL FORMATO DESCRITO.
@@ -46,7 +61,9 @@ EJEMPLO DE RESPUESTA JSON IDEAL:
       "impacto_estimado": "Alto",
       "probabilidad_estimada": "Media",
       "responsabilidad_mitigacion": "Ingeniería Civil y de Planta",
-      "responsable_accidente": "Gerencia de Operaciones"
+      "responsable_accidente": "Gerencia de Operaciones",
+      "accion_mitigacion": "Realizar un estudio de suelo y diseñar una cimentación reforzada antes del montaje de la prensa, según lo indicado en el manual del fabricante.",
+      "umbral_alerta": "Vibración medida en la base de la prensa superior a 5 mm/s durante la puesta en marcha."
     }}
   ]
 }}
@@ -137,7 +154,7 @@ def crear_cadena_rag(llm, vector_db_instance):
         if config.USE_RERANKER:
             logger.info("--- Habilitando Re-ranker (CrossEncoder) ---")
             try:
-                model = HuggingFaceCrossEncoder(model_name='BAAI/bge-reranker-v2-m3')
+                model = _get_reranker_model('BAAI/bge-reranker-v2-m3')
                 compressor = CrossEncoderReranker(model=model, top_n=config.RERANKER_TOP_N)
                 final_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
                 logger.info(f"--- Re-ranker configurado para devolver los mejores {config.RERANKER_TOP_N} fragmentos ---")
@@ -157,4 +174,28 @@ def crear_cadena_rag(llm, vector_db_instance):
         return qa_chain
     except Exception as e:
         logger.error(f"Error al crear la cadena RetrievalQA: {e}", exc_info=True)
+        return None
+
+
+def crear_cadena_sin_rag(llm):
+    """Cadena de comparación (ablation) para medir el aporte real del RAG: mismo
+    modelo, mismo prompt y mismo esquema JSON exigido, pero SIN recuperar ningún
+    fragmento de la Base de Conocimiento. La única variable que cambia frente a
+    crear_cadena_rag() es la presencia o ausencia de contexto recuperado -- así
+    cualquier diferencia en los resultados es atribuible únicamente al RAG."""
+    if not llm:
+        logger.error("Instancia de LLM no proporcionada.")
+        return None
+    try:
+        prompt_sin_contexto_str = PROMPT_TEMPLATE_STR.replace(
+            "{context}",
+            "(No se proporcionó ningún fragmento de la Base de Conocimiento. Respondé únicamente con tu conocimiento general, sin inventar citas ni referencias a documentos.)"
+        )
+        prompt = PromptTemplate(template=prompt_sin_contexto_str, input_variables=["question"])
+        from langchain_core.output_parsers import StrOutputParser
+        cadena_sin_rag = prompt | llm | StrOutputParser()
+        logger.info("--- Cadena SIN RAG (ablation) creada exitosamente ---")
+        return cadena_sin_rag
+    except Exception as e:
+        logger.error(f"Error al crear la cadena sin RAG: {e}", exc_info=True)
         return None
