@@ -4,13 +4,11 @@ import sys
 import logging
 import pandas as pd
 from datasets import Dataset
-
-# --- Workaround: ragas 0.4.3 tiene un import roto hacia una ruta de LangChain
-# que ya no existe (ChatVertexAI se movió a otro paquete hace tiempo). No
-# usamos VertexAI en este proyecto, así que le damos a Python un módulo falso
-# para que ese import no rompa. Sin esto, "from ragas import evaluate" falla
-# con ModuleNotFoundError apenas se ejecuta el script.
 import types
+
+# Workaround: ragas 0.4.3 tiene un import roto hacia una ruta de LangChain que
+# ya no existe (ChatVertexAI se movió de paquete). No usamos VertexAI en este
+# proyecto, así que se registra un módulo falso para que ese import no rompa.
 if "langchain_community.chat_models.vertexai" not in sys.modules:
     _stub = types.ModuleType("langchain_community.chat_models.vertexai")
     class _ChatVertexAIStub:
@@ -25,7 +23,6 @@ from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.run_config import RunConfig
 import json
-import shutil
 import datetime
 import time
 import numpy as np
@@ -37,11 +34,10 @@ if PROJECT_ROOT not in sys.path:
 from scripts.main import run_analysis
 from scripts import config, vector_db_manager, rag_components
 
-# --- Logging a archivo, además de consola: cada ejecución completa queda en un
-# .txt en datos/Resultados/evaluaciones_rag/, sin depender del buffer/scroll
-# de la terminal. RUN_TIMESTAMP se calcula UNA vez acá arriba y se reutiliza
-# más abajo para nombrar el CSV y los respaldos, así todos los archivos de
-# una misma ejecución comparten el mismo timestamp y son fáciles de agrupar.
+# Log a archivo además de consola: cada ejecución completa queda en un .txt en
+# datos/Resultados/evaluaciones_rag/, sin depender del buffer de la terminal.
+# RUN_TIMESTAMP se calcula UNA vez y se reutiliza para nombrar el CSV y los
+# respaldos, así todos los archivos de una misma ejecución comparten nombre.
 RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 _RESULTS_DIR = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, "evaluaciones_rag")
 os.makedirs(_RESULTS_DIR, exist_ok=True)
@@ -52,8 +48,8 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - EVAL - %(message)s',
     datefmt='%H:%M:%S',
     handlers=[
-        logging.StreamHandler(),                              # sigue mostrando todo en consola
-        logging.FileHandler(_LOG_FILE_PATH, encoding='utf-8'),  # y además lo guarda acá
+        logging.StreamHandler(),
+        logging.FileHandler(_LOG_FILE_PATH, encoding='utf-8'),
     ],
 )
 logging.getLogger("ragas").setLevel(logging.WARNING)
@@ -66,12 +62,8 @@ METRICS_TO_EVALUATE = [faithfulness, answer_relevancy, context_recall, context_p
 # sin contexto, saldrían siempre en 0 por construcción, no como un hallazgo real.
 METRICS_SIN_RAG = [answer_relevancy]
 
-# Modelo usado como "juez" de Ragas. Se usa el modelo LOCAL (Qwen2.5 vía Ollama)
-# a propósito: Groq tiene un límite diario de TOKENS (no solo de velocidad) que
-# se comparte entre el modelo evaluado y el juez -- con ambos roles en Groq, una
-# sola ejecución agota el presupuesto del día antes de terminar de puntuar. El
-# modelo local no tiene límite de tokens ni de cuota, así que separamos el juez
-# por completo de cualquier proveedor en la nube.
+# Modelo usado como "juez" de Ragas: un modelo LOCAL (Qwen2.5 vía Ollama), sin
+# límite de cuota ni costo, independiente de los modelos evaluados.
 RAGAS_JUDGE_MODEL_ID = "qwen2.5:7b-instruct"
 RAGAS_JUDGE_BASE_URL = "http://localhost:11434/v1"
 
@@ -88,7 +80,7 @@ def run_evaluation_for_model(model_id: str, eval_dataset: Dataset, db_connection
     results = []
     # Los modelos locales (Ollama) no tienen límite de velocidad ni de cuota:
     # la pausa de 10s entre preguntas solo tiene sentido para no chocar con
-    # los límites de APIs en la nube. La saltamos para modelos locales.
+    # los límites de APIs en la nube. Se saltea para modelos locales.
     model_base_url = config.LLM_MODELS.get(model_id, {}).get("base_url", "")
     is_local_model = "localhost" in model_base_url or "127.0.0.1" in model_base_url
 
@@ -105,9 +97,6 @@ def run_evaluation_for_model(model_id: str, eval_dataset: Dataset, db_connection
             if result:
                 results.append(result)
             else:
-                # run_analysis devolvió None (fallo técnico, no de esquema -- ej. no
-                # se pudo inicializar el LLM). Igual se registra para no perder el
-                # intento del denominador de la tasa de cumplimiento de esquema.
                 results.append({
                     "question": row["question"], "answer": None, "contexts": [],
                     "ground_truth": row["ground_truth"], "schema_valido": False, "usa_rag": usar_rag,
@@ -133,24 +122,20 @@ def _cosine_similarity(vec_a, vec_b) -> float:
 
 
 def calcular_metricas_propias(model_results_list, embedding_function):
-    """Dos métricas propias, deterministas (sin juez LLM, sin costo, sin varianza):
+    """Métricas propias, deterministas (sin juez LLM, sin costo, sin varianza):
 
-    1. Tasa de Cumplimiento de Esquema: de todas las preguntas intentadas, cuántas
-       devolvieron un JSON válido según el esquema RiskItem (9 campos). Mide
-       directamente "predecible": un sistema que a veces no devuelve un JSON
-       usable no lo es, sin importar qué tan buenos sean los riesgos que sí logra
-       identificar.
-
+    1. Tasa de Cumplimiento de Esquema: proporción de preguntas que devuelven
+       un JSON válido según el esquema RiskItem (9 campos).
     2. Coherencia Interna Acción/Umbral: similitud semántica (embeddings BGE-M3,
-       el mismo modelo del pipeline, sin costo extra) entre la descripción de
-       cada riesgo y, POR SEPARADO, su acción de mitigación y su umbral de
-       alerta -- se toma el mínimo de las dos comparaciones, no el promedio de
-       ambas concatenadas. Concatenar antes de comparar diluye el problema: si
-       la acción es coherente pero el umbral no, el promedio esconde el error.
-       Comparando por separado y quedándose con el peor de los dos, un solo
-       campo mal generado (ej. un umbral de puesta a tierra aplicado a un
-       riesgo de iluminación -- el caso real que motivó esta métrica) sí se
-       refleja como valor bajo.
+       el mismo modelo del pipeline) entre la descripción de cada riesgo y, por
+       separado, su acción de mitigación y su umbral de alerta -- se toma el
+       mínimo de las dos comparaciones, no el promedio de ambas concatenadas,
+       para que un campo bien generado no diluya uno mal generado.
+    3. Distribución del Evaluador de Evidencia (CRAG-lite): cuántas preguntas
+       fueron clasificadas CORRECTO / AMBIGUO / INSUFICIENTE. Sirve para
+       reportar con qué frecuencia el sistema identificaría, por sí mismo, los
+       mismos casos que el juez externo de Ragas calificó con precisión de
+       contexto baja.
     """
     total_intentos = len(model_results_list)
     validos = [r for r in model_results_list if r.get("schema_valido", False)]
@@ -180,6 +165,11 @@ def calcular_metricas_propias(model_results_list, embedding_function):
             except Exception as e_emb:
                 logging.warning(f"No se pudo calcular coherencia interna para un riesgo: {e_emb}")
 
+    conteo_evidencia = {"CORRECTO": 0, "AMBIGUO": 0, "INSUFICIENTE": 0, "N/A": 0}
+    for r in validos:
+        clave = r.get("evaluacion_evidencia") or "N/A"
+        conteo_evidencia[clave] = conteo_evidencia.get(clave, 0) + 1
+
     return {
         "tasa_cumplimiento_esquema": tasa_cumplimiento_esquema,
         "preguntas_totales": total_intentos,
@@ -187,6 +177,9 @@ def calcular_metricas_propias(model_results_list, embedding_function):
         "coherencia_interna_promedio": (sum(similitudes) / len(similitudes)) if similitudes else None,
         "coherencia_interna_minima": min(similitudes) if similitudes else None,
         "riesgos_evaluados_coherencia": len(similitudes),
+        "evidencia_correcto": conteo_evidencia["CORRECTO"],
+        "evidencia_ambiguo": conteo_evidencia["AMBIGUO"],
+        "evidencia_insuficiente": conteo_evidencia["INSUFICIENTE"],
     }
 
 
@@ -208,11 +201,12 @@ def main():
     if not db_connection: logging.error("No se pudo crear la base de datos vectorial."); return
     logging.info("✅ Base de datos lista para ser reutilizada.")
 
-    # --- Juez de Ragas 100% gratuito y sin límites: modelo local (Ollama) + tu mismo modelo local de embeddings ---
+    if not os.getenv("OLLAMA_API_KEY"):
+        logging.warning("No se encontró 'OLLAMA_API_KEY' (cualquier valor no vacío sirve). Usando un valor por defecto.")
     from langchain_openai import ChatOpenAI
     judge_llm_raw = ChatOpenAI(
         model=RAGAS_JUDGE_MODEL_ID,
-        api_key="ollama-local",  # Ollama no valida esta clave, pero el SDK exige que exista
+        api_key="ollama-local",
         base_url=RAGAS_JUDGE_BASE_URL,
         temperature=0.2,
     )
@@ -220,16 +214,12 @@ def main():
     ragas_judge_embeddings = LangchainEmbeddingsWrapper(embedding_function)
     logging.info(f"✅ Ragas usará '{RAGAS_JUDGE_MODEL_ID}' (gratuito) como modelo juez. No se usa OpenAI en ningún paso.")
 
-    # --- Rutas de guardado. Reutilizan RUN_TIMESTAMP (calculado arriba, al
-    # importar el módulo) para que el CSV, los respaldos por modelo y el log
-    # de esta ejecución compartan el mismo nombre y sean fáciles de agrupar. ---
     results_dir = _RESULTS_DIR
     timestamp = RUN_TIMESTAMP
     csv_path = os.path.join(results_dir, f"ragas_eval_TODOS_{timestamp}.csv")
     # Nombres reales que usa Ragas 0.4.x en to_pandas() (esquema v2): user_input
     # en vez de question, response en vez de answer, retrieved_contexts en vez
-    # de contexts, reference en vez de ground_truth. Con los nombres viejos el
-    # filtro no encontraba nada y el CSV quedaba sin texto, solo con números.
+    # de contexts, reference en vez de ground_truth.
     cols = ['model_id', 'user_input', 'response', 'retrieved_contexts', 'reference',
             'faithfulness', 'answer_relevancy', 'context_recall', 'context_precision']
 
@@ -241,11 +231,10 @@ def main():
         if not os.getenv(config.LLM_MODELS[model_id].get("api_key_env")):
             logging.warning(f"No se encontró API Key para '{model_id}'. Saltando su evaluación."); continue
 
-        # --- Ablation automático: cada modelo se evalúa dos veces, con RAG y sin
+        # Ablation automático: cada modelo se evalúa dos veces, con RAG y sin
         # RAG (mismo modelo, mismas preguntas, único cambio es la presencia de
-        # contexto recuperado). 'etiqueta' es el nombre que va a aparecer en el
-        # CSV final -- así una sola ejecución de este script deja todo junto para
-        # quien lo corra (tutora, jurado), sin pasos manuales adicionales.
+        # contexto recuperado). 'etiqueta' es el nombre que aparece en el CSV
+        # final, así una sola ejecución deja todo junto, sin pasos manuales.
         modos = [(True, model_id, METRICS_TO_EVALUATE), (False, f"{model_id} [SIN RAG]", METRICS_SIN_RAG)]
 
         for usar_rag, etiqueta, metricas_ragas_a_usar in modos:
@@ -253,11 +242,9 @@ def main():
             if not model_results_list:
                 logging.warning(f"No se obtuvieron resultados para {etiqueta}. Saltando Ragas."); continue
 
-            # --- Métricas propias: se calculan sobre TODOS los intentos (éxitos y
-            # fallos de esquema), antes de filtrar nada -- necesitan el denominador
-            # completo para que la tasa de cumplimiento sea real. Se calculan en
-            # ambos modos: comparar la coherencia interna con y sin RAG también es
-            # información válida. ---
+            # Métricas propias: se calculan sobre TODOS los intentos (éxitos y
+            # fallos de esquema), antes de filtrar nada -- necesitan el
+            # denominador completo para que la tasa de cumplimiento sea real.
             metricas = calcular_metricas_propias(model_results_list, embedding_function)
             metricas["model_id"] = etiqueta
             metricas_propias_todas.append(metricas)
@@ -265,13 +252,10 @@ def main():
             logging.info(
                 f"📊 Métricas propias de {etiqueta}: cumplimiento de esquema "
                 f"{metricas['tasa_cumplimiento_esquema']:.0%} ({metricas['preguntas_validas']}/{metricas['preguntas_totales']}), "
-                f"coherencia interna acción/umbral promedio {coherencia_txt}"
+                f"coherencia interna acción/umbral promedio {coherencia_txt}, "
+                f"evidencia [correcto={metricas['evidencia_correcto']}, ambiguo={metricas['evidencia_ambiguo']}, insuficiente={metricas['evidencia_insuficiente']}]"
             )
 
-            # Guardado de respaldo de TODAS las respuestas crudas (éxitos y fallos),
-            # ANTES de intentar puntuarlas con Ragas. Si Ragas falla después, esto no
-            # se pierde -- y sirve para inspeccionar a mano los casos de fallo de
-            # esquema, además de comparar cualitativamente respuestas con y sin RAG.
             sufijo_archivo = etiqueta.replace(':', '_').replace(' ', '_').replace('[', '').replace(']', '')
             raw_backup_path = os.path.join(results_dir, f"respuestas_crudas_{sufijo_archivo}_{timestamp}.json")
             try:
@@ -281,11 +265,11 @@ def main():
             except Exception as e_backup:
                 logging.warning(f"No se pudo guardar el respaldo crudo de {etiqueta}: {e_backup}")
 
-            # Ragas solo puede puntuar respuestas con esquema válido -- un JSON roto
-            # no se le puede pasar al juez. Se descarta también la clave interna
-            # 'schema_valido', que no forma parte del dataset que espera Ragas.
+            # Ragas solo puede puntuar respuestas con esquema válido. Se descarta
+            # también la clave interna 'schema_valido' y 'evaluacion_evidencia',
+            # que no forman parte del dataset que espera Ragas.
             intentos_validos_ragas = [
-                {k: v for k, v in r.items() if k != "schema_valido"}
+                {k: v for k, v in r.items() if k not in ("schema_valido", "evaluacion_evidencia")}
                 for r in model_results_list if r.get("schema_valido", False)
             ]
             if not intentos_validos_ragas:
@@ -299,14 +283,6 @@ def main():
                     metrics=metricas_ragas_a_usar,
                     llm=ragas_judge_llm,
                     embeddings=ragas_judge_embeddings,
-                    # max_workers más alto que en la versión "nube": sin Groq/Gemini en
-                    # esta ejecución no hay riesgo de rate limit externo. Ollama procesa
-                    # en cola sobre una sola GPU, así que esto acelera la espera de
-                    # red/CPU sin saturar nada; si tu GPU se queda corta de VRAM, bajalo
-                    # a 2 o 3. timeout más alto (antes 120s) y menos concurrencia:
-                    # context_precision es la métrica más pesada para el juez y venía
-                    # fallando por timeout en varias preguntas cuando corría con 6
-                    # llamadas en paralelo sobre un modelo local de 7B.
                     run_config=RunConfig(max_workers=3, timeout=300),
                 )
                 score_df = score.to_pandas()
@@ -317,9 +293,9 @@ def main():
                 logging.error(f"Error durante la evaluación de Ragas para {etiqueta}: {e}", exc_info=True)
                 continue
 
-            # --- GUARDADO INCREMENTAL: se reescribe el CSV con todo lo acumulado hasta
-            # ahora, después de CADA modo evaluado. Si el siguiente falla o se corta el
-            # script, esto ya quedó a salvo en disco. ---
+            # Guardado incremental: se reescribe el CSV con todo lo acumulado
+            # hasta ahora, después de cada modo evaluado. Si el siguiente falla
+            # o se corta el script, esto ya quedó a salvo en disco.
             try:
                 partial_df = pd.concat(all_results, ignore_index=True)
                 partial_df = partial_df[[c for c in cols if c in partial_df.columns]]
@@ -341,7 +317,7 @@ def main():
         metricas_df = pd.DataFrame(metricas_propias_todas)
         metricas_csv_path = os.path.join(results_dir, f"metricas_propias_{timestamp}.csv")
         metricas_df.to_csv(metricas_csv_path, index=False, encoding='utf-8-sig')
-        print("\n--- MÉTRICAS PROPIAS (cumplimiento de esquema + coherencia interna acción/umbral) ---")
+        print("\n--- MÉTRICAS PROPIAS (cumplimiento de esquema + coherencia + evaluador de evidencia) ---")
         print(metricas_df.to_string(index=False))
         print("-------------------------------------------------")
         logging.info(f"Métricas propias guardadas en: {metricas_csv_path}")

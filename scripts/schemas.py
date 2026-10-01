@@ -4,8 +4,9 @@ from typing import List, Literal, Optional
 
 ImpactoEstimado = Literal["Bajo", "Medio", "Alto"]
 ProbabilidadEstimada = Literal["Baja", "Media", "Alta"]
-# --- NUEVO: Tipo de Riesgo ---
 TipoDeRiesgo = Literal["Explícito", "Implícito"]
+# --- Clasificación del evaluador de evidencia (CRAG-lite) ---
+EvaluacionEvidencia = Literal["CORRECTO", "AMBIGUO", "INSUFICIENTE"]
 
 class SourceChunk(BaseModel):
     """Representa un fragmento de la base de conocimiento que fue recuperado como evidencia."""
@@ -17,13 +18,11 @@ class SourceChunk(BaseModel):
 class RiskItem(BaseModel):
     """Representa un único riesgo identificado con todos sus atributos."""
     descripcion_riesgo: str = Field(description="Descripción clara y concisa del riesgo identificado.")
-    # --- CAMBIO: Añadido tipo_de_riesgo ---
     tipo_de_riesgo: TipoDeRiesgo = Field(description="Clasificación del riesgo como 'Explícito' (directamente mencionado) o 'Implícito' (deducido lógicamente).")
     impacto_estimado: ImpactoEstimado = Field(description="Impacto potencial del riesgo. Debe ser 'Bajo', 'Medio' o 'Alto'.")
     probabilidad_estimada: ProbabilidadEstimada = Field(description="Probabilidad de ocurrencia del riesgo. Debe ser 'Baja', 'Media', o 'Alta'.")
     responsabilidad_mitigacion: str = Field(description="Rol o departamento responsable de las tareas de mitigación preventivas.")
     responsable_accidente: str = Field(description="Rol o departamento que asumiría la responsabilidad principal si el riesgo se materializa.")
-    # --- NUEVO: pedido explícito de Paolo — acción concreta y umbral de alerta, no solo un rol responsable ---
     accion_mitigacion: str = Field(description="Acción concreta y específica recomendada para prevenir o mitigar el riesgo (una tarea accionable, no un rol ni un departamento).")
     umbral_alerta: str = Field(description="Indicador o condición medible cuyo cumplimiento debería disparar una alerta o escalamiento (ej. una métrica, un plazo, un valor límite concreto).")
     explicacion_riesgo: str = Field(description="Breve explicación de por qué esto es un riesgo, citando evidencia del contexto.")
@@ -41,3 +40,8 @@ class RiskReport(BaseModel):
     nombre_proyecto_analizado: Optional[str] = None
     timestamp_analisis: Optional[str] = None
     respuesta_cruda_llm: Optional[str] = None
+    # --- Resultado del evaluador de evidencia CRAG-lite (Yan et al., 2024,
+    # adaptado sin el componente de búsqueda web, para mantener el sistema 100%
+    # local y auditable dentro de la Base de Conocimiento de la organización). ---
+    evaluacion_evidencia: Optional[EvaluacionEvidencia] = Field(default=None, description="Clasificación de la suficiencia de la evidencia recuperada, calculada ANTES de generar el análisis: CORRECTO (específica y aplicable), AMBIGUO (temáticamente relacionada pero genérica), o INSUFICIENTE (sin relación real).")
+    advertencia_evidencia: Optional[str] = Field(default=None, description="Mensaje explicativo para el usuario cuando evaluacion_evidencia es AMBIGUO o INSUFICIENTE.")

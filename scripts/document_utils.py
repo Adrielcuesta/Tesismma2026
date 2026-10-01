@@ -9,7 +9,7 @@ from . import config
 
 logger = logging.getLogger(__name__)
 
-# --- INICIO: Lógica de Filtros Locales (Con capa de Metadatos) ---
+# --- Lógica de Filtros Locales (Con capa de Metadatos) ---
 
 def is_ignorable_page(page_text: str, min_chars=150) -> bool:
     text = (page_text or "").strip()
@@ -74,8 +74,6 @@ def procesar_y_filtrar_paginas(docs: list) -> list:
 
     logger.info(f"  Páginas retenidas tras todos los filtros: {len(filtered_pages)} de {len(docs)}.")
     return filtered_pages
-
-# ... (El resto del archivo 'document_utils.py' no necesita cambios y se mantiene igual)
 
 def cargar_y_procesar_pdfs_de_carpeta(carpeta_path, chunk_size, chunk_overlap):
     documentos_cargados_finales = []

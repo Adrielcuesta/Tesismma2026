@@ -21,7 +21,7 @@ def image_to_base64(image_filename_in_static_images):
         return f"data:{mime_type};base64,{encoded_string}"
     except FileNotFoundError:
         logger.error(f"¡IMAGEN NO ENCONTRADA! Verifica esta ruta: {image_path}")
-        return "" 
+        return ""
     except Exception as e:
         logger.error(f"Error codificando imagen {image_path} a Base64: {e}")
         return ""
@@ -36,19 +36,24 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
     try:
         with open(ruta_json_resultados, 'r', encoding='utf-8') as f:
             datos_analisis = json.load(f)
-    except Exception as e: 
+    except Exception as e:
         logger.error(f"Error abriendo o parseando JSON en {ruta_json_resultados}: {e}")
         return
 
     nombre_proyecto_analizado = escape(datos_analisis.get("nombre_proyecto_analizado", "Proyecto No Especificado"))
     riesgos_identificados = datos_analisis.get("riesgos_identificados_estructurados", [])
     fragmentos_fuente = datos_analisis.get("fragmentos_fuente", [])
+
+    # --- Resultado del evaluador de evidencia CRAG-lite ---
+
+    evaluacion_evidencia = datos_analisis.get("evaluacion_evidencia")
+    advertencia_evidencia = datos_analisis.get("advertencia_evidencia")
     it = info_tesis_config or {}
-    
-    header_banner_base64 = image_to_base64("header_banner_abstract.png") 
-    logo_inline_base64 = image_to_base64("logo-itba.png")                
-    logo_itba_footer_base64 = image_to_base64("itba.png")               
-    
+
+    header_banner_base64 = image_to_base64("header_banner_abstract.png")
+    logo_inline_base64 = image_to_base64("logo-itba.png")
+    logo_itba_footer_base64 = image_to_base64("itba.png")
+
     risk_category_emojis = {"Rojo": "🔥", "Ámbar": "⚠️", "Verde": "✅", "Gris (Indeterminado)": "❓"}
     estado_map = {
         "Rojo": {"clase": "rojo", "titulo": "Riesgos Altos"},
@@ -80,6 +85,10 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
         .app-subtitle{{color:#555;font-size:1.0em;font-weight:bold;font-style:italic;margin-top:2px;margin-bottom:15px;}}
         .student-name{{color:#333;font-size:1.1em;font-weight:bold;margin-top:15px;}}
         .project-analysis-title{{text-align:center;font-size:1.6em;color:#1a2533;margin-top:0;margin-bottom:30px;padding-bottom:15px;border-bottom:2px solid #e0e0e0;}}
+        .evidencia-banner{{border-radius:8px;padding:16px 20px;margin-bottom:25px;font-size:.95em;line-height:1.5;}}
+        .evidencia-banner.ambiguo{{background-color:#fff8e1;border:1px solid #f39c12;color:#7a5c00;}}
+        .evidencia-banner.insuficiente{{background-color:#fdecea;border:1px solid #e74c3c;color:#7a1f14;}}
+        .evidencia-banner strong{{display:block;margin-bottom:4px;font-size:1.05em;}}
         .risk-section{{margin-bottom:35px;}}
         .risk-section-title{{font-size:1.4em;color:#2c3e50;border-bottom:1px solid #e0e0e0;padding-bottom:10px;margin-bottom:20px;display:flex;align-items:center;}}
         .section-emoji{{margin-right:12px;font-size:1.2em;}}
@@ -105,13 +114,27 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
 <body>
 <div class="page-wrapper">
     <div class="main-dashboard-container">
-        <div class="abstract-banner-container"></div> 
+        <div class="abstract-banner-container"></div>
         <div class="header-content">
             <div class="title-with-logo"><img src="{logo_inline_base64}" alt="Logo" class="logo-inline"><h1>{escape(it.get("titulo_tesis_h1", ""))}</h1></div>
             <h2>{escape(it.get("titulo_tesis_h2", ""))}</h2><h3>{escape(it.get("titulo_tesis_h3", ""))}</h3>
         </div>
         <h2 class="project-analysis-title">Resultados del Análisis para: {nombre_proyecto_analizado}</h2>
     '''
+
+    
+    if evaluacion_evidencia == "INSUFICIENTE":
+        final_html += f'''
+        <div class="evidencia-banner insuficiente">
+            <strong>⛔ Evidencia insuficiente en la Base de Conocimiento</strong>
+            {escape(advertencia_evidencia or "No se encontró relación real entre la Base de Conocimiento y el proyecto descrito.")}
+        </div>'''
+    elif evaluacion_evidencia == "AMBIGUO":
+        final_html += f'''
+        <div class="evidencia-banner ambiguo">
+            <strong>⚠️ Evidencia genérica, revisar con cautela</strong>
+            {escape(advertencia_evidencia or "La evidencia recuperada es temáticamente relacionada pero no específica para este proyecto.")}
+        </div>'''
 
     # --- SECCIÓN DE TARJETAS DE RESUMEN ---
     summary_html_parts = []
@@ -140,9 +163,12 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
                     </div>
                 </div>''')
             summary_html_parts.append('</div></div>')
-    
+
     if not any(riesgos_agrupados.values()):
-        final_html += "<p style='text-align:center; font-style:italic;'>No se identificaron riesgos.</p>"
+        if evaluacion_evidencia == "INSUFICIENTE":
+            final_html += "<p style='text-align:center; font-style:italic;'>No se generó un análisis de riesgos porque la evidencia disponible fue insuficiente (ver aviso arriba).</p>"
+        else:
+            final_html += "<p style='text-align:center; font-style:italic;'>No se identificaron riesgos.</p>"
     else:
         final_html += "".join(summary_html_parts)
 
@@ -195,20 +221,20 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
     except IOError as e:
         logger.error(f"Error al guardar el dashboard HTML en {ruta_output_dashboard_html}: {e}")
 
-# --- MODO DE PRUEBA ---
+
 if __name__ == '__main__':
-    if not logging.getLogger().handlers: 
+    if not logging.getLogger().handlers:
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 
     logger.info("--- Ejecutando dashboard_generator.py en modo de prueba ---")
-    
+
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     test_output_dir = os.path.join(project_root, "datos", "Resultados", "ModoPrueba")
     os.makedirs(test_output_dir, exist_ok=True)
-    
+
     dummy_json_path = os.path.join(test_output_dir, "analisis_de_prueba.json")
     dummy_dashboard_path = os.path.join(test_output_dir, "dashboard_de_prueba.html")
-    
+
     try:
         from config import INFO_TESIS
     except ImportError:
@@ -216,6 +242,8 @@ if __name__ == '__main__':
 
     dummy_data = {
         "nombre_proyecto_analizado": "Proyecto de Prueba de Diseño (Final)",
+        "evaluacion_evidencia": "AMBIGUO",
+        "advertencia_evidencia": "La evidencia recuperada es genérica, no específica para este proyecto de prueba.",
         "riesgos_identificados_estructurados": [
             {"descripcion_riesgo": "Fallo crítico en sistema por sobrecalentamiento", "tipo_de_riesgo": "Implícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Alto", "probabilidad_estimada": "Alta", "estado_RAG_sugerido": "Rojo", "score_confianza_compuesto": 0.85, "responsabilidad_mitigacion": "Mantenimiento", "responsable_accidente": "Jefe de Operaciones", "accion_mitigacion": "Instalar sensores de temperatura con corte automático y realizar inspección semanal.", "umbral_alerta": "Temperatura de operación superior a 80°C sostenida por más de 5 minutos."},
             {"descripcion_riesgo": "Retrasos en la entrega de componentes clave", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Medio", "probabilidad_estimada": "Media", "estado_RAG_sugerido": "Ámbar", "score_confianza_compuesto": 0.65, "responsabilidad_mitigacion": "Compras", "responsable_accidente": "Logística", "accion_mitigacion": "Confirmar stock de proveedor alternativo antes del inicio de obra.", "umbral_alerta": "Confirmación de entrega no recibida 10 días antes de la fecha planificada."},
@@ -223,16 +251,16 @@ if __name__ == '__main__':
         ],
         "fragmentos_fuente": [{"nombre_documento_fuente": "Manual_Tecnico.pdf"}]
     }
-    
+
     with open(dummy_json_path, 'w', encoding='utf-8') as f_dummy:
         json.dump(dummy_data, f_dummy, ensure_ascii=False, indent=4)
     logger.info(f"Archivo JSON de prueba creado en: {dummy_json_path}")
-    
+
     generar_dashboard_html(
         ruta_json_resultados=dummy_json_path,
         ruta_output_dashboard_html=dummy_dashboard_path,
         info_tesis_config=INFO_TESIS
     )
-    
+
     logger.info(f"--- Prueba completada. Abre este archivo en tu navegador: ---")
     logger.info(f"{os.path.abspath(dummy_dashboard_path)}")

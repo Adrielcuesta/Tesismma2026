@@ -4,6 +4,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
 from langchain_classic.retrievers.document_compressors.cross_encoder_rerank import CrossEncoderReranker
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+from langchain_core.output_parsers import StrOutputParser
 import logging
 import os
 
@@ -12,11 +13,6 @@ from . import config
 
 logger = logging.getLogger(__name__)
 
-# --- Caché del modelo de re-ranker a nivel de módulo: tanto app.py como
-# evaluate_rag.py son procesos que quedan corriendo durante muchas preguntas
-# seguidas. Sin esto, HuggingFaceCrossEncoder se recargaba desde cero en
-# CADA pregunta (~3-4 segundos perdidos cada vez, medido en las ejecuciones
-# de evaluación). Con el caché, solo se carga una vez por proceso.
 _reranker_model_cache = {}
 
 def _get_reranker_model(model_name: str):
@@ -24,6 +20,7 @@ def _get_reranker_model(model_name: str):
         logger.info(f"--- Cargando modelo de re-ranker '{model_name}' por primera vez en este proceso (se reutilizará en las siguientes preguntas) ---")
         _reranker_model_cache[model_name] = HuggingFaceCrossEncoder(model_name=model_name)
     return _reranker_model_cache[model_name]
+
 
 PROMPT_TEMPLATE_STR = """
 Eres un asistente de IA experto en la identificación y evaluación de riesgos para proyectos de instalación de maquinaria industrial.
@@ -71,6 +68,71 @@ EJEMPLO DE RESPUESTA JSON IDEAL:
 Comienza tu respuesta JSON AHORA:
 """
 
+# --- Evaluador de evidencia (CRAG-lite) ---
+# Adaptado de Yan et al. (2024), "Corrective Retrieval Augmented Generation"
+# (arXiv:2401.15884). Se implementan 2 de las 3 acciones del paper original
+# (evidencia suficiente / evidencia insuficiente); se omite deliberadamente
+# la tercera acción del paper (búsqueda web externa cuando la evidencia local
+# no alcanza), porque contradice el objetivo central de este sistema: operar
+# exclusivamente sobre la Base de Conocimiento validada y controlada por la
+# organización, sin salir a fuentes externas no auditadas. Este es un recorte
+# de diseño intencional, no una limitación técnica.
+PROMPT_EVALUADOR_EVIDENCIA_STR = """
+Sos un evaluador crítico de evidencia documental. Tu ÚNICA tarea es determinar si el CONTEXTO proporcionado tiene relación real y específica con el PROYECTO descrito. NO generes ningún análisis de riesgos, NO expliques tu razonamiento.
+
+CONTEXTO RECUPERADO:
+{context}
+
+PROYECTO A ANALIZAR:
+{question}
+
+Clasificá la relación entre el contexto y el proyecto en UNA SOLA de estas tres categorías:
+- CORRECTO: el contexto contiene información específica y aplicable directamente a los elementos concretos del proyecto (tecnología, ubicación, plazos, personal, normativa mencionada).
+- AMBIGUO: el contexto está temáticamente relacionado (gestión de riesgos, proyectos industriales en general) pero es de carácter genérico, sin abordar los elementos específicos de este proyecto en particular.
+- INSUFICIENTE: el contexto no tiene relación real con el proyecto descrito.
+
+Responde ÚNICAMENTE con una de estas tres palabras exactas, sin ningún texto adicional: CORRECTO, AMBIGUO o INSUFICIENTE.
+"""
+
+
+def _construir_retriever(vector_db_instance):
+    """Arma el retriever con re-ranking (embeddings + cross-encoder), sin
+    envolverlo en ninguna cadena de generación. Se extrajo como función propia
+    para poder reutilizarlo tanto en el evaluador de evidencia como en la
+    cadena de generación final, sin duplicar la configuración del re-ranker."""
+    base_retriever = vector_db_instance.as_retriever(search_kwargs={"k": config.K_RETRIEVED_DOCS_BEFORE_RERANK})
+    final_retriever = base_retriever
+    if config.USE_RERANKER:
+        logger.info("--- Habilitando Re-ranker (CrossEncoder) ---")
+        try:
+            model = _get_reranker_model('BAAI/bge-reranker-v2-m3')
+            compressor = CrossEncoderReranker(model=model, top_n=config.RERANKER_TOP_N)
+            final_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
+            logger.info(f"--- Re-ranker configurado para devolver los mejores {config.RERANKER_TOP_N} fragmentos ---")
+        except Exception as e_reranker:
+            logger.error(f"No se pudo inicializar el Re-ranker. Se usará el retriever base. Error: {e_reranker}")
+    return final_retriever
+
+
+def crear_evaluador_evidencia(llm):
+    """Cadena CRAG-lite: clasifica CORRECTO/AMBIGUO/INSUFICIENTE, sin generar
+    ningún análisis de riesgos. Se invoca ANTES de la cadena de generación
+    principal, con los mismos fragmentos ya recuperados por el re-ranker."""
+    prompt = PromptTemplate(template=PROMPT_EVALUADOR_EVIDENCIA_STR, input_variables=["context", "question"])
+    return prompt | llm | StrOutputParser()
+
+
+def clasificar_evidencia(respuesta_cruda: str) -> str:
+    """Normaliza la respuesta del evaluador a una de las 3 categorías válidas,
+    por si el LLM agrega texto extra pese a la instrucción de no hacerlo."""
+    texto = (respuesta_cruda or "").strip().upper()
+    if "INSUFICIENTE" in texto:
+        return "INSUFICIENTE"
+    if "AMBIGUO" in texto:
+        return "AMBIGUO"
+    return "CORRECTO"
+
+
 def get_llm_instance(model_id: str):
     if model_id not in config.LLM_MODELS:
         logger.error(f"Modelo '{model_id}' no encontrado en config.LLM_MODELS.")
@@ -98,7 +160,6 @@ def get_llm_instance(model_id: str):
             )
 
         elif provider == "groq":
-            # Opción A: Conexión nativa compatible con OpenAI (No requiere instalar librerías extra)
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
                 model=model_id,
@@ -137,30 +198,19 @@ def get_llm_instance(model_id: str):
             return None
 
     except ImportError as e:
-        logger.error(f"Error de importación para el proveedor '{provider}'. ¿Instalaste la librería requerida (ej. 'pip install langchain-mistralai')? Error: {e}")
+        logger.error(f"Error de importación para el proveedor '{provider}'. {e}")
         return None
     except Exception as e:
         logger.error(f"Error al inicializar el modelo '{model_id}': {e}", exc_info=True)
         return None
+
 
 def crear_cadena_rag(llm, vector_db_instance):
     if not llm or not vector_db_instance:
         logger.error("Instancia de LLM o Vector DB no proporcionada.")
         return None
     try:
-        base_retriever = vector_db_instance.as_retriever(search_kwargs={"k": config.K_RETRIEVED_DOCS_BEFORE_RERANK})
-        final_retriever = base_retriever
-
-        if config.USE_RERANKER:
-            logger.info("--- Habilitando Re-ranker (CrossEncoder) ---")
-            try:
-                model = _get_reranker_model('BAAI/bge-reranker-v2-m3')
-                compressor = CrossEncoderReranker(model=model, top_n=config.RERANKER_TOP_N)
-                final_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
-                logger.info(f"--- Re-ranker configurado para devolver los mejores {config.RERANKER_TOP_N} fragmentos ---")
-            except Exception as e_reranker:
-                logger.error(f"No se pudo inicializar el Re-ranker. Se usará el retriever base. Error: {e_reranker}")
-
+        final_retriever = _construir_retriever(vector_db_instance)
         prompt = PromptTemplate(template=PROMPT_TEMPLATE_STR, input_variables=["context", "question"])
 
         qa_chain = RetrievalQA.from_chain_type(
@@ -180,9 +230,7 @@ def crear_cadena_rag(llm, vector_db_instance):
 def crear_cadena_sin_rag(llm):
     """Cadena de comparación (ablation) para medir el aporte real del RAG: mismo
     modelo, mismo prompt y mismo esquema JSON exigido, pero SIN recuperar ningún
-    fragmento de la Base de Conocimiento. La única variable que cambia frente a
-    crear_cadena_rag() es la presencia o ausencia de contexto recuperado -- así
-    cualquier diferencia en los resultados es atribuible únicamente al RAG."""
+    fragmento de la Base de Conocimiento."""
     if not llm:
         logger.error("Instancia de LLM no proporcionada.")
         return None
@@ -192,7 +240,6 @@ def crear_cadena_sin_rag(llm):
             "(No se proporcionó ningún fragmento de la Base de Conocimiento. Respondé únicamente con tu conocimiento general, sin inventar citas ni referencias a documentos.)"
         )
         prompt = PromptTemplate(template=prompt_sin_contexto_str, input_variables=["question"])
-        from langchain_core.output_parsers import StrOutputParser
         cadena_sin_rag = prompt | llm | StrOutputParser()
         logger.info("--- Cadena SIN RAG (ablation) creada exitosamente ---")
         return cadena_sin_rag
