@@ -24,7 +24,10 @@ except ImportError:
     PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     MODELOS_LOCALES_PATH = os.path.join(PROJECT_ROOT, "modelos_locales")
     CACHE_DIR_HF = os.path.join(PROJECT_ROOT, ".cache", "huggingface_cache")
-    DEFAULT_EMBEDDING_MODEL_HF_REPO_ID = "sentence-transformers/all-MiniLM-L6-v2"
+    # Nota: este valor de respaldo solo se usa si el import relativo de config
+    # falla (caso borde). Si eso ocurre, confirmar manualmente que coincide con
+    # DEFAULT_EMBEDDING_MODEL_HF_REPO_ID definido en config.py (hoy: BAAI/bge-m3).
+    DEFAULT_EMBEDDING_MODEL_HF_REPO_ID = "BAAI/bge-m3"
 
 MODEL_ID_TO_DOWNLOAD = DEFAULT_EMBEDDING_MODEL_HF_REPO_ID
 MODEL_SAVE_SUBFOLDER = MODEL_ID_TO_DOWNLOAD.split('/')[-1]
@@ -54,7 +57,7 @@ def descargar_modelo():
     logger.info(f"Descargando y guardando el modelo '{MODEL_ID_TO_DOWNLOAD}' en '{FULL_SAVE_PATH}'...")
     logger.info(f"Usando directorio de caché de Hugging Face: {CACHE_DIR_HF}")
     try:
-        if CACHE_DIR_HF and not os.path.exists(CACHE_DIR_HF): # Asegurar que el directorio de caché exista
+        if CACHE_DIR_HF and not os.path.exists(CACHE_DIR_HF):
             os.makedirs(CACHE_DIR_HF, exist_ok=True)
             logger.info(f"Directorio de caché de Hugging Face creado: {CACHE_DIR_HF}")
 
@@ -68,7 +71,7 @@ def descargar_modelo():
         logger.error(f"ERROR al descargar o guardar el modelo '{MODEL_ID_TO_DOWNLOAD}':")
         logger.error(f"Tipo: {type(e)}, Mensaje: {str(e)}")
         logger.debug(traceback.format_exc())
-    finally: # Restaurar variables de entorno SSL
+    finally:  # Restaurar variables de entorno SSL
         if 'original_ssl_cert_file' in locals():
             if original_ssl_cert_file is not None: os.environ['SSL_CERT_FILE'] = original_ssl_cert_file
             elif 'SSL_CERT_FILE' in os.environ: del os.environ['SSL_CERT_FILE']
