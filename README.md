@@ -79,9 +79,9 @@ El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de 
 - **API Keys (opcionales):** Solo necesarias si se quiere usar algún modelo en la nube (Gemini, Groq, Mistral). Los modelos locales vía Ollama no requieren ninguna clave real. En `scripts/config.py`, los modelos en la nube están comentados por defecto — descomentarlos para habilitarlos.
 - **Microsoft C++ Build Tools (Windows):** Recomendado para dependencias que requieren compilación (`numpy`, `onnxruntime`). Ver [Visual Studio Downloads](https://visualstudio.microsoft.com/es/downloads/) ("Herramientas de compilación para Visual Studio", carga de trabajo "Desarrollo para el escritorio con C++").
 
-## ⚠️ Nota sobre la Base de Conocimiento e ISO 31000
+## ⚠️ Nota sobre la Base de Conocimiento
 
-Por restricciones de licencia, la norma **ISO 31000** (citada como marco teórico en la tesis) **no se distribuye en este repositorio**. La carpeta `datos/BaseConocimiento/` incluye únicamente documentos de libre distribución. Si querés reconstruir el corpus completo usado en las pruebas originales, necesitás conseguir tu propia copia licenciada de ISO 31000 y agregarla manualmente a esa carpeta (no se sube a Git — ver `.gitignore`).
+La carpeta `datos/BaseConocimiento/` incluye únicamente documentos de libre distribución.
 
 ## Estructura del Proyecto
 
@@ -90,7 +90,7 @@ tesismma2026/
 ├── app.py                      # Aplicación principal Flask
 ├── Dockerfile                  # Instrucciones para construir la imagen Docker
 ├── datos/
-│   ├── BaseConocimiento/       # PDFs para la base de conocimiento (ISO 31000 excluida, ver nota arriba)
+│   ├── BaseConocimiento/       # PDFs para la base de conocimiento
 │   ├── ProyectoAnalizar/       # PDF del proyecto a analizar
 │   ├── ChromaDB_V1/            # (Generado) Base de datos vectorial
 │   ├── Resultados/
