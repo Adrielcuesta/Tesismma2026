@@ -23,7 +23,7 @@ Para garantizar la precisión, el sistema incorpora un **módulo de re-ranking m
 
 Al finalizar, el sistema genera:
 - Un **reporte JSON** estructurado con los hallazgos detallados.
-- Un **dashboard HTML dinámico e interactivo** con los riesgos, la evidencia utilizada (con scores de relevancia) y un aviso visible cuando la evidencia recuperada es genérica o insuficiente.
+- Un **dashboard HTML dinámico e interactivo** con los riesgos, la evidencia utilizada y un aviso visible cuando la evidencia recuperada es genérica o insuficiente.
 - Opcionalmente, un **reporte en formato PDF**.
 
 El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de forma cuantitativa y reproducible la calidad del pipeline RAG, comparando el desempeño entre distintos LLMs (locales y en la nube), con y sin recuperación de contexto (ablation), bajo la misma configuración.
@@ -37,7 +37,7 @@ El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de 
   - **Re-ranking de Contexto:** Cross-Encoder multilingüe (`BAAI/bge-reranker-v2-m3`) sobre los `K` fragmentos recuperados antes de pasarlos al LLM.
   - **Evaluador de Evidencia (CRAG-lite):** clasifica la evidencia recuperada como CORRECTO / AMBIGUO / INSUFICIENTE antes de generar el análisis (adaptado de Yan et al., 2024, *Corrective Retrieval Augmented Generation*, sin el componente de búsqueda web del paper original, para mantener el sistema 100% local y auditable). Corre siempre en un modelo local fijo, independiente del modelo elegido para el análisis, para no consumir cuota de ninguna API paga.
 - **Validación Estructurada de Salida:** Pydantic garantiza que cada riesgo tenga descripción, tipo, impacto, probabilidad, responsables, una acción de mitigación concreta y un umbral de alerta medible.
-- **Reportes Completos y Trazables:** JSON, dashboard HTML interactivo y PDF, con evidencia, score de relevancia, y aviso de calidad de evidencia cuando corresponde.
+- **Reportes Completos y Trazables:** JSON, dashboard HTML interactivo y PDF, con evidencia y aviso de calidad de evidencia cuando corresponde.
 - **Framework de Evaluación Integrado (Ragas):**
   - Mide `faithfulness`, `answer_relevancy`, `context_precision` y `context_recall`.
   - **Ablation automático RAG vs. sin RAG:** cada modelo se evalúa con y sin acceso a la Base de Conocimiento, en la misma ejecución.
@@ -201,6 +201,8 @@ Accedé a `http://localhost:8080`. Verificá que tu `.env` tenga las claves nece
 
 * **`API Key not found` al usar un LLM en la nube:** verificá que `.env` exista y que el nombre de la variable coincida exactamente con lo esperado en `scripts/config.py`.
 
+* **La primera consulta tarda muchos minutos (en CPU):** el re-ranker (`bge-reranker-v2-m3`) es un modelo grande y su costo crece con el largo del texto consultado. Por eso la búsqueda usa solo los primeros `MAX_CHARS_CONSULTA_RECUPERACION` caracteres del proyecto (ver `scripts/config.py`). Con GPU es mucho más rápido.
+
 * **Los modelos locales no responden / error de conexión a `localhost:11434`:** confirmá que Ollama esté corriendo (abrí `http://localhost:11434` en el navegador, debería decir "Ollama is running") y que el modelo esté descargado (`ollama list`). Esto aplica también si se eligió un modelo en la nube para el análisis: el evaluador de evidencia (CRAG-lite) y el juez de Ragas siempre requieren Ollama activo.
 
 * **`ModuleNotFoundError` al ejecutar un script desde la terminal:** los scripts usan importaciones relativas. Ejecutalos como módulo desde la carpeta raíz: `python -m scripts.evaluate_rag` (no `python evaluate_rag.py` desde adentro de `scripts/`).
@@ -217,4 +219,4 @@ Accedé a `http://localhost:8080`. Verificá que tu `.env` tenga las claves nece
 6. **Caché de Embeddings** (ej. Redis) para evitar recalcular embeddings de documentos sin cambios.
 7. **Soporte Multiusuario y Persistencia Histórica** con base de datos relacional/NoSQL y autenticación.
 8. **Esquema de MLOps Continuo:** integración con LangSmith u otra herramienta de observabilidad para trazabilidad de costos, latencias y feedback humano sobre los reportes generados.
-9. **Reducción de la sobrecarga del re-ranker:** actualmente el modelo de re-ranking se cachea a nivel de proceso, pero el evaluador de evidencia agrega una segunda llamada de recuperación por pregunta; evaluar si conviene compartir el resultado entre ambos pasos.
+9. **Consulta de recuperación más representativa:** hoy la búsqueda y el re-ranking usan los primeros `MAX_CHARS_CONSULTA_RECUPERACION` caracteres del proyecto (1.500 por defecto) para que el paso sea viable en CPU, mientras que el análisis recibe la descripción completa. Evaluar alternativas: resumir el proyecto con el modelo local, o consultar por secciones (relacionado con la descomposición de consultas del punto 2).

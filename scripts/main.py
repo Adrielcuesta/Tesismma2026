@@ -119,7 +119,11 @@ def _run_analysis_impl(
         if usar_rag:
             try:
                 retriever = rag_components._construir_retriever(vector_db)
-                fuentes_docs_evaluador = retriever.invoke(descripcion_nuevo_proyecto)
+                # La consulta de recuperación se acota: embeber y re-rankear el proyecto completo
+                # (hasta 15.000 caracteres) tardaba más de 12 minutos en CPU; las preguntas con
+                # las que se evaluó el sistema tienen entre 217 y 301 caracteres.
+                consulta_recuperacion = descripcion_nuevo_proyecto[:config.MAX_CHARS_CONSULTA_RECUPERACION]
+                fuentes_docs_evaluador = retriever.invoke(consulta_recuperacion)
                 contexto_para_evaluador = "\n\n".join(d.page_content for d in fuentes_docs_evaluador) or "(sin fragmentos recuperados)"
                 # El evaluador SIEMPRE usa un modelo local fijo (igual criterio que
                 # el juez de Ragas), sin importar qué modelo haya elegido el usuario
@@ -182,7 +186,10 @@ def _run_analysis_impl(
         # --- FIN evaluador de evidencia ------------------------------------------
 
         if usar_rag:
-            qa_chain = rag_components.crear_cadena_rag(llm, vector_db)
+            # Se reutilizan los fragmentos que ya recuperó el evaluador (misma búsqueda, mismo
+            # re-ranking): no se repite el paso más caro. Si no hubo recuperación previa, la
+            # cadena busca por su cuenta como antes.
+            qa_chain = rag_components.crear_cadena_rag(llm, vector_db, documentos_precalculados=fuentes_docs_evaluador or None)
             if not qa_chain: return None
             logger.info("Invocando la cadena RAG principal...")
             respuesta_rag_dict = qa_chain.invoke({"query": descripcion_nuevo_proyecto})

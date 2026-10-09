@@ -5,6 +5,9 @@ from langchain_classic.retrievers.contextual_compression import ContextualCompre
 from langchain_classic.retrievers.document_compressors.cross_encoder_rerank import CrossEncoderReranker
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.documents import Document
+from typing import List, Optional
 import logging
 import os
 
@@ -93,6 +96,18 @@ Clasificá la relación entre el contexto y el proyecto en UNA SOLA de estas tre
 
 Responde ÚNICAMENTE con una de estas tres palabras exactas, sin ningún texto adicional: CORRECTO, AMBIGUO o INSUFICIENTE.
 """
+
+
+class RetrieverFijo(BaseRetriever):
+    """Retriever que devuelve SIEMPRE los fragmentos ya recuperados y re-rankeados,
+    sin volver a buscar en la base vectorial ni a pasar por el cross-encoder.
+    Se usa para que la cadena de generación reutilice lo que ya recuperó el evaluador
+    de evidencia: con consultas largas, el re-ranking en CPU es el paso más caro del
+    sistema, y repetirlo daba exactamente los mismos fragmentos."""
+    documentos: List[Document]
+
+    def _get_relevant_documents(self, query: str, *, run_manager=None) -> List[Document]:
+        return self.documentos
 
 
 def _construir_retriever(vector_db_instance):
@@ -205,12 +220,16 @@ def get_llm_instance(model_id: str):
         return None
 
 
-def crear_cadena_rag(llm, vector_db_instance):
+def crear_cadena_rag(llm, vector_db_instance, documentos_precalculados: Optional[List[Document]] = None):
     if not llm or not vector_db_instance:
         logger.error("Instancia de LLM o Vector DB no proporcionada.")
         return None
     try:
-        final_retriever = _construir_retriever(vector_db_instance)
+        if documentos_precalculados:
+            logger.info(f"--- Se reutilizan los {len(documentos_precalculados)} fragmentos ya recuperados (sin repetir búsqueda ni re-ranking) ---")
+            final_retriever = RetrieverFijo(documentos=documentos_precalculados)
+        else:
+            final_retriever = _construir_retriever(vector_db_instance)
         prompt = PromptTemplate(template=PROMPT_TEMPLATE_STR, input_variables=["context", "question"])
 
         qa_chain = RetrievalQA.from_chain_type(

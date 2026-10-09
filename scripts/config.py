@@ -44,6 +44,10 @@ else:
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 100
 MAX_CHARS_PROYECTO = 15000
+# Largo máximo (en caracteres) del texto con el que se BUSCA en la base vectorial y se re-rankea.
+# El análisis sigue recibiendo la descripción completa (hasta MAX_CHARS_PROYECTO); esto solo acota
+# la consulta de recuperación. Las preguntas de evaluación miden entre 217 y 301 caracteres.
+MAX_CHARS_CONSULTA_RECUPERACION = 1500
 RECREAR_DB = False
 MAX_PAGES_TO_CHECK_FOR_INDEX = 5
 
