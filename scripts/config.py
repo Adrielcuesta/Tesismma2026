@@ -38,7 +38,7 @@ LOCAL_EMBEDDING_MODEL_PATH = os.path.join(MODELOS_LOCALES_PATH, MODEL_SAVE_SUBFO
 if os.path.exists(LOCAL_EMBEDDING_MODEL_PATH):
     EMBEDDING_MODEL_NAME_OR_PATH = LOCAL_EMBEDDING_MODEL_PATH
 else:
-    EMBEDDING_MODEL_NAME_OR_PATH = os.environ.get('EMBEDDING_MODEL_PATH', DEFAULT_EMBEDDING_MODEL_HF_REPO_ID).strip()
+    EMBEDDING_MODEL_NAME_OR_PATH = os.environ.get('EMBEDDING_MODEL_PATH', '').strip() or DEFAULT_EMBEDDING_MODEL_HF_REPO_ID
 
 # --- Configuración de RAG y Embeddings ---
 CHUNK_SIZE = 1000
@@ -127,7 +127,7 @@ INFO_TESIS = {
     "alumno": "Adriel J. Cuesta",
     "institucion_line1": "ITBA - Instituto Tecnológico Buenos Aires",
     "institucion_line2": "Maestría en Management & Analytics",
-    "github_repo_url": "https://github.com/Adrielcuesta/tesismma"
+    "github_repo_url": "https://github.com/Adrielcuesta/tesismma2026"
 }
 
 # --- Funciones de Inicialización ---

@@ -76,7 +76,7 @@ El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de 
   ```
   Ollama debe estar corriendo en segundo plano (`http://localhost:11434`) antes de usar la app o el script de evaluación.
 - **Docker:** Opcional, si se desea ejecutar la versión dockerizada.
-- **API Keys (opcionales):** Solo necesarias si se quiere usar algún modelo en la nube (Gemini, Groq, Mistral). Los modelos locales vía Ollama no requieren ninguna clave real. En `scripts/config.py`, los modelos en la nube están comentados por defecto — descomentarlos para habilitarlos.
+- **API Keys (opcionales):** Solo necesarias si se quiere usar algún modelo en la nube (Gemini, Groq, Mistral). Los modelos locales vía Ollama no requieren ninguna clave real. La lista de modelos disponibles está en `scripts/config.py` y todos aparecen en el desplegable de la aplicación; un modelo cuya clave no esté en el `.env` no funciona (el resto sí), y el script de evaluación lo saltea.
 - **Microsoft C++ Build Tools (Windows):** Recomendado para dependencias que requieren compilación (`numpy`, `onnxruntime`). Ver [Visual Studio Downloads](https://visualstudio.microsoft.com/es/downloads/) ("Herramientas de compilación para Visual Studio", carga de trabajo "Desarrollo para el escritorio con C++").
 
 ## ⚠️ Nota sobre la Base de Conocimiento
@@ -176,6 +176,8 @@ tesismma2026/
    * `metricas_propias_<timestamp>.csv` — cumplimiento de esquema, coherencia interna acción/umbral, y distribución del evaluador de evidencia (CORRECTO/AMBIGUO/INSUFICIENTE), por modelo.
    * `respuestas_crudas_<modelo>_<timestamp>.json` — respaldo de las respuestas generadas por cada modelo, antes de puntuarlas.
    * `log_ejecucion_<timestamp>.txt` — log completo de la ejecución.
+
+   **Logs de la aplicación web:** cada análisis hecho desde la app guarda además un `log_analisis_<timestamp>.txt` en la misma carpeta que su dashboard (`datos/Resultados/<nombre-del-proyecto>/`), con el modelo usado, el resultado del evaluador de evidencia y cualquier error. Estas carpetas no se suben a GitHub (están en `.gitignore`): quedan en la máquina donde se ejecuta.
 
 ## Ejecución con Docker (Opcional)
 

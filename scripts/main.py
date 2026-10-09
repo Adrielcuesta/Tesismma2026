@@ -3,6 +3,7 @@ import os
 import sys
 import logging
 import json
+import datetime
 from pydantic import ValidationError
 from typing import Optional
 
@@ -29,7 +30,46 @@ if not logger.handlers:
     # el error se sigue viendo en consola Y además queda guardado en el archivo.
     logger.propagate = True
 
-def run_analysis(
+def _iniciar_log_de_analisis():
+    """Guarda el log de una corrida hecha desde la app en la MISMA carpeta que el
+    dashboard (datos/Resultados/<proyecto>/log_analisis_<fecha>.txt), para poder
+    auditar después qué pasó en cada ejecución (modelo usado, resultado del
+    evaluador de evidencia, errores). Devuelve el handler para cerrarlo al final,
+    o None si no se pudo (en ese caso el análisis sigue igual, sin log a archivo)."""
+    try:
+        pdf_path = document_utils.obtener_ruta_pdf_proyecto(config.DIRECTORIO_PROYECTO_ANALIZAR)
+        if not pdf_path:
+            return None
+        nombre_pdf = os.path.basename(pdf_path)
+        nombre_base = "".join(c for c in os.path.splitext(nombre_pdf)[0] if c.isalnum() or c in (' ', '_')).rstrip()
+        carpeta = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base)
+        os.makedirs(carpeta, exist_ok=True)
+        ruta_log = os.path.join(carpeta, f"log_analisis_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+        handler = logging.FileHandler(ruta_log, encoding="utf-8")
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+        root_logger = logging.getLogger()
+        if root_logger.level > logging.INFO:
+            root_logger.setLevel(logging.INFO)
+        root_logger.addHandler(handler)
+        logger.info(f"📝 Log de este análisis guardándose en: {ruta_log}")
+        return handler
+    except Exception as e_log:
+        logger.warning(f"No se pudo iniciar el log a archivo del análisis: {e_log}")
+        return None
+
+
+def _cerrar_log_de_analisis(handler):
+    if handler is None:
+        return
+    try:
+        logging.getLogger().removeHandler(handler)
+        handler.close()
+    except Exception:
+        pass
+
+
+def _run_analysis_impl(
     selected_llm_model_id: str,
     force_recreate_db: bool = False,
     is_evaluation_mode: bool = False,
@@ -250,3 +290,30 @@ def run_analysis(
         logger.error(f"Error de validación o tipo: {e}", exc_info=True); raise
     except Exception as e_main_flow:
         logger.error(f"Error catastrófico en el flujo principal: {e_main_flow}", exc_info=True); return None
+
+
+def run_analysis(
+    selected_llm_model_id: str,
+    force_recreate_db: bool = False,
+    is_evaluation_mode: bool = False,
+    eval_question: Optional[str] = None,
+    eval_ground_truth: Optional[str] = None,
+    db_connection: Optional[object] = None,
+    usar_rag: bool = True,
+):
+    """Punto de entrada público (misma firma de siempre, lo usan app.py y evaluate_rag.py).
+    En modo app deja un log en la carpeta del dashboard; en modo evaluación no lo hace,
+    porque evaluate_rag.py ya guarda su propio log en datos/Resultados/evaluaciones_rag/."""
+    handler_log = None if is_evaluation_mode else _iniciar_log_de_analisis()
+    try:
+        return _run_analysis_impl(
+            selected_llm_model_id=selected_llm_model_id,
+            force_recreate_db=force_recreate_db,
+            is_evaluation_mode=is_evaluation_mode,
+            eval_question=eval_question,
+            eval_ground_truth=eval_ground_truth,
+            db_connection=db_connection,
+            usar_rag=usar_rag,
+        )
+    finally:
+        _cerrar_log_de_analisis(handler_log)
