@@ -9,19 +9,37 @@ from .schemas import RiskReport
 
 logger = logging.getLogger(__name__)
 
-# Mapeo de categorías a valores numéricos para calcular la severidad
-SEVERITY_MAPPING = {
-    "bajo": 0.2, "baja": 0.2,
-    "medio": 0.6, "media": 0.6,
-    "alto": 1.0, "alta": 1.0
+# Escala ordinal 1-2-3 para cada eje de la matriz de riesgo (probabilidad x impacto)
+NIVEL_ORDINAL = {
+    "bajo": 1, "baja": 1,
+    "medio": 2, "media": 2,
+    "alto": 3, "alta": 3,
 }
 
-def get_risk_severity_score(impacto: str, probabilidad: str) -> float:
-    """Convierte el impacto y la probabilidad textual en un score de severidad numérico (0-1)."""
-    impacto_score = SEVERITY_MAPPING.get(impacto.lower().strip(), 0)
-    probabilidad_score = SEVERITY_MAPPING.get(probabilidad.lower().strip(), 0)
-    # Usamos un promedio simple para el score de severidad general
-    return (impacto_score + probabilidad_score) / 2.0
+# Umbrales de la exposición (1 a 9) para su lectura en la matriz 3x3
+UMBRAL_EXPOSICION_ALTA = 6    # 6 y 9: Alta   (p. ej. Alto x Media, Alto x Alta)
+UMBRAL_EXPOSICION_MEDIA = 3   # 3 y 4: Media  (p. ej. Medio x Baja, Medio x Media)
+
+def calcular_exposicion(impacto: str, probabilidad: str) -> Optional[int]:
+    """Exposición al riesgo = impacto x probabilidad, con escala 1-2-3 en cada eje
+    (resultado entre 1 y 9). Devuelve None si alguna categoría no es reconocible.
+    Es la convención clásica de la matriz de riesgo: no es una medición, porque el
+    impacto y la probabilidad son estimaciones categóricas del LLM."""
+    i = NIVEL_ORDINAL.get((impacto or "").lower().strip())
+    p = NIVEL_ORDINAL.get((probabilidad or "").lower().strip())
+    if i is None or p is None:
+        return None
+    return i * p
+
+def nivel_exposicion(exposicion: Optional[int]) -> str:
+    """Traduce la exposición (1-9) a Baja / Media / Alta según los umbrales fijados arriba."""
+    if exposicion is None:
+        return "N/D"
+    if exposicion >= UMBRAL_EXPOSICION_ALTA:
+        return "Alta"
+    if exposicion >= UMBRAL_EXPOSICION_MEDIA:
+        return "Media"
+    return "Baja"
 
 def asignar_estado_rag(impacto_str: str, probabilidad_str: str) -> str:
     """Asigna un estado RAG (Rojo, Ámbar, Verde) basado en el impacto y la probabilidad."""
@@ -38,18 +56,21 @@ def asignar_estado_rag(impacto_str: str, probabilidad_str: str) -> str:
 def formatear_y_guardar_reporte(
     risk_report_obj: RiskReport,
     nombre_original_pdf: str,
-    output_path_dir: str
+    output_path_dir: str,
+    sufijo_nombre: str = ""
 ) -> Optional[str]:
     """Toma el objeto RiskReport validado, le añade metadatos finales y lo guarda como JSON."""
     logger.info("Procesando objeto RiskReport para guardado final (JSON)...")
 
     riesgos_con_estado = []
-    # El score de confianza compuesto ya fue calculado en main.py
-    # Aquí solo añadimos el estado RAG para la visualización
+    # La exposición (impacto x probabilidad) y el respaldo en la Base de Conocimiento ya
+    # fueron calculados en main.py; acá solo se añade el estado RAG (Rojo/Ámbar/Verde) y
+    # el nivel textual de la exposición para la visualización.
     for riesgo_item in risk_report_obj.riesgos_identificados:
         estado_rag = asignar_estado_rag(riesgo_item.impacto_estimado, riesgo_item.probabilidad_estimada)
         riesgo_dict = riesgo_item.model_dump()
         riesgo_dict["estado_RAG_sugerido"] = estado_rag
+        riesgo_dict["nivel_exposicion"] = nivel_exposicion(riesgo_item.exposicion_riesgo)
         riesgos_con_estado.append(riesgo_dict)
 
     reporte_final_dict = risk_report_obj.model_dump()
@@ -65,7 +86,7 @@ def formatear_y_guardar_reporte(
 
     # Guardamos el archivo JSON
     clean_filename = "".join(c if c.isalnum() else "_" for c in os.path.splitext(nombre_original_pdf)[0])
-    output_filename_json = f"analisis_riesgos_{clean_filename}.json"
+    output_filename_json = f"analisis_riesgos_{clean_filename}{sufijo_nombre}.json"
     output_file_path_json = os.path.join(output_path_dir, output_filename_json)
 
     try:

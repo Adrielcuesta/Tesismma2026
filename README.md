@@ -15,7 +15,7 @@ Repositorio: [https://github.com/Adrielcuesta/tesismma2026](https://github.com/A
 
 ## Descripción del Proyecto
 
-Este proyecto implementa un sistema de **Generación Aumentada por Recuperación (RAG)** enfocado en el análisis de riesgos para proyectos de instalación de maquinaria industrial. El usuario describe un proyecto (o carga un PDF con su descripción) y el sistema identifica, evalúa y detalla riesgos potenciales a partir de una Base de Conocimiento documental, incluyendo responsables de mitigación, una acción concreta y un umbral de alerta medible para cada riesgo.
+Este proyecto implementa un sistema de **Generación Aumentada por Recuperación (RAG)** enfocado en el análisis de riesgos para proyectos de instalación de maquinaria industrial. El usuario carga un PDF con la descripción del proyecto o un pliego completo y el sistema identifica, evalúa y detalla riesgos potenciales a partir de una Base de Conocimiento documental, incluyendo responsables de mitigación, una acción concreta y un umbral de alerta medible para cada riesgo.
 
 La interacción principal se realiza a través de una **aplicación web desarrollada con Flask**. El sistema permite **seleccionar dinámicamente entre múltiples Modelos de Lenguaje Grandes (LLMs)**, tanto en la nube (Google Gemini, Groq/Llama, Mistral) como **modelos locales ejecutados enteramente en la máquina del usuario vía Ollama** (Qwen2.5, Llama 3.1, Mistral 7B, Gemma2) — esto último permite correr el sistema y su evaluación completa sin ningún costo de API y sin que los datos salgan de la máquina local.
 
@@ -23,7 +23,7 @@ Para garantizar la precisión, el sistema incorpora un **módulo de re-ranking m
 
 Al finalizar, el sistema genera:
 - Un **reporte JSON** estructurado con los hallazgos detallados.
-- Un **dashboard HTML dinámico e interactivo** con los riesgos, la evidencia utilizada y un aviso visible cuando la evidencia recuperada es genérica o insuficiente.
+- Un **dashboard HTML dinámico e interactivo** con los riesgos (con su exposición = impacto × probabilidad y su respaldo en la Base de Conocimiento), la evidencia utilizada con la relevancia que le asignó el re-ranker, y un aviso visible cuando la evidencia recuperada es genérica o insuficiente.
 - Opcionalmente, un **reporte en formato PDF**.
 
 El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de forma cuantitativa y reproducible la calidad del pipeline RAG, comparando el desempeño entre distintos LLMs (locales y en la nube), con y sin recuperación de contexto (ablation), bajo la misma configuración.
@@ -38,6 +38,7 @@ El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de 
   - **Evaluador de Evidencia (CRAG-lite):** clasifica la evidencia recuperada como CORRECTO / AMBIGUO / INSUFICIENTE antes de generar el análisis (adaptado de Yan et al., 2024, *Corrective Retrieval Augmented Generation*, sin el componente de búsqueda web del paper original, para mantener el sistema 100% local y auditable). Corre siempre en un modelo local fijo, independiente del modelo elegido para el análisis, para no consumir cuota de ninguna API paga.
 - **Validación Estructurada de Salida:** Pydantic garantiza que cada riesgo tenga descripción, tipo, impacto, probabilidad, responsables, una acción de mitigación concreta y un umbral de alerta medible.
 - **Reportes Completos y Trazables:** JSON, dashboard HTML interactivo y PDF, con evidencia y aviso de calidad de evidencia cuando corresponde.
+- **Dos indicadores por riesgo, deliberadamente separados:** (1) **exposición** = impacto × probabilidad, escala 1-2-3 por eje (1 a 9; 1-2 baja, 3-4 media, 6-9 alta), una convención de matriz de riesgo cuyo impacto y probabilidad estima el LLM; (2) **respaldo en la Base de Conocimiento** = mejor score (0-100%) del re-ranker entre el texto del riesgo y los fragmentos recuperados, calculado localmente sin llamadas extra a ninguna API. El respaldo mide cuánto se apoya el riesgo en la bibliografía de referencia. Como el LLM genera los riesgos a partir de esos mismos fragmentos, un valor alto indica fidelidad al contexto recuperado, no una validación independiente; un valor bajo no implica que el riesgo sea falso (puede surgir de datos específicos del proyecto) ni uno alto que sea correcto. La decisión final sobre cada riesgo es siempre del usuario.
 - **Framework de Evaluación Integrado (Ragas):**
   - Mide `faithfulness`, `answer_relevancy`, `context_precision` y `context_recall`.
   - **Ablation automático RAG vs. sin RAG:** cada modelo se evalúa con y sin acceso a la Base de Conocimiento, en la misma ejecución.
@@ -99,7 +100,7 @@ tesismma2026/
 ├── scripts/
 │   ├── __init__.py
 │   ├── config.py               # Configuración central (rutas, API keys, modelos, embeddings, reranker)
-│   ├── schemas.py               # Esquemas Pydantic (incluye RiskItem de 9 campos y clasificación de evidencia)
+│   ├── schemas.py              # Esquemas Pydantic (incluye RiskItem de 9 campos y clasificación de evidencia)
 │   ├── document_utils.py       # Utilidades para procesar PDFs
 │   ├── vector_db_manager.py    # Gestión de ChromaDB y embeddings
 │   ├── rag_components.py       # Cadena RAG, cadena sin RAG (ablation) y evaluador de evidencia (CRAG-lite)
@@ -177,7 +178,33 @@ tesismma2026/
    * `respuestas_crudas_<modelo>_<timestamp>.json` — respaldo de las respuestas generadas por cada modelo, antes de puntuarlas.
    * `log_ejecucion_<timestamp>.txt` — log completo de la ejecución.
 
-   **Logs de la aplicación web:** cada análisis hecho desde la app guarda además un `log_analisis_<timestamp>.txt` en la misma carpeta que su dashboard (`datos/Resultados/<nombre-del-proyecto>/`), con el modelo usado, el resultado del evaluador de evidencia y cualquier error. Estas carpetas no se suben a GitHub (están en `.gitignore`): quedan en la máquina donde se ejecuta.
+   **Historial de análisis:** cada ejecución desde la app guarda sus resultados en `datos/Resultados/<nombre-del-proyecto>/` con una marca de fecha y hora en el nombre (`analisis_riesgos_<proyecto>_<AAAAMMDD_HHMMSS>.json`, `dashboard_<proyecto>_<AAAAMMDD_HHMMSS>.html` y `log_analisis_<AAAAMMDD_HHMMSS>.txt`, los tres con la misma marca), de modo que un análisis nuevo nunca pisa a los anteriores.
+   **Logs de la aplicación web:** el `log_analisis_<timestamp>.txt` incluye el modelo usado, el resultado del evaluador de evidencia y cualquier error. Estas carpetas no se suben a GitHub (están en `.gitignore`): quedan en la máquina donde se ejecuta.
+
+## Configuración de Referencia y Pruebas Exploratorias
+
+**Configuración usada en los resultados de evaluación (Ragas y análisis de referencia)**, definida en `scripts/config.py`:
+
+| Parámetro | Valor | Qué controla |
+| :--- | :--- | :--- |
+| Tamaño / solapamiento de fragmento | 1000 / 100 caracteres | Segmentación de la Base de Conocimiento (206 fragmentos). |
+| `K_RETRIEVED_DOCS_BEFORE_RERANK` | 50 | Fragmentos recuperados por similitud antes del re-ranking. |
+| `RERANKER_TOP_N` | 4 | Fragmentos que el re-ranker entrega al LLM. |
+| `MAX_CHARS_CONSULTA_RECUPERACION` | 15.000 | Largo del texto del proyecto usado como consulta de recuperación. |
+| `MAX_CHARS_PROYECTO` | 15.000 | Largo del texto del proyecto que recibe el LLM. |
+| Temperatura del LLM | 0,2 | Generación del análisis. |
+
+**Pruebas exploratorias de ampliación de contexto.** Se probaron otras configuraciones sobre un único proyecto de ejemplo y una única base de conocimiento genérica (PMBOK), con una ejecución por configuración. Son pruebas exploratorias, sin pretensión de significancia estadística, y el LLM no es determinista.
+
+| Configuración | Modelo | Riesgos | Observación |
+| :--- | :--- | :---: | :--- |
+| Consulta de 1.500 caracteres | Gemini 3.5 Flash | 4 | ~2 min; relevancia de la evidencia ~11 % |
+| Consulta de 15.000 caracteres (referencia) | Gemini 3.5 Flash | 4 | ~12,5 min en CPU; relevancia ~89 %. |
+| `RERANKER_TOP_N = 6` | Gemini 3.5 Flash | 5 | No incrementó la cantidad de riesgos de forma proporcional a los fragmentos. |
+| `MAX_CHARS_PROYECTO = 60.000` (documento completo, 56.458 caracteres) | Gemini 3.5 Flash | 5 | No aumentó la cantidad de riesgos; cambió su composición. |
+| `MAX_CHARS_PROYECTO = 60.000` | Gemma 2 9B (local) | 2 | Riesgos genéricos, respaldo 0 % y 10 %, y un error 500 de Ollama con reintento. |
+
+**Decisión:** se mantienen `MAX_CHARS_PROYECTO = 15.000` y `RERANKER_TOP_N = 4`. Con modelos locales, la ventana de contexto limitada y los recursos de cómputo disponibles degradan la salida cuando se amplía el texto; con el modelo en la nube, ampliarlo no aumentó la cantidad de riesgos detectados. Con un modelo en la nube y un pliego largo puede subirse `MAX_CHARS_PROYECTO` a mano en `scripts/config.py`. Todas las pruebas usaron un proyecto genérico y una base de conocimiento genérica, y no hay una lista de riesgos de referencia elaborada por un experto, por lo que no se midió precisión ni recall.
 
 ## Ejecución con Docker (Opcional)
 
@@ -201,7 +228,9 @@ Accedé a `http://localhost:8080`. Verificá que tu `.env` tenga las claves nece
 
 * **`API Key not found` al usar un LLM en la nube:** verificá que `.env` exista y que el nombre de la variable coincida exactamente con lo esperado en `scripts/config.py`.
 
-* **La primera consulta tarda muchos minutos (en CPU):** el re-ranker (`bge-reranker-v2-m3`) es un modelo grande y su costo crece con el largo del texto consultado. Por eso la búsqueda usa solo los primeros `MAX_CHARS_CONSULTA_RECUPERACION` caracteres del proyecto (ver `scripts/config.py`). Con GPU es mucho más rápido.
+* **La primera consulta tarda muchos minutos (en CPU):** el re-ranker (`bge-reranker-v2-m3`) es un modelo grande y su costo crece con el largo del texto consultado. En una CPU sin GPU, la búsqueda con la descripción completa (15.000 caracteres) tarda ~11 minutos y el análisis completo ~12,5 minutos. Si priorizás la velocidad, bajá `MAX_CHARS_CONSULTA_RECUPERACION` en `scripts/config.py` (con 1.500 caracteres el análisis completo tarda ~2 minutos, pero la evidencia recuperada resulta mucho menos relevante: ~11 % frente a ~89 % según el re-ranker). Con GPU es mucho más rápido.
+
+* **Un modelo local devuelve pocos riesgos, genéricos, o falla con `500 Internal Server Error` al analizar un pliego largo:** los modelos locales tienen una ventana de contexto limitada (Gemma 2 9B: 8K tokens; Ollama usa por defecto un contexto chico) y en CPU hay poca memoria disponible. Con `MAX_CHARS_PROYECTO = 60000`, Gemma 2 9B devolvió 2 riesgos genéricos y un error 500 con reintento. Dejá `MAX_CHARS_PROYECTO = 15000` para modelos locales y reservá valores mayores para modelos en la nube. La causa exacta del error 500 no fue confirmada.
 
 * **Los modelos locales no responden / error de conexión a `localhost:11434`:** confirmá que Ollama esté corriendo (abrí `http://localhost:11434` en el navegador, debería decir "Ollama is running") y que el modelo esté descargado (`ollama list`). Esto aplica también si se eligió un modelo en la nube para el análisis: el evaluador de evidencia (CRAG-lite) y el juez de Ragas siempre requieren Ollama activo.
 
@@ -219,4 +248,5 @@ Accedé a `http://localhost:8080`. Verificá que tu `.env` tenga las claves nece
 6. **Caché de Embeddings** (ej. Redis) para evitar recalcular embeddings de documentos sin cambios.
 7. **Soporte Multiusuario y Persistencia Histórica** con base de datos relacional/NoSQL y autenticación.
 8. **Esquema de MLOps Continuo:** integración con LangSmith u otra herramienta de observabilidad para trazabilidad de costos, latencias y feedback humano sobre los reportes generados.
-9. **Consulta de recuperación más representativa:** hoy la búsqueda y el re-ranking usan los primeros `MAX_CHARS_CONSULTA_RECUPERACION` caracteres del proyecto (1.500 por defecto) para que el paso sea viable en CPU, mientras que el análisis recibe la descripción completa. Evaluar alternativas: resumir el proyecto con el modelo local, o consultar por secciones (relacionado con la descomposición de consultas del punto 2).
+9. **Consulta de recuperación más representativa:** hoy la búsqueda y el re-ranking usan hasta `MAX_CHARS_CONSULTA_RECUPERACION` caracteres del proyecto (15.000 por defecto, lo que cuesta ~11 minutos en CPU) porque un recorte a 1.500 caracteres recuperó evidencia mucho menos relevante. Evaluar alternativas: resumir el proyecto con el modelo local, o consultar por secciones (relacionado con la descomposición de consultas del punto 2).
+10. **Validar el respaldo en la Base de Conocimiento:** los valores del re-ranker y sus umbrales no están calibrados contra criterio humano. Comparar contra una lista de riesgos de referencia elaborada por un experto (precisión y recall) para saber si el indicador discrimina.

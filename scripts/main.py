@@ -9,7 +9,7 @@ from typing import Optional
 
 from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator
 from .schemas import RiskReport, SourceChunk, LLMResponse, RiskItem
-from .report_utils import get_risk_severity_score
+from .report_utils import calcular_exposicion
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +23,6 @@ if not logger.handlers:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(module)s.%(funcName)s - %(message)s', datefmt='%H:%M:%S')
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
-    # CORREGIDO: antes era 'False'. Con 'False', los errores de este módulo
-    # nunca llegaban al archivo de log configurado por evaluate_rag.py -- solo
-    # se veían en la consola en vivo. Esto nos dejó sin poder diagnosticar por
-    # qué fallaron 2 modelos por completo en una ejecución anterior. Con 'True',
-    # el error se sigue viendo en consola Y además queda guardado en el archivo.
     logger.propagate = True
 
 def _iniciar_log_de_analisis():
@@ -44,8 +39,10 @@ def _iniciar_log_de_analisis():
         nombre_base = "".join(c for c in os.path.splitext(nombre_pdf)[0] if c.isalnum() or c in (' ', '_')).rstrip()
         carpeta = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base)
         os.makedirs(carpeta, exist_ok=True)
-        ruta_log = os.path.join(carpeta, f"log_analisis_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+        marca_tiempo = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        ruta_log = os.path.join(carpeta, f"log_analisis_{marca_tiempo}.txt")
         handler = logging.FileHandler(ruta_log, encoding="utf-8")
+        handler.marca_tiempo = marca_tiempo  # la reutilizan el JSON y el dashboard de esta corrida
         handler.setLevel(logging.INFO)
         handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
         root_logger = logging.getLogger()
@@ -77,8 +74,12 @@ def _run_analysis_impl(
     eval_ground_truth: Optional[str] = None,
     db_connection: Optional[object] = None,
     usar_rag: bool = True,
+    marca_tiempo: Optional[str] = None,
 ):
     if not is_evaluation_mode: logger.info(f"--- INICIANDO ANÁLISIS (Modelo: {selected_llm_model_id}) ---")
+    # Cada ejecución guarda su JSON y su dashboard con esta marca en el nombre, para no
+    # pisar los análisis anteriores del mismo proyecto (el log usa la misma marca).
+    marca_tiempo = marca_tiempo or datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     try:
         config.inicializar_directorios_datos()
 
@@ -107,11 +108,12 @@ def _run_analysis_impl(
 
         if not descripcion_nuevo_proyecto: logger.error("La descripción del proyecto está vacía."); return None
 
-        # --- NUEVO: Evaluador de evidencia CRAG-lite -----------------------------
+        # -------------------------Evaluador de evidencia CRAG-lite -----------------------------
+        #
         # Se ejecuta ANTES de generar el análisis completo, y solo si se está
         # usando RAG (sin RAG no hay evidencia que evaluar por diseño). Reutiliza
         # el mismo retriever (embeddings + re-ranker) que usaría la generación
-        # normal -- a costa de una segunda llamada de recuperación más adelante
+        # normal a costa de una segunda llamada de recuperación más adelante
         # (barata, no involucra al LLM), se mantiene la cadena de generación ya
         # probada (crear_cadena_rag) completamente intacta.
         clasificacion_evidencia = None
@@ -119,9 +121,6 @@ def _run_analysis_impl(
         if usar_rag:
             try:
                 retriever = rag_components._construir_retriever(vector_db)
-                # La consulta de recuperación se acota: embeber y re-rankear el proyecto completo
-                # (hasta 15.000 caracteres) tardaba más de 12 minutos en CPU; las preguntas con
-                # las que se evaluó el sistema tienen entre 217 y 301 caracteres.
                 consulta_recuperacion = descripcion_nuevo_proyecto[:config.MAX_CHARS_CONSULTA_RECUPERACION]
                 fuentes_docs_evaluador = retriever.invoke(consulta_recuperacion)
                 contexto_para_evaluador = "\n\n".join(d.page_content for d in fuentes_docs_evaluador) or "(sin fragmentos recuperados)"
@@ -172,9 +171,9 @@ def _run_analysis_impl(
             nombre_base_proyecto = "".join(c for c in os.path.splitext(nombre_pdf_proyecto_detectado)[0] if c.isalnum() or c in (' ', '_')).rstrip()
             output_dir_especifico = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base_proyecto)
             os.makedirs(output_dir_especifico, exist_ok=True)
-            ruta_json_guardado = report_utils.formatear_y_guardar_reporte(reporte_insuficiente, nombre_pdf_proyecto_detectado, output_dir_especifico)
+            ruta_json_guardado = report_utils.formatear_y_guardar_reporte(reporte_insuficiente, nombre_pdf_proyecto_detectado, output_dir_especifico, sufijo_nombre=f"_{marca_tiempo}")
             if not ruta_json_guardado: return None
-            dashboard_html_filename = f"dashboard_{nombre_base_proyecto}.html"
+            dashboard_html_filename = f"dashboard_{nombre_base_proyecto}_{marca_tiempo}.html"
             ruta_output_dashboard_html = os.path.join(output_dir_especifico, dashboard_html_filename)
             dashboard_generator.generar_dashboard_html(
                 ruta_json_resultados=ruta_json_guardado, ruta_output_dashboard_html=ruta_output_dashboard_html,
@@ -183,7 +182,7 @@ def _run_analysis_impl(
             if os.path.exists(ruta_output_dashboard_html):
                 return os.path.normpath(os.path.relpath(ruta_output_dashboard_html, config.PROJECT_ROOT)).replace("\\", "/")
             return None
-        # --- FIN evaluador de evidencia ------------------------------------------
+        # --- FIN evaluador de evidencia ---
 
         if usar_rag:
             # Se reutilizan los fragmentos que ya recuperó el evaluador (misma búsqueda, mismo
@@ -229,12 +228,22 @@ def _run_analysis_impl(
 
         logger.info(f"Metadatos de la evidencia recuperada: {[doc.metadata for doc in fuentes_docs]}")
 
-        logger.info("Calculando score de confianza compuesto...")
-        scores = [doc.metadata.get('relevance_score', 0.0) for doc in fuentes_docs if doc.metadata.get('relevance_score') is not None]
-        max_relevance_score = max(scores) if scores else 0.5
-        for riesgo in llm_response_obj.riesgos_identificados:
-            severity_score = get_risk_severity_score(riesgo.impacto_estimado, riesgo.probabilidad_estimada)
-            riesgo.score_confianza_compuesto = min((max_relevance_score * 0.6) + (severity_score * 0.4), 1.0)
+        # Dos indicadores separados por riesgo (no se mezclan en un solo número):
+        #  - exposición = impacto x probabilidad (convención de matriz de riesgo, 1-9)
+        #  - respaldo en la Base de Conocimiento = mejor score del re-ranker entre el
+        #    texto del riesgo y los fragmentos recuperados (0-1). Solo fuera de la evaluación
+        #    Ragas, para no sumar cómputo a las corridas masivas.
+        logger.info("Calculando exposición al riesgo y respaldo en la Base de Conocimiento...")
+        riesgos_generados = llm_response_obj.riesgos_identificados
+        for riesgo in riesgos_generados:
+            riesgo.exposicion_riesgo = calcular_exposicion(riesgo.impacto_estimado, riesgo.probabilidad_estimada)
+        if not is_evaluation_mode:
+            respaldos = rag_components.puntuar_riesgos_contra_evidencia(
+                [f"{r.descripcion_riesgo}. {r.explicacion_riesgo}" for r in riesgos_generados],
+                fuentes_docs,
+            )
+            for riesgo, respaldo in zip(riesgos_generados, respaldos):
+                riesgo.respaldo_base_conocimiento = respaldo
 
         if is_evaluation_mode:
             return {
@@ -281,10 +290,10 @@ def _run_analysis_impl(
         nombre_base_proyecto = "".join(c for c in os.path.splitext(nombre_pdf_proyecto_detectado)[0] if c.isalnum() or c in (' ', '_')).rstrip()
         output_dir_especifico = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base_proyecto)
         os.makedirs(output_dir_especifico, exist_ok=True)
-        ruta_json_guardado = report_utils.formatear_y_guardar_reporte(reporte_final, nombre_pdf_proyecto_detectado, output_dir_especifico)
+        ruta_json_guardado = report_utils.formatear_y_guardar_reporte(reporte_final, nombre_pdf_proyecto_detectado, output_dir_especifico, sufijo_nombre=f"_{marca_tiempo}")
         if not ruta_json_guardado: return None
 
-        dashboard_html_filename = f"dashboard_{nombre_base_proyecto}.html"
+        dashboard_html_filename = f"dashboard_{nombre_base_proyecto}_{marca_tiempo}.html"
         ruta_output_dashboard_html = os.path.join(output_dir_especifico, dashboard_html_filename)
         dashboard_generator.generar_dashboard_html(
             ruta_json_resultados=ruta_json_guardado, ruta_output_dashboard_html=ruta_output_dashboard_html,
@@ -321,6 +330,7 @@ def run_analysis(
             eval_ground_truth=eval_ground_truth,
             db_connection=db_connection,
             usar_rag=usar_rag,
+            marca_tiempo=getattr(handler_log, "marca_tiempo", None),
         )
     finally:
         _cerrar_log_de_analisis(handler_log)

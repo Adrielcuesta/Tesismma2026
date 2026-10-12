@@ -26,11 +26,17 @@ def image_to_base64(image_filename_in_static_images):
         logger.error(f"Error codificando imagen {image_path} a Base64: {e}")
         return ""
 
-def get_confidence_class(score):
-    if score is None: return "conf-none-text"
-    if score >= 0.7: return "conf-high-text"
-    if score >= 0.45: return "conf-medium-text"
-    return "conf-low-text"
+def formatear_exposicion(riesgo):
+    """Texto de la exposición (impacto x probabilidad), p. ej. '6/9 (Alta)'."""
+    exposicion = riesgo.get("exposicion_riesgo")
+    if exposicion is None:
+        return "N/D"
+    return f"{exposicion}/9 ({escape(str(riesgo.get('nivel_exposicion', 'N/D')))})"
+
+def formatear_respaldo(riesgo):
+    """Respaldo en la Base de Conocimiento (score del re-ranker, 0-1) como porcentaje."""
+    respaldo = riesgo.get("respaldo_base_conocimiento")
+    return f"{respaldo:.0%}" if respaldo is not None else "N/D"
 
 def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, info_tesis_config=None):
     try:
@@ -43,9 +49,7 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
     nombre_proyecto_analizado = escape(datos_analisis.get("nombre_proyecto_analizado", "Proyecto No Especificado"))
     riesgos_identificados = datos_analisis.get("riesgos_identificados_estructurados", [])
     fragmentos_fuente = datos_analisis.get("fragmentos_fuente", [])
-
-    # --- Resultado del evaluador de evidencia CRAG-lite ---
-
+    # Resultado del evaluador de evidencia CRAG-lite
     evaluacion_evidencia = datos_analisis.get("evaluacion_evidencia")
     advertencia_evidencia = datos_analisis.get("advertencia_evidencia")
     it = info_tesis_config or {}
@@ -122,7 +126,6 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
         <h2 class="project-analysis-title">Resultados del Análisis para: {nombre_proyecto_analizado}</h2>
     '''
 
-    
     if evaluacion_evidencia == "INSUFICIENTE":
         final_html += f'''
         <div class="evidencia-banner insuficiente">
@@ -145,9 +148,6 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
             emoji = risk_category_emojis.get(estado_key, '')
             summary_html_parts.append(f'<div class="risk-section"><h3 class="risk-section-title"><span class="section-emoji">{emoji}</span>{info_estado["titulo"]}</h3><div class="dashboard-grid">')
             for riesgo in riesgos_en_seccion:
-                score = riesgo.get("score_confianza_compuesto")
-                score_display = f"{score:.0%}" if score is not None else "N/D"
-                conf_class = get_confidence_class(score)
                 summary_html_parts.append(f'''
                 <div class="risk-card {info_estado['clase']}">
                     <h6>{escape(riesgo.get("descripcion_riesgo","N/A"))}</h6>
@@ -159,7 +159,8 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
                         <p><span class="detail-label">Acción:</span> {escape(riesgo.get("accion_mitigacion", "N/A"))}</p>
                     </div>
                     <div class="risk-card-confidence">
-                        <span class="confidence-score {conf_class}">{score_display}</span>
+                        <p><span class="detail-label">Exposición (impacto × prob.):</span> <span class="confidence-score conf-none-text">{formatear_exposicion(riesgo)}</span></p>
+                        <p><span class="detail-label">Respaldo en base de conocimiento:</span> <span class="confidence-score conf-none-text">{formatear_respaldo(riesgo)}</span></p>
                     </div>
                 </div>''')
             summary_html_parts.append('</div></div>')
@@ -176,9 +177,6 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
     if riesgos_identificados:
         final_html += '<div class="details-section"><h3 class="details-section-title">Detalles Completos de Riesgos Identificados</h3>'
         for riesgo in riesgos_identificados:
-            score = riesgo.get("score_confianza_compuesto")
-            score_display = f"{score:.0%}" if score is not None else "N/D"
-            conf_class = get_confidence_class(score)
             final_html += f'''
             <div class="risk-detail-item">
                 <h4><span class="section-emoji">ℹ️</span>{escape(riesgo.get("descripcion_riesgo","N/A"))}</h4>
@@ -189,7 +187,8 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
                 <p><span class="detail-label">Acción de Mitigación:</span> {escape(riesgo.get("accion_mitigacion", "N/A"))}</p>
                 <p><span class="detail-label">Umbral de Alerta:</span> {escape(riesgo.get("umbral_alerta", "N/A"))}</p>
                 <p><span class="detail-label">Tipo de Riesgo:</span> {escape(riesgo.get("tipo_de_riesgo", "N/A"))}</p>
-                <p><span class="detail-label">Score de Confianza:</span> <span class="confidence-score {conf_class}">{score_display}</span></p>
+                <p><span class="detail-label">Exposición (impacto × probabilidad):</span> <span class="confidence-score conf-none-text">{formatear_exposicion(riesgo)}</span></p>
+                <p><span class="detail-label">Respaldo en la Base de Conocimiento:</span> <span class="confidence-score conf-none-text">{formatear_respaldo(riesgo)}</span></p>
             </div>'''
         final_html += '</div>'
 
@@ -198,7 +197,20 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
     if fragmentos_fuente:
         documentos_unicos = sorted(list(set(frag.get("nombre_documento_fuente") for frag in fragmentos_fuente if frag.get("nombre_documento_fuente"))))
         list_items = "".join([f'<li>{escape(doc)}</li>' for doc in documentos_unicos])
-        kb_html = f'<div class="kb-section"><h2>Documentos de la Base de Conocimiento Utilizada</h2><ul>{list_items}</ul></div>'
+        # Fragmentos recuperados con la relevancia que les asignó el re-ranker (0-1)
+        filas = []
+        for frag in fragmentos_fuente:
+            rel = frag.get("score_relevancia")
+            rel_txt = f"{rel:.0%}" if rel is not None else "N/D"
+            filas.append(f'<tr><td>{escape(str(frag.get("nombre_documento_fuente", "N/D")))}</td><td>{escape(str(frag.get("numero_pagina", "N/D")))}</td><td>{rel_txt}</td></tr>')
+        scores_validos = [f.get("score_relevancia") for f in fragmentos_fuente if f.get("score_relevancia") is not None]
+        resumen_rel = f'<p>Relevancia máxima de la evidencia recuperada (re-ranker): <strong>{max(scores_validos):.0%}</strong></p>' if scores_validos else ""
+        tabla_frag = (
+            f'{resumen_rel}<table style="border-collapse:collapse;margin-top:8px;">'
+            '<tr><th style="text-align:left;padding:4px 12px 4px 0;">Documento</th><th style="text-align:left;padding:4px 12px;">Página</th><th style="text-align:left;padding:4px 12px;">Relevancia</th></tr>'
+            + "".join(filas) + '</table>'
+        )
+        kb_html = f'<div class="kb-section"><h2>Documentos de la Base de Conocimiento Utilizada</h2><ul>{list_items}</ul><h3>Fragmentos recuperados</h3>{tabla_frag}</div>'
     final_html += kb_html
 
     # --- FOOTER ---
@@ -245,11 +257,11 @@ if __name__ == '__main__':
         "evaluacion_evidencia": "AMBIGUO",
         "advertencia_evidencia": "La evidencia recuperada es genérica, no específica para este proyecto de prueba.",
         "riesgos_identificados_estructurados": [
-            {"descripcion_riesgo": "Fallo crítico en sistema por sobrecalentamiento", "tipo_de_riesgo": "Implícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Alto", "probabilidad_estimada": "Alta", "estado_RAG_sugerido": "Rojo", "score_confianza_compuesto": 0.85, "responsabilidad_mitigacion": "Mantenimiento", "responsable_accidente": "Jefe de Operaciones", "accion_mitigacion": "Instalar sensores de temperatura con corte automático y realizar inspección semanal.", "umbral_alerta": "Temperatura de operación superior a 80°C sostenida por más de 5 minutos."},
-            {"descripcion_riesgo": "Retrasos en la entrega de componentes clave", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Medio", "probabilidad_estimada": "Media", "estado_RAG_sugerido": "Ámbar", "score_confianza_compuesto": 0.65, "responsabilidad_mitigacion": "Compras", "responsable_accidente": "Logística", "accion_mitigacion": "Confirmar stock de proveedor alternativo antes del inicio de obra.", "umbral_alerta": "Confirmación de entrega no recibida 10 días antes de la fecha planificada."},
-            {"descripcion_riesgo": "Documentación del manual de usuario incompleta", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Bajo", "probabilidad_estimada": "Baja", "estado_RAG_sugerido": "Verde", "score_confianza_compuesto": 0.30, "responsabilidad_mitigacion": "Ingeniería", "responsable_accidente": "Equipo de Proyecto", "accion_mitigacion": "Revisar manual contra checklist de contenidos mínimos antes de la entrega.", "umbral_alerta": "Menos de 5 días hábiles restantes antes de la fecha de entrega sin revisión completada."}
+            {"descripcion_riesgo": "Fallo crítico en sistema por sobrecalentamiento", "tipo_de_riesgo": "Implícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Alto", "probabilidad_estimada": "Alta", "estado_RAG_sugerido": "Rojo", "exposicion_riesgo": 9, "nivel_exposicion": "Alta", "respaldo_base_conocimiento": 0.72, "responsabilidad_mitigacion": "Mantenimiento", "responsable_accidente": "Jefe de Operaciones", "accion_mitigacion": "Instalar sensores de temperatura con corte automático y realizar inspección semanal.", "umbral_alerta": "Temperatura de operación superior a 80°C sostenida por más de 5 minutos."},
+            {"descripcion_riesgo": "Retrasos en la entrega de componentes clave", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Medio", "probabilidad_estimada": "Media", "estado_RAG_sugerido": "Ámbar", "exposicion_riesgo": 4, "nivel_exposicion": "Media", "respaldo_base_conocimiento": 0.41, "responsabilidad_mitigacion": "Compras", "responsable_accidente": "Logística", "accion_mitigacion": "Confirmar stock de proveedor alternativo antes del inicio de obra.", "umbral_alerta": "Confirmación de entrega no recibida 10 días antes de la fecha planificada."},
+            {"descripcion_riesgo": "Documentación del manual de usuario incompleta", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Bajo", "probabilidad_estimada": "Baja", "estado_RAG_sugerido": "Verde", "exposicion_riesgo": 1, "nivel_exposicion": "Baja", "respaldo_base_conocimiento": 0.08, "responsabilidad_mitigacion": "Ingeniería", "responsable_accidente": "Equipo de Proyecto", "accion_mitigacion": "Revisar manual contra checklist de contenidos mínimos antes de la entrega.", "umbral_alerta": "Menos de 5 días hábiles restantes antes de la fecha de entrega sin revisión completada."}
         ],
-        "fragmentos_fuente": [{"nombre_documento_fuente": "Manual_Tecnico.pdf"}]
+        "fragmentos_fuente": [{"nombre_documento_fuente": "Manual_Tecnico.pdf", "numero_pagina": 7, "score_relevancia": 0.63}]
     }
 
     with open(dummy_json_path, 'w', encoding='utf-8') as f_dummy:

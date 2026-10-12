@@ -9,6 +9,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.documents import Document
 from typing import List, Optional
 import logging
+import math
 import os
 
 from .schemas import LLMResponse
@@ -23,6 +24,58 @@ def _get_reranker_model(model_name: str):
         logger.info(f"--- Cargando modelo de re-ranker '{model_name}' por primera vez en este proceso (se reutilizará en las siguientes preguntas) ---")
         _reranker_model_cache[model_name] = HuggingFaceCrossEncoder(model_name=model_name)
     return _reranker_model_cache[model_name]
+
+
+RERANKER_MODEL_NAME = 'BAAI/bge-reranker-v2-m3'
+
+
+def _normalizar_score(score) -> float:
+    """El cross-encoder de una sola etiqueta (bge-reranker-v2-m3) devuelve ya valores
+    entre 0 y 1 (sentence-transformers aplica sigmoide por defecto). Si por alguna
+    versión llegara un logit crudo fuera de rango, se lo lleva a 0-1 con sigmoide."""
+    s = float(score)
+    if 0.0 <= s <= 1.0:
+        return s
+    return 1.0 / (1.0 + math.exp(-max(min(s, 50.0), -50.0)))
+
+
+class CrossEncoderRerankerConScore(CrossEncoderReranker):
+    """Igual que CrossEncoderReranker, pero conserva el score de cada fragmento en
+    metadata['relevance_score']. La versión de LangChain ordena y descarta el score,
+    por lo que el dashboard no podía mostrar cuán relevante fue cada fragmento."""
+
+    def compress_documents(self, documents, query, callbacks=None):
+        if not documents:
+            return []
+        scores = self.model.score([(query, doc.page_content) for doc in documents])
+        con_score = sorted(zip(documents, scores), key=lambda x: float(x[1]), reverse=True)
+        resultado = []
+        for doc, score in con_score[: self.top_n]:
+            metadata = dict(doc.metadata)
+            metadata["relevance_score"] = _normalizar_score(score)
+            resultado.append(Document(page_content=doc.page_content, metadata=metadata))
+        return resultado
+
+
+def puntuar_riesgos_contra_evidencia(textos_riesgos: List[str], fragmentos: List[Document]) -> List[Optional[float]]:
+    """Para cada riesgo, devuelve el MEJOR score (0-1) del re-ranker entre el texto del
+    riesgo y los fragmentos de la Base de Conocimiento recuperados. Mide cuánto se
+    apoya el riesgo en la bibliografía de referencia. No usa el LLM (cómputo local,
+    segundos) ni requiere nuevas llamadas a la API.
+    Devuelve None para cada riesgo si no hay fragmentos o si el re-ranker falla."""
+    if not textos_riesgos:
+        return []
+    if not fragmentos or not config.USE_RERANKER:
+        return [None] * len(textos_riesgos)
+    try:
+        model = _get_reranker_model(RERANKER_MODEL_NAME)
+        pares = [(texto, f.page_content) for texto in textos_riesgos for f in fragmentos]
+        scores = [_normalizar_score(s) for s in model.score(pares)]
+        n = len(fragmentos)
+        return [max(scores[i * n:(i + 1) * n]) for i in range(len(textos_riesgos))]
+    except Exception as e:
+        logger.error(f"No se pudo calcular el respaldo de cada riesgo en la Base de Conocimiento: {e}")
+        return [None] * len(textos_riesgos)
 
 
 PROMPT_TEMPLATE_STR = """
@@ -120,8 +173,8 @@ def _construir_retriever(vector_db_instance):
     if config.USE_RERANKER:
         logger.info("--- Habilitando Re-ranker (CrossEncoder) ---")
         try:
-            model = _get_reranker_model('BAAI/bge-reranker-v2-m3')
-            compressor = CrossEncoderReranker(model=model, top_n=config.RERANKER_TOP_N)
+            model = _get_reranker_model(RERANKER_MODEL_NAME)
+            compressor = CrossEncoderRerankerConScore(model=model, top_n=config.RERANKER_TOP_N)
             final_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=base_retriever)
             logger.info(f"--- Re-ranker configurado para devolver los mejores {config.RERANKER_TOP_N} fragmentos ---")
         except Exception as e_reranker:

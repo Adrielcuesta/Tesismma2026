@@ -26,7 +26,8 @@ class RiskItem(BaseModel):
     accion_mitigacion: str = Field(description="Acción concreta y específica recomendada para prevenir o mitigar el riesgo (una tarea accionable, no un rol ni un departamento).")
     umbral_alerta: str = Field(description="Indicador o condición medible cuyo cumplimiento debería disparar una alerta o escalamiento (ej. una métrica, un plazo, un valor límite concreto).")
     explicacion_riesgo: str = Field(description="Breve explicación de por qué esto es un riesgo, citando evidencia del contexto.")
-    score_confianza_compuesto: Optional[float] = Field(default=None, description="Confianza calculada para el riesgo, combinando la relevancia de la evidencia con la severidad del riesgo (0 a 1).")
+    exposicion_riesgo: Optional[int] = Field(default=None, description="Exposición al riesgo = impacto x probabilidad, con escala 1-2-3 en cada eje (resultado de 1 a 9). Es una convención de la matriz de riesgo; impacto y probabilidad los estima el LLM.")
+    respaldo_base_conocimiento: Optional[float] = Field(default=None, description="Puntuación (0 a 1) del re-ranker entre el texto del riesgo y el fragmento de la Base de Conocimiento que mejor lo respalda. Mide cuánto se apoya el riesgo en la bibliografía de referencia; no es una probabilidad de que el riesgo sea real.")
 
 class LLMResponse(BaseModel):
     """Define la estructura de datos que se espera directamente del LLM."""

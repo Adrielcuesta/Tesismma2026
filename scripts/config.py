@@ -47,7 +47,11 @@ MAX_CHARS_PROYECTO = 15000
 # Largo máximo (en caracteres) del texto con el que se BUSCA en la base vectorial y se re-rankea.
 # El análisis sigue recibiendo la descripción completa (hasta MAX_CHARS_PROYECTO); esto solo acota
 # la consulta de recuperación. Las preguntas de evaluación miden entre 217 y 301 caracteres.
-MAX_CHARS_CONSULTA_RECUPERACION = 1500
+# Medido en una CPU sin GPU, con el mismo proyecto (56.458 caracteres, truncado a 15.000):
+#   1500 caracteres  -> búsqueda ~70 s  (análisis completo ~2 min),  relevancia máx. del re-ranker ~11 %
+#   15000 caracteres -> búsqueda ~11 min (análisis completo ~12,5 min), relevancia máx. del re-ranker ~89 %
+# Se deja el valor completo por defecto (mejor evidencia); bajarlo a 1500 si se prioriza la velocidad.
+MAX_CHARS_CONSULTA_RECUPERACION = 15000
 RECREAR_DB = False
 MAX_PAGES_TO_CHECK_FOR_INDEX = 5
 
