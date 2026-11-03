@@ -42,7 +42,7 @@ if descargar_modelo and config:
     else:
         logger_startup.info(f"✅ Modelo ya existe en '{config.LOCAL_EMBEDDING_MODEL_PATH}'. No se necesita descarga.")
 
-ALLOWED_EXTENSIONS = {'pdf'}
+ALLOWED_EXTENSIONS = {'pdf', 'docx'}
 
 # --- LÍMITES DE TAMAÑO DE ARCHIVOS ---
 MAX_KB_FILES = 4 * 1024 * 1024 # 4 MB por archivo de KB
@@ -163,8 +163,8 @@ HOME_PAGE_HTML = """
                         <input type="checkbox" id="use_default_kb_input" name="use_default_kb" value="yes" checked>
                         <label for="use_default_kb_input" class="checkbox-label">Usar Base de Conocimiento por defecto.</label>
                     </div>
-                    <label for="kb_files_input" style="margin-top:10px;">Subir PDFs para nueva Base de Conocimiento:</label>
-                    <input type="file" id="kb_files_input" name="kb_files" multiple accept=".pdf">
+                    <label for="kb_files_input" style="margin-top:10px;">Subir PDF o DOCX para nueva Base de Conocimiento:</label>
+                    <input type="file" id="kb_files_input" name="kb_files" multiple accept=".pdf,.docx">
                 </div>
                 <div class="form-section">
                     <h4><span class="emoji">📄</span>Proyecto a Analizar</h4>
@@ -172,8 +172,8 @@ HOME_PAGE_HTML = """
                         <input type="checkbox" id="use_existing_project_file_input" name="use_existing_project_file" value="yes" checked>
                         <label for="use_existing_project_file_input" class="checkbox-label">Utilizar documento previamente cargado.</label>
                     </div>
-                    <label for="project_file_input" style="margin-top:10px;">Subir PDF del Proyecto a Analizar:</label>
-                    <input type="file" id="project_file_input" name="project_file" accept=".pdf">
+                    <label for="project_file_input" style="margin-top:10px;">Subir PDF o DOCX del Proyecto a Analizar:</label>
+                    <input type="file" id="project_file_input" name="project_file" accept=".pdf,.docx">
                 </div>
             </div>
             <div class="button-container">
@@ -235,6 +235,7 @@ def analyze_route():
     project_file_uploaded = request.files.get('project_file')
 
     directorio_kb = None  # None = Base de Conocimiento por defecto
+    directorio_proyecto = None  # None = datos/ProyectoAnalizar (el proyecto por defecto)
 
     # --- Validación de tamaño para archivos de la Base de Conocimiento ---
     if not use_default_kb_checkbox:
@@ -264,7 +265,7 @@ def analyze_route():
             directorio_kb = config.DIRECTORIO_BASE_CONOCIMIENTO_USUARIO
             flash(f"{len(actual_kb_files_to_save)} archivo(s) guardados para la Base de Conocimiento.", "success")
         else:
-             flash("No se subieron PDFs: se usará la Base de Conocimiento por defecto.", "info")
+             flash("No se subieron archivos (PDF o DOCX): se usará la Base de Conocimiento por defecto.", "info")
 
     # --- Validación de tamaño para el archivo de Proyecto ---
     if not use_existing_project_file_checkbox:
@@ -276,9 +277,12 @@ def analyze_route():
                 flash(f"El archivo de proyecto excede el límite de tamaño ({MAX_PROJECT_FILE_SIZE_MB / (1024 * 1024):.0f} MB).", "error")
                 return redirect(url_for('home'))
 
-            clear_directory(config.DIRECTORIO_PROYECTO_ANALIZAR)
+            # El proyecto subido va a su propia carpeta: datos/ProyectoAnalizar nunca se vacía
+            os.makedirs(config.DIRECTORIO_PROYECTO_ANALIZAR_USUARIO, exist_ok=True)
+            clear_directory(config.DIRECTORIO_PROYECTO_ANALIZAR_USUARIO)
             filename = secure_filename(project_file_uploaded.filename)
-            project_file_uploaded.save(os.path.join(config.DIRECTORIO_PROYECTO_ANALIZAR, filename))
+            project_file_uploaded.save(os.path.join(config.DIRECTORIO_PROYECTO_ANALIZAR_USUARIO, filename))
+            directorio_proyecto = config.DIRECTORIO_PROYECTO_ANALIZAR_USUARIO
             flash(f"Archivo de proyecto '{filename}' guardado.", "success")
         else:
             flash("Debe subir un archivo de proyecto si no utiliza el existente.", "error")
@@ -289,7 +293,8 @@ def analyze_route():
 
         dashboard_relative_path = run_analysis(
             selected_llm_model_id=selected_llm_model_id,
-            directorio_kb=directorio_kb
+            directorio_kb=directorio_kb,
+            directorio_proyecto=directorio_proyecto
         )
 
         if not dashboard_relative_path:

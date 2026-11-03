@@ -53,14 +53,14 @@ def _parsear_respuesta_llm(raw: str, llm) -> LLMResponse:
         return LLMResponse.model_validate(json.loads(_extraer_json(raw_reintento)))
 
 
-def _iniciar_log_de_analisis():
+def _iniciar_log_de_analisis(directorio_proyecto: Optional[str] = None):
     """Guarda el log de una corrida hecha desde la app en la MISMA carpeta que el
     dashboard (datos/Resultados/<proyecto>/log_analisis_<fecha>.txt), para poder
     auditar después qué pasó en cada ejecución (modelo usado, resultado del
     evaluador de evidencia, errores). Devuelve el handler para cerrarlo al final,
     o None si no se pudo (en ese caso el análisis sigue igual, sin log a archivo)."""
     try:
-        pdf_path = document_utils.obtener_ruta_pdf_proyecto(config.DIRECTORIO_PROYECTO_ANALIZAR)
+        pdf_path = document_utils.obtener_ruta_pdf_proyecto(directorio_proyecto or config.DIRECTORIO_PROYECTO_ANALIZAR)
         if not pdf_path:
             return None
         nombre_pdf = os.path.basename(pdf_path)
@@ -104,6 +104,7 @@ def _run_analysis_impl(
     usar_rag: bool = True,
     marca_tiempo: Optional[str] = None,
     directorio_kb: Optional[str] = None,
+    directorio_proyecto: Optional[str] = None,
 ):
     if not is_evaluation_mode: logger.info(f"--- INICIANDO ANÁLISIS (Modelo: {selected_llm_model_id}) ---")
     # Cada ejecución guarda su JSON y su dashboard con esta marca en el nombre, para no
@@ -128,8 +129,8 @@ def _run_analysis_impl(
         if not llm: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
 
         if not is_evaluation_mode:
-            pdf_path_analizar_abs = document_utils.obtener_ruta_pdf_proyecto(config.DIRECTORIO_PROYECTO_ANALIZAR)
-            if not pdf_path_analizar_abs: raise AnalisisError("No se encontró ningún PDF en la carpeta del proyecto a analizar.")
+            pdf_path_analizar_abs = document_utils.obtener_ruta_pdf_proyecto(directorio_proyecto or config.DIRECTORIO_PROYECTO_ANALIZAR)
+            if not pdf_path_analizar_abs: raise AnalisisError("No se encontró ningún PDF o DOCX en la carpeta del proyecto a analizar.")
             nombre_pdf_proyecto_detectado = os.path.basename(pdf_path_analizar_abs)
             descripcion_nuevo_proyecto = document_utils.procesar_pdf_proyecto_para_analisis(pdf_path_analizar_abs, config.MAX_CHARS_PROYECTO)
         else:
@@ -339,11 +340,12 @@ def run_analysis(
     db_connection: Optional[object] = None,
     usar_rag: bool = True,
     directorio_kb: Optional[str] = None,
+    directorio_proyecto: Optional[str] = None,
 ):
     """Punto de entrada público (misma firma de siempre, lo usan app.py y evaluate_rag.py).
     En modo app deja un log en la carpeta del dashboard; en modo evaluación no lo hace,
     porque evaluate_rag.py ya guarda su propio log en datos/Resultados/evaluaciones_rag/."""
-    handler_log = None if is_evaluation_mode else _iniciar_log_de_analisis()
+    handler_log = None if is_evaluation_mode else _iniciar_log_de_analisis(directorio_proyecto)
     try:
         return _run_analysis_impl(
             selected_llm_model_id=selected_llm_model_id,
@@ -355,6 +357,7 @@ def run_analysis(
             usar_rag=usar_rag,
             marca_tiempo=getattr(handler_log, "marca_tiempo", None),
             directorio_kb=directorio_kb,
+            directorio_proyecto=directorio_proyecto,
         )
     finally:
         _cerrar_log_de_analisis(handler_log)

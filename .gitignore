@@ -22,9 +22,12 @@ datos/ChromaDB_V1/
 datos/ChromaDB_Test_Minimal/
 datos/ChromaDB_Test_Super_Minimal/
 datos/ChromaDB_V1_manifest.json
+datos/ChromaDB_KB_Ferroviaria/
+datos/ChromaDB_KB_Ferroviaria_manifest.json
 
-# KB subida desde la app
+# KB y proyecto subidos desde la app
 datos/BaseConocimiento_Usuario/
+datos/ProyectoAnalizar_Usuario/
 *.duckdb
 *.duckdb.wal
 

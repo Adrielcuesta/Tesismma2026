@@ -1,0 +1,61 @@
+﻿id;proyecto;documento;seccion;fragmento_trampa;norma;articulo;severidad;responsable
+P1-01-A;Proyecto 1;P1_oferta_TBP01.docx;3.5 Optimización del plazo de la obra civil;posicionar el torno sobre sus apoyos a los 14 días;NORM_01;4.2;Alta;Gerencia de Infraestructura y Vías
+P1-01-M;Proyecto 1;P1_oferta_TBP01.docx;3.6 Fosa: accesos, achique y estanqueidad;escalera portátil de aluminio;NORM_01;6.3;Media;Gerencia de Infraestructura y Vías
+P1-01-B;Proyecto 1;P1_oferta_TBP01.docx;3.6 Fosa: accesos, achique y estanqueidad;prueba de inundación de 24 h;NORM_01;6.5;Baja;Gerencia de Infraestructura y Vías
+P1-02-A;Proyecto 1;P1_oferta_TBP01.docx;4.3 Puesta a tierra y compatibilidad electromagnética;jabalina dedicada exclusiva;NORM_02;5.4;Alta;Gerencia de Energía e Instalaciones Electromecánicas
+P1-02-M;Proyecto 1;P1_oferta_TBP01.docx;4.2 Tableros seccionales;serán IP54;NORM_02;4.5;Media;Gerencia de Energía e Instalaciones Electromecánicas
+P1-02-B;Proyecto 1;P1_oferta_TBP01.docx;4.3 Puesta a tierra y compatibilidad electromagnética;marzo de 2025;NORM_02;5.16;Baja;Gerencia de Energía e Instalaciones Electromecánicas
+P1-03-A;Proyecto 1;P1_oferta_TBP01.docx;5.1 Descripción de la maniobra principal;utilización resultante es del 87 %;NORM_03;2.2;Alta;Gerencia de Seguridad Operacional y Salud Ocupacional
+P1-03-M;Proyecto 1;P1_oferta_TBP01.docx;5.2 Eslingado y accesorios;ángulo de 55°;NORM_03;2.6;Media;Gerencia de Seguridad Operacional y Salud Ocupacional
+P1-03-B;Proyecto 1;P1_oferta_TBP01.docx;5.4 Supervisión y documentación;48 horas de anticipación;NORM_03;5.1;Baja;Gerencia de Seguridad Operacional y Salud Ocupacional
+P1-04-A;Proyecto 1;P1_oferta_TBP01.docx;6.3 Control geométrico de la vía de aproximación;ajustada a ± 3 mm;NORM_04;2.3;Alta;Gerencia de Infraestructura y Vías
+P1-04-M;Proyecto 1;P1_oferta_TBP01.docx;7.2 SAT bajo carga;pasadas de acabado de 0,5 mm;NORM_04;3.8;Media;Gerencia de Material Rodante y Equipamiento de Talleres
+P1-04-B;Proyecto 1;P1_oferta_TBP01.docx;6.3 Control geométrico de la vía de aproximación;lecturas de trocha cada 1,0 m;NORM_04;2.5;Baja;Gerencia de Infraestructura y Vías
+P1-05-A;Proyecto 1;P1_oferta_TBP01.docx;4.4 Sistema oleohidráulico;servoválvulas se conectarán directamente;NORM_05;3.4;Alta;Gerencia de Material Rodante y Equipamiento de Talleres
+P1-05-M;Proyecto 1;P1_oferta_TBP01.docx;6.1 Nivelación de la bancada;se ajustará a 0,05 mm/m;NORM_05;2.1;Media;Gerencia de Material Rodante y Equipamiento de Talleres
+P1-05-B;Proyecto 1;P1_oferta_TBP01.docx;4.5 Bulonería, anclajes y grout;plan bienal de calibraciones;NORM_05;4.4;Baja;Gerencia de Material Rodante y Equipamiento de Talleres
+P2-01-A;Proyecto 2;P2_oferta_PH400.docx;2.2 Implantación sobre la losa existente;prensa anterior de 22 t;NORM_01;5.2;Alta;Gerencia de Infraestructura y Vías
+P2-01-M;Proyecto 2;P2_oferta_PH400.docx;3.2 Hormigón de bloques de anclaje y losa de vía;relación agua/cemento 0,52;NORM_01;3.2;Media;Gerencia de Infraestructura y Vías
+P2-01-B;Proyecto 2;P2_oferta_PH400.docx;3.2 Hormigón de bloques de anclaje y losa de vía;ensayo esclerométrico a los 28 días;NORM_01;3.7;Baja;Gerencia de Infraestructura y Vías
+P2-02-A;Proyecto 2;P2_oferta_PH400.docx;4.2 Tablero de la prensa;será de 25 kA;NORM_02;3.13;Alta;Gerencia de Energía e Instalaciones Electromecánicas
+P2-02-M;Proyecto 2;P2_oferta_PH400.docx;4.1 Instalación eléctrica;es de 4,2 %, dentro del 5 % admisible;NORM_02;2.16;Media;Gerencia de Energía e Instalaciones Electromecánicas
+P2-02-B;Proyecto 2;P2_oferta_PH400.docx;4.2 Tablero de la prensa;20 % de espacio libre en riel DIN;NORM_02;4.7;Baja;Gerencia de Energía e Instalaciones Electromecánicas
+P2-03-A;Proyecto 2;P2_oferta_PH400.docx;5.1 Maniobra del bastidor;tomando cada una 12 t;NORM_03;2.8;Alta;Gerencia de Seguridad Operacional y Salud Ocupacional
+P2-03-M;Proyecto 2;P2_oferta_PH400.docx;5.1 Maniobra del bastidor;peso de catálogo de la prensa: 24.000 kg;NORM_03;2.4;Media;Gerencia de Seguridad Operacional y Salud Ocupacional
+P2-03-B;Proyecto 2;P2_oferta_PH400.docx;4.7 Ruido;a 3 m del equipo;NORM_03;6.2;Baja;Gerencia de Seguridad Operacional y Salud Ocupacional
+P2-04-A;Proyecto 2;P2_oferta_PH400.docx;7.2 Pruebas en sitio y recepción;prueba de funcionamiento en vacío en sitio;NORM_04;3.2;Alta;Gerencia de Material Rodante y Equipamiento de Talleres
+P2-04-M;Proyecto 2;P2_oferta_PH400.docx;3.4 Vía de alimentación de pares montados;desnivel longitudinal de hasta 1,5 mm/m;NORM_04;2.6;Media;Gerencia de Infraestructura y Vías
+P2-04-B;Proyecto 2;P2_oferta_PH400.docx;3.4 Vía de alimentación de pares montados;levantamiento realizado antes del hormigonado;NORM_04;2.13;Baja;Gerencia de Infraestructura y Vías
+P2-05-A;Proyecto 2;P2_oferta_PH400.docx;5.2 Eslingado;eslingando desde las columnas guía rectificadas;NORM_05;1.8;Alta;Gerencia de Material Rodante y Equipamiento de Talleres
+P2-05-M;Proyecto 2;P2_oferta_PH400.docx;4.4 Sistema oleohidráulico;Re ≈ 2.300;NORM_05;3.5;Media;Gerencia de Material Rodante y Equipamiento de Talleres
+P2-05-B;Proyecto 2;P2_oferta_PH400.docx;4.4 Sistema oleohidráulico;aceite se presente claro;NORM_05;3.8;Baja;Gerencia de Material Rodante y Equipamiento de Talleres
+P3-01-A;Proyecto 3;P3_oferta_TV1600.docx;3.2 Excavación;taludes naturales 1:0,5;NORM_01;6.1;Alta;Gerencia de Infraestructura y Vías
+P3-01-M;Proyecto 3;P3_oferta_TV1600.docx;3.3 Fundación;bloque de inercia de 45 t;NORM_01;7.3;Media;Gerencia de Infraestructura y Vías
+P3-01-B;Proyecto 3;P3_oferta_TV1600.docx;3.5 Inspección y liberaciones;conformidad verbal del jefe de obra;NORM_01;8.2;Baja;Gerencia de Infraestructura y Vías
+P3-02-A;Proyecto 3;P3_oferta_TV1600.docx;4.3 Puesta a tierra;referenciará únicamente a la bancada metálica;NORM_02;5.14;Alta;Gerencia de Energía e Instalaciones Electromecánicas
+P3-02-M;Proyecto 3;P3_oferta_TV1600.docx;4.3 Puesta a tierra;será de 10 mm² Cu;NORM_02;5.5;Media;Gerencia de Energía e Instalaciones Electromecánicas
+P3-02-B;Proyecto 3;P3_oferta_TV1600.docx;4.1 Alimentación eléctrica;cos φ 0,92;NORM_02;1.11;Baja;Gerencia de Energía e Instalaciones Electromecánicas
+P3-03-A;Proyecto 3;P3_oferta_TV1600.docx;5.3 Apoyo de la autogrúa;contrachapado fenólico de 25 mm;NORM_03;4.7;Alta;Gerencia de Seguridad Operacional y Salud Ocupacional
+P3-03-M;Proyecto 3;P3_oferta_TV1600.docx;5.4 Supervisión;permanecerá disponible por radio;NORM_03;5.5;Media;Gerencia de Seguridad Operacional y Salud Ocupacional
+P3-03-B;Proyecto 3;P3_oferta_TV1600.docx;5.2 Plan de Izaje Crítico;constancia de recepción del sistema se considerará conformidad;NORM_03;5.2;Baja;Gerencia de Seguridad Operacional y Salud Ocupacional
+P3-04-A;Proyecto 3;P3_oferta_TV1600.docx;7.1 Unidades de prueba;serán discos patrón;NORM_04;3.6;Alta;Gerencia de Material Rodante y Equipamiento de Talleres
+P3-04-M;Proyecto 3;P3_oferta_TV1600.docx;3.6 Vía de abastecimiento y pasarela;altura libre de 2,00 m;NORM_04;1.6;Media;Gerencia de Infraestructura y Vías
+P3-04-B;Proyecto 3;P3_oferta_TV1600.docx;7.3 Mediciones;Una traza por rueda;NORM_04;3.10;Baja;Gerencia de Material Rodante y Equipamiento de Talleres
+P3-05-A;Proyecto 3;P3_oferta_TV1600.docx;4.6 Anclajes, bulonería y grout;se apretarán a 2.700 N·m;NORM_05;4.3;Alta;Gerencia de Material Rodante y Equipamiento de Talleres
+P3-05-M;Proyecto 3;P3_oferta_TV1600.docx;4.6 Anclajes, bulonería y grout;mortero cementicio de nivelación de alta resistencia (60 MPa);NORM_05;2.9;Media;Gerencia de Material Rodante y Equipamiento de Talleres
+P3-05-B;Proyecto 3;P3_oferta_TV1600.docx;6. Montaje y nivelación;portón de la nave abierto;NORM_05;2.3;Baja;Gerencia de Material Rodante y Equipamiento de Talleres
+P4-01-A;Proyecto 4;P4_oferta_TPE800.docx;3.2 Hormigón;hormigón elaborado H-25;NORM_01;3.1;Alta;Gerencia de Infraestructura y Vías
+P4-01-M;Proyecto 4;P4_oferta_TPE800.docx;3.2 Hormigón;recubrimiento de 25 mm;NORM_01;3.5;Media;Gerencia de Infraestructura y Vías
+P4-01-B;Proyecto 4;P4_oferta_TPE800.docx;3.3 Curado;consignará la fecha de hormigonado;NORM_01;4.1;Baja;Gerencia de Infraestructura y Vías
+P4-02-A;Proyecto 4;P4_oferta_TPE800.docx;4.2 Tablero seccional;diferencial general de 300 mA;NORM_02;4.15;Alta;Gerencia de Energía e Instalaciones Electromecánicas
+P4-02-M;Proyecto 4;P4_oferta_TPE800.docx;4.1 Alimentación y capacidad del sistema;630 kVA cubre holgadamente;NORM_02;1.10;Media;Gerencia de Energía e Instalaciones Electromecánicas
+P4-02-B;Proyecto 4;P4_oferta_TPE800.docx;4.2 Tablero seccional;a 1,70 m de altura;NORM_02;4.10;Baja;Gerencia de Energía e Instalaciones Electromecánicas
+P4-03-A;Proyecto 4;P4_oferta_TPE800.docx;5.2 Pruebas y habilitación;únicamente a su capacidad nominal (100 %);NORM_03;3.4;Alta;Gerencia de Seguridad Operacional y Salud Ocupacional
+P4-03-M;Proyecto 4;P4_oferta_TPE800.docx;4.4 Canalizaciones y EMC;a 0,50 m del recorrido del carro;NORM_03;4.2;Media;Gerencia de Seguridad Operacional y Salud Ocupacional
+P4-03-B;Proyecto 4;P4_oferta_TPE800.docx;5.3 Mantenimiento;inspección especializada anual;NORM_03;3.6;Baja;Gerencia de Seguridad Operacional y Salud Ocupacional
+P4-04-A;Proyecto 4;P4_oferta_TPE800.docx;6.2 Interferencia con la vía 4 electrificada;a 2,0 m de la catenaria;NORM_04;1.10;Alta;Gerencia de Infraestructura y Vías
+P4-04-M;Proyecto 4;P4_oferta_TPE800.docx;8.2 Actas y recepción;firmada por el Jefe de Puesta en Marcha;NORM_04;3.20;Media;Gerencia de Material Rodante y Equipamiento de Talleres
+P4-04-B;Proyecto 4;P4_oferta_TPE800.docx;8.1 SAT bajo carga;manualmente cada 15 minutos;NORM_04;3.12;Baja;Gerencia de Material Rodante y Equipamiento de Talleres
+P4-05-A;Proyecto 4;P4_oferta_TPE800.docx;4.5 Hidráulica;eliminarán por centrifugado;NORM_05;3.9;Alta;Gerencia de Material Rodante y Equipamiento de Talleres
+P4-05-M;Proyecto 4;P4_oferta_TPE800.docx;4.4 Canalizaciones y EMC;separados 50 mm;NORM_05;4.8;Media;Gerencia de Material Rodante y Equipamiento de Talleres
+P4-05-B;Proyecto 4;P4_oferta_TPE800.docx;4.6 Bulonería y grout;dos pasadas (50 % y 100 %;NORM_05;4.5;Baja;Gerencia de Material Rodante y Equipamiento de Talleres

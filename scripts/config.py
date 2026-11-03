@@ -27,9 +27,15 @@ DIRECTORIO_BASE_CONOCIMIENTO = os.path.join(DATA_DIR, "BaseConocimiento")
 DIRECTORIO_PROYECTO_ANALIZAR = os.path.join(DATA_DIR, "ProyectoAnalizar")
 # PDFs subidos desde la app como Base de Conocimiento propia (nunca pisan DIRECTORIO_BASE_CONOCIMIENTO)
 DIRECTORIO_BASE_CONOCIMIENTO_USUARIO = os.path.join(DATA_DIR, "BaseConocimiento_Usuario")
+# Proyecto subido desde la app (nunca pisa DIRECTORIO_PROYECTO_ANALIZAR)
+DIRECTORIO_PROYECTO_ANALIZAR_USUARIO = os.path.join(DATA_DIR, "ProyectoAnalizar_Usuario")
 CHROMA_DB_PATH = os.path.join(DATA_DIR, "ChromaDB_V1")
 # Firma de lo indexado (archivos + CHUNK_SIZE + embedding), junto a ChromaDB; si cambia, se reindexa
 CHROMA_MANIFEST_PATH = CHROMA_DB_PATH + "_manifest.json"
+# Índice de la KB ferroviaria, un chunk por artículo (el índice anterior no se toca)
+CHROMA_DB_PATH_KB = os.path.join(DATA_DIR, "ChromaDB_KB_Ferroviaria")
+CHROMA_COLLECTION_KB = "kb_ferroviaria_articulos"
+CHROMA_MANIFEST_PATH_KB = CHROMA_DB_PATH_KB + "_manifest.json"
 DIRECTORIO_RESULTADOS_BASE = os.path.join(DATA_DIR, "Resultados")
 MODELOS_LOCALES_PATH = os.path.join(PROJECT_ROOT, "modelos_locales")
 CACHE_DIR_HF = os.path.join(PROJECT_ROOT, ".cache", "huggingface_cache")
@@ -58,6 +64,14 @@ MAX_CHARS_PROYECTO = 15000
 MAX_CHARS_CONSULTA_RECUPERACION = 15000
 RECREAR_DB = False
 MAX_PAGES_TO_CHECK_FOR_INDEX = 5
+
+# --- Chunker de la KB por artículos ---
+VERSION_CHUNKER_ARTICULOS = 1
+MAX_CHARS_ARTICULO = 3000
+# Una línea (normalizada, sin dígitos) repetida en al menos esta fracción de páginas es encabezado/pie
+UMBRAL_ENCABEZADO = 0.5
+# Norma que va completa en el prompt y no se indexa
+NORMA_COMPLETA = "NORM_06"
 
 # --- Configuración para el Re-ranker ---
 USE_RERANKER = True
@@ -135,7 +149,7 @@ INFO_TESIS = {
 def inicializar_directorios_datos():
     directorios_a_crear = [
         DIRECTORIO_BASE_CONOCIMIENTO, DIRECTORIO_BASE_CONOCIMIENTO_USUARIO, DIRECTORIO_PROYECTO_ANALIZAR,
-        CHROMA_DB_PATH, DIRECTORIO_RESULTADOS_BASE, MODELOS_LOCALES_PATH, CACHE_DIR_HF
+        DIRECTORIO_PROYECTO_ANALIZAR_USUARIO, CHROMA_DB_PATH, DIRECTORIO_RESULTADOS_BASE, MODELOS_LOCALES_PATH, CACHE_DIR_HF
     ]
     try:
         for dir_path in directorios_a_crear:
