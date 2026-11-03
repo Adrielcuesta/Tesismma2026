@@ -25,7 +25,11 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir
 DATA_DIR = os.path.join(PROJECT_ROOT, "datos")
 DIRECTORIO_BASE_CONOCIMIENTO = os.path.join(DATA_DIR, "BaseConocimiento")
 DIRECTORIO_PROYECTO_ANALIZAR = os.path.join(DATA_DIR, "ProyectoAnalizar")
+# PDFs subidos desde la app como Base de Conocimiento propia (nunca pisan DIRECTORIO_BASE_CONOCIMIENTO)
+DIRECTORIO_BASE_CONOCIMIENTO_USUARIO = os.path.join(DATA_DIR, "BaseConocimiento_Usuario")
 CHROMA_DB_PATH = os.path.join(DATA_DIR, "ChromaDB_V1")
+# Firma de lo indexado (archivos + CHUNK_SIZE + embedding), junto a ChromaDB; si cambia, se reindexa
+CHROMA_MANIFEST_PATH = CHROMA_DB_PATH + "_manifest.json"
 DIRECTORIO_RESULTADOS_BASE = os.path.join(DATA_DIR, "Resultados")
 MODELOS_LOCALES_PATH = os.path.join(PROJECT_ROOT, "modelos_locales")
 CACHE_DIR_HF = os.path.join(PROJECT_ROOT, ".cache", "huggingface_cache")
@@ -60,6 +64,15 @@ USE_RERANKER = True
 K_RETRIEVED_DOCS_BEFORE_RERANK = 50
 RERANKER_TOP_N = 4
 
+# --- Configuración de Ollama (único modelo local: generación y evaluador de evidencia) ---
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434").strip().rstrip("/")
+OLLAMA_MODEL = "qwen3:8b"
+OLLAMA_NUM_CTX = 16384
+# KV q8_0 y flash attention son variables del SERVIDOR de Ollama (no se fijan por request):
+# arrancarlo con OLLAMA_KV_CACHE_TYPE=q8_0 y OLLAMA_FLASH_ATTENTION=1.
+OLLAMA_KV_CACHE_TYPE = "q8_0"
+OLLAMA_FLASH_ATTENTION = "1"
+
 # --- Configuración de LLMs ---
 LLM_MODELS = {
     # --- Modelos disponibles ---
@@ -73,29 +86,9 @@ LLM_MODELS = {
         "display_name": "Llama 3.3 70B vía Groq (Gratuito)",
         "api_key_env": "GROQ_API_KEY"
     },
-    "qwen2.5:7b-instruct": {
-        "provider": "openai_compatible",
-        "display_name": "Qwen2.5 7B (Local, sin costo)",
-        "api_key_env": "OLLAMA_API_KEY",
-        "base_url": "http://localhost:11434/v1"
-    },
-    "llama3.1:8b": {
-        "provider": "openai_compatible",
-        "display_name": "Llama 3.1 8B (Local, sin costo)",
-        "api_key_env": "OLLAMA_API_KEY",
-        "base_url": "http://localhost:11434/v1"
-    },
-    "mistral:7b": {
-        "provider": "openai_compatible",
-        "display_name": "Mistral 7B (Local, sin costo)",
-        "api_key_env": "OLLAMA_API_KEY",
-        "base_url": "http://localhost:11434/v1"
-    },
-    "gemma2:9b": {
-        "provider": "openai_compatible",
-        "display_name": "Gemma 2 9B (Local, sin costo)",
-        "api_key_env": "OLLAMA_API_KEY",
-        "base_url": "http://localhost:11434/v1"
+    OLLAMA_MODEL: {
+        "provider": "ollama",
+        "display_name": "Qwen3 8B (Local, sin costo)"
     },
     "mistral-large-latest": {
         "provider": "mistral",
@@ -141,7 +134,7 @@ INFO_TESIS = {
 # --- Funciones de Inicialización ---
 def inicializar_directorios_datos():
     directorios_a_crear = [
-        DIRECTORIO_BASE_CONOCIMIENTO, DIRECTORIO_PROYECTO_ANALIZAR,
+        DIRECTORIO_BASE_CONOCIMIENTO, DIRECTORIO_BASE_CONOCIMIENTO_USUARIO, DIRECTORIO_PROYECTO_ANALIZAR,
         CHROMA_DB_PATH, DIRECTORIO_RESULTADOS_BASE, MODELOS_LOCALES_PATH, CACHE_DIR_HF
     ]
     try:

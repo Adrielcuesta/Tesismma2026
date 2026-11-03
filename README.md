@@ -17,27 +17,26 @@ Repositorio: [https://github.com/Adrielcuesta/tesismma2026](https://github.com/A
 
 Este proyecto implementa un sistema de **Generación Aumentada por Recuperación (RAG)** enfocado en el análisis de riesgos para proyectos de instalación de maquinaria industrial. El usuario carga un PDF con la descripción del proyecto o un pliego completo y el sistema identifica, evalúa y detalla riesgos potenciales a partir de una Base de Conocimiento documental, incluyendo responsables de mitigación, una acción concreta y un umbral de alerta medible para cada riesgo.
 
-La interacción principal se realiza a través de una **aplicación web desarrollada con Flask**. El sistema permite **seleccionar dinámicamente entre múltiples Modelos de Lenguaje Grandes (LLMs)**, tanto en la nube (Google Gemini, Groq/Llama, Mistral) como **modelos locales ejecutados enteramente en la máquina del usuario vía Ollama** (Qwen2.5, Llama 3.1, Mistral 7B, Gemma2) — esto último permite correr el sistema y su evaluación completa sin ningún costo de API y sin que los datos salgan de la máquina local.
+La interacción principal se realiza a través de una **aplicación web desarrollada con Flask**. El sistema permite **seleccionar dinámicamente entre múltiples Modelos de Lenguaje Grandes (LLMs)**, tanto en la nube (Google Gemini, Groq/Llama, Mistral) como **modelos locales ejecutados enteramente en la máquina del usuario vía Ollama** (Qwen3 8B) — esto último permite correr el sistema y su evaluación completa sin ningún costo de API y sin que los datos salgan de la máquina local.
 
 Para garantizar la precisión, el sistema incorpora un **módulo de re-ranking multilingüe** (`BAAI/bge-reranker-v2-m3`) que optimiza la relevancia del contexto recuperado, en conjunto con un modelo de **embeddings multilingüe** (`BAAI/bge-m3`), elegido específicamente porque toda la Base de Conocimiento y las consultas están en español. Antes de generar el análisis, un **evaluador de evidencia (CRAG-lite)** clasifica si el contexto recuperado es específico, genérico o irrelevante para el proyecto, evitando forzar un análisis sobre evidencia insuficiente. La salida del LLM es validada estrictamente mediante **esquemas Pydantic** (9 campos por riesgo).
 
 Al finalizar, el sistema genera:
 - Un **reporte JSON** estructurado con los hallazgos detallados.
 - Un **dashboard HTML dinámico e interactivo** con los riesgos (con su exposición = impacto × probabilidad y su respaldo en la Base de Conocimiento), la evidencia utilizada con la relevancia que le asignó el re-ranker, y un aviso visible cuando la evidencia recuperada es genérica o insuficiente.
-- Opcionalmente, un **reporte en formato PDF**.
 
 El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de forma cuantitativa y reproducible la calidad del pipeline RAG, comparando el desempeño entre distintos LLMs (locales y en la nube), con y sin recuperación de contexto (ablation), bajo la misma configuración.
 
 ## Características Principales
 
 - **Interfaz Web con Flask:** Gestión de documentos y configuración del análisis.
-- **Selección Dinámica de LLMs:** Gemini, Llama 3.3 (vía Groq), Mistral Large, y modelos 100% locales vía Ollama (Qwen2.5 7B, Llama 3.1 8B, Mistral 7B, Gemma2 9B).
+- **Selección Dinámica de LLMs:** Gemini, Llama 3.3 (vía Groq), Mistral Large, y el modelo 100% local `qwen3:8b` vía Ollama.
 - **Pipeline RAG Avanzado (LangChain 1.x / `langchain-classic`):**
   - **Embeddings multilingües:** `BAAI/bge-m3`, elegido por el idioma español de todo el corpus.
   - **Re-ranking de Contexto:** Cross-Encoder multilingüe (`BAAI/bge-reranker-v2-m3`) sobre los `K` fragmentos recuperados antes de pasarlos al LLM.
   - **Evaluador de Evidencia (CRAG-lite):** clasifica la evidencia recuperada como CORRECTO / AMBIGUO / INSUFICIENTE antes de generar el análisis (adaptado de Yan et al., 2024, *Corrective Retrieval Augmented Generation*, sin el componente de búsqueda web del paper original, para mantener el sistema 100% local y auditable). Corre siempre en un modelo local fijo, independiente del modelo elegido para el análisis, para no consumir cuota de ninguna API paga.
 - **Validación Estructurada de Salida:** Pydantic garantiza que cada riesgo tenga descripción, tipo, impacto, probabilidad, responsables, una acción de mitigación concreta y un umbral de alerta medible.
-- **Reportes Completos y Trazables:** JSON, dashboard HTML interactivo y PDF, con evidencia y aviso de calidad de evidencia cuando corresponde.
+- **Reportes Completos y Trazables:** JSON y dashboard HTML interactivo, con evidencia y aviso de calidad de evidencia cuando corresponde.
 - **Dos indicadores por riesgo, deliberadamente separados:** (1) **exposición** = impacto × probabilidad, escala 1-2-3 por eje (1 a 9; 1-2 baja, 3-4 media, 6-9 alta), una convención de matriz de riesgo cuyo impacto y probabilidad estima el LLM; (2) **respaldo en la Base de Conocimiento** = mejor score (0-100%) del re-ranker entre el texto del riesgo y los fragmentos recuperados, calculado localmente sin llamadas extra a ninguna API. El respaldo mide cuánto se apoya el riesgo en la bibliografía de referencia. Como el LLM genera los riesgos a partir de esos mismos fragmentos, un valor alto indica fidelidad al contexto recuperado, no una validación independiente; un valor bajo no implica que el riesgo sea falso (puede surgir de datos específicos del proyecto) ni uno alto que sea correcto. La decisión final sobre cada riesgo es siempre del usuario.
 - **Framework de Evaluación Integrado (Ragas):**
   - Mide `faithfulness`, `answer_relevancy`, `context_precision` y `context_recall`.
@@ -54,14 +53,13 @@ El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de 
 | **Aplicación Web** | `Flask` | Servidor web, gestión de rutas e interfaz de usuario. |
 | **Orquestación de IA** | `LangChain 1.x` + `langchain-classic` | Encadenamiento de componentes RAG, prompts y LLMs. |
 | **Modelos de Lenguaje (nube)** | `Google Generative AI`, `Groq API`, `Mistral API` | Gemini, Llama 3.3 (Groq), Mistral Large. |
-| **Modelos de Lenguaje (local)** | `Ollama` (endpoint OpenAI-compatible) | Qwen2.5 7B, Llama 3.1 8B, Mistral 7B, Gemma2 9B — sin costo ni límite de cuota. |
+| **Modelos de Lenguaje (local)** | `Ollama` (`langchain-ollama`) | Qwen3 8B (`num_ctx=16384`, thinking desactivado) — sin costo ni límite de cuota. |
 | **Base de Datos Vectorial** | `ChromaDB` | Almacenamiento y búsqueda de similitud de embeddings. |
 | **Embeddings** | `sentence-transformers` (`BAAI/bge-m3`) | Representaciones vectoriales multilingües del texto. |
 | **Re-ranking** | `langchain-classic` + `HuggingFaceCrossEncoder` (`BAAI/bge-reranker-v2-m3`) | Reclasificación multilingüe de fragmentos recuperados. |
 | **Evaluación de Evidencia** | Cadena propia (CRAG-lite) sobre modelo local fijo | Clasifica la suficiencia del contexto antes de generar el análisis. |
 | **Validación de Datos** | `Pydantic` | Definición y validación de esquemas para la salida del LLM. |
 | **Evaluación RAG** | `Ragas` (juez local, sin OpenAI) | Medición cuantitativa del rendimiento del pipeline, con ablation RAG/sin RAG. |
-| **Generación de PDF** | `WeasyPrint` | Conversión del dashboard HTML a PDF. |
 | **Procesamiento de PDF** | `PyMuPDF` (`fitz`) | Lectura y extracción de texto de documentos PDF. |
 
 ## Requisitos Previos
@@ -70,12 +68,9 @@ El proyecto incluye un **arnés de evaluación con Ragas** que permite medir de 
 - **Git:** Para clonar el repositorio.
 - **[Ollama](https://ollama.com/download):** Requerido para los modelos locales, para el juez de Ragas y para el evaluador de evidencia (todos corren en local por diseño, incluso si se elige un modelo en la nube para el análisis). Tras instalarlo, bajar al menos:
   ```bash
-  ollama pull qwen2.5:7b-instruct
-  ollama pull llama3.1:8b
-  ollama pull mistral:7b
-  ollama pull gemma2:9b
+  ollama pull qwen3:8b
   ```
-  Ollama debe estar corriendo en segundo plano (`http://localhost:11434`) antes de usar la app o el script de evaluación.
+  Arrancar el servidor con `OLLAMA_KV_CACHE_TYPE=q8_0` y `OLLAMA_FLASH_ATTENTION=1`. Ollama debe estar corriendo en segundo plano (`http://localhost:11434`, configurable con `OLLAMA_BASE_URL`) antes de usar la app o el script de evaluación.
 - **Docker:** Opcional, si se desea ejecutar la versión dockerizada.
 - **API Keys (opcionales):** Solo necesarias si se quiere usar algún modelo en la nube (Gemini, Groq, Mistral). Los modelos locales vía Ollama no requieren ninguna clave real. La lista de modelos disponibles está en `scripts/config.py` y todos aparecen en el desplegable de la aplicación; un modelo cuya clave no esté en el `.env` no funciona (el resto sí), y el script de evaluación lo saltea.
 - **Microsoft C++ Build Tools (Windows):** Recomendado para dependencias que requieren compilación (`numpy`, `onnxruntime`). Ver [Visual Studio Downloads](https://visualstudio.microsoft.com/es/downloads/) ("Herramientas de compilación para Visual Studio", carga de trabajo "Desarrollo para el escritorio con C++").
@@ -106,7 +101,6 @@ tesismma2026/
 │   ├── rag_components.py       # Cadena RAG, cadena sin RAG (ablation) y evaluador de evidencia (CRAG-lite)
 │   ├── report_utils.py         # Formateo del reporte final
 │   ├── dashboard_generator.py  # Generación del dashboard HTML (incluye aviso de calidad de evidencia)
-│   ├── pdf_utils.py            # Generación de reportes PDF
 │   ├── main.py                 # Orquestador del flujo de análisis
 │   ├── descargar_modelo.py     # Utilitario para pre-descargar el modelo de embeddings
 │   └── evaluate_rag.py         # Script de evaluación con Ragas (ablation, métricas propias, guardado incremental)
@@ -235,8 +229,6 @@ Accedé a `http://localhost:8080`. Verificá que tu `.env` tenga las claves nece
 * **Los modelos locales no responden / error de conexión a `localhost:11434`:** confirmá que Ollama esté corriendo (abrí `http://localhost:11434` en el navegador, debería decir "Ollama is running") y que el modelo esté descargado (`ollama list`). Esto aplica también si se eligió un modelo en la nube para el análisis: el evaluador de evidencia (CRAG-lite) y el juez de Ragas siempre requieren Ollama activo.
 
 * **`ModuleNotFoundError` al ejecutar un script desde la terminal:** los scripts usan importaciones relativas. Ejecutalos como módulo desde la carpeta raíz: `python -m scripts.evaluate_rag` (no `python evaluate_rag.py` desde adentro de `scripts/`).
-
-* **Errores con WeasyPrint al generar PDF (Linux/macOS):** puede requerir instalar `pango`, `cairo` y `gdk-pixbuf` a nivel de sistema. Ver [documentación de WeasyPrint](https://weasyprint.readthedocs.io/en/stable/install.html).
 
 ## Pasos Futuros y Escalabilidad
 

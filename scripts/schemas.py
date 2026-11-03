@@ -1,12 +1,16 @@
 # scripts/schemas.py
-from pydantic import BaseModel, Field
-from typing import List, Literal, Optional
+import unicodedata
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Literal, Optional, get_args
 
 ImpactoEstimado = Literal["Bajo", "Medio", "Alto"]
 ProbabilidadEstimada = Literal["Baja", "Media", "Alta"]
 TipoDeRiesgo = Literal["Explícito", "Implícito"]
 # --- Clasificación del evaluador de evidencia (CRAG-lite) ---
 EvaluacionEvidencia = Literal["CORRECTO", "AMBIGUO", "INSUFICIENTE"]
+
+def _sin_tildes(texto: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn").strip().casefold()
 
 class SourceChunk(BaseModel):
     """Representa un fragmento de la base de conocimiento que fue recuperado como evidencia."""
@@ -28,6 +32,17 @@ class RiskItem(BaseModel):
     explicacion_riesgo: str = Field(description="Breve explicación de por qué esto es un riesgo, citando evidencia del contexto.")
     exposicion_riesgo: Optional[int] = Field(default=None, description="Exposición al riesgo = impacto x probabilidad, con escala 1-2-3 en cada eje (resultado de 1 a 9). Es una convención de la matriz de riesgo; impacto y probabilidad los estima el LLM.")
     respaldo_base_conocimiento: Optional[float] = Field(default=None, description="Puntuación (0 a 1) del re-ranker entre el texto del riesgo y el fragmento de la Base de Conocimiento que mejor lo respalda. Mide cuánto se apoya el riesgo en la bibliografía de referencia; no es una probabilidad de que el riesgo sea real.")
+
+    @field_validator("tipo_de_riesgo", "impacto_estimado", "probabilidad_estimada", mode="before")
+    @classmethod
+    def _normalizar_literal(cls, valor, info):
+        """El LLM a veces devuelve 'alto', 'ALTO', 'Explicito'... se lleva al valor canónico."""
+        if isinstance(valor, str):
+            opciones = get_args(cls.model_fields[info.field_name].annotation)
+            for opcion in opciones:
+                if _sin_tildes(opcion) == _sin_tildes(valor):
+                    return opcion
+        return valor
 
 class LLMResponse(BaseModel):
     """Define la estructura de datos que se espera directamente del LLM."""

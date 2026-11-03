@@ -191,14 +191,14 @@ def crear_evaluador_evidencia(llm):
 
 
 def clasificar_evidencia(respuesta_cruda: str) -> str:
-    """Normaliza la respuesta del evaluador a una de las 3 categorías válidas,
-    por si el LLM agrega texto extra pese a la instrucción de no hacerlo."""
-    texto = (respuesta_cruda or "").strip().upper()
-    if "INSUFICIENTE" in texto:
-        return "INSUFICIENTE"
-    if "AMBIGUO" in texto:
-        return "AMBIGUO"
-    return "CORRECTO"
+    """Normaliza la respuesta del evaluador a una de las 3 categorías válidas. Solo acepta
+    coincidencia exacta (ignorando mayúsculas y puntuación); cualquier otra respuesta cae
+    en AMBIGUO, el valor prudente, en vez de dar por buena la evidencia."""
+    texto = (respuesta_cruda or "").strip().strip(".,;:!\"'*` \n").upper()
+    if texto in ("CORRECTO", "AMBIGUO", "INSUFICIENTE"):
+        return texto
+    logger.warning(f"Respuesta del evaluador de evidencia sin coincidencia exacta ({texto[:60]!r}); se asume AMBIGUO.")
+    return "AMBIGUO"
 
 
 def get_llm_instance(model_id: str):
@@ -218,7 +218,17 @@ def get_llm_instance(model_id: str):
         raise ValueError(f"Clave API no encontrada para el modelo {model_id}")
 
     try:
-        if provider == "google":
+        if provider == "ollama":
+            from langchain_ollama import ChatOllama
+            return ChatOllama(
+                model=model_id,
+                base_url=config.OLLAMA_BASE_URL,
+                num_ctx=config.OLLAMA_NUM_CTX,
+                reasoning=False,
+                temperature=0.2
+            )
+
+        elif provider == "google":
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
                 model=model_id,

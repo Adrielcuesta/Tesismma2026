@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./datos/BaseConocimiento/**)",
+      "Read(./datos/ProyectoAnalizar/**)",
+      "Read(./datos/Resultados/**)",
+      "Read(./datos/ChromaDB*/**)",
+      "Read(./modelos_locales/**)",
+      "Read(./.cache/**)",
+      "Read(./venv/**)"
+    ]
+  }
+}

@@ -14,13 +14,13 @@ if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
 try:
-    from scripts.main import run_analysis
+    from scripts.main import run_analysis, AnalisisError
     from scripts import config
     from scripts.descargar_modelo import descargar_modelo
 except ImportError as e:
     logging.basicConfig(level=logging.ERROR)
     logging.error(f"Error crítico al importar módulos necesarios: {e}")
-    run_analysis, config, descargar_modelo = None, None, None
+    run_analysis, AnalisisError, config, descargar_modelo = None, Exception, None, None
 
 # --- Creación y Configuración de la App Flask ---
 app = Flask(__name__)
@@ -48,6 +48,7 @@ ALLOWED_EXTENSIONS = {'pdf'}
 MAX_KB_FILES = 4 * 1024 * 1024 # 4 MB por archivo de KB
 MAX_TOTAL_KB_UPLOAD_MB = 8 * 1024 * 1024 # 8 MB total para KB
 MAX_PROJECT_FILE_SIZE_MB = 2 * 1024 * 1024 # 2 MB para el archivo de proyecto
+app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', MAX_TOTAL_KB_UPLOAD_MB + MAX_PROJECT_FILE_SIZE_MB))
 
 FOOTER_INFO = getattr(config, 'INFO_TESIS', {})
 CURRENT_YEAR = datetime.datetime.now().year
@@ -233,7 +234,7 @@ def analyze_route():
     kb_files_uploaded = request.files.getlist('kb_files')
     project_file_uploaded = request.files.get('project_file')
 
-    recreate_db_for_this_run = not use_default_kb_checkbox
+    directorio_kb = None  # None = Base de Conocimiento por defecto
 
     # --- Validación de tamaño para archivos de la Base de Conocimiento ---
     if not use_default_kb_checkbox:
@@ -255,13 +256,15 @@ def analyze_route():
             return redirect(url_for('home'))
 
         if actual_kb_files_to_save:
-            clear_directory(config.DIRECTORIO_BASE_CONOCIMIENTO)
+            os.makedirs(config.DIRECTORIO_BASE_CONOCIMIENTO_USUARIO, exist_ok=True)
+            clear_directory(config.DIRECTORIO_BASE_CONOCIMIENTO_USUARIO)
             for file in actual_kb_files_to_save:
                 filename = secure_filename(file.filename)
-                file.save(os.path.join(config.DIRECTORIO_BASE_CONOCIMIENTO, filename))
+                file.save(os.path.join(config.DIRECTORIO_BASE_CONOCIMIENTO_USUARIO, filename))
+            directorio_kb = config.DIRECTORIO_BASE_CONOCIMIENTO_USUARIO
             flash(f"{len(actual_kb_files_to_save)} archivo(s) guardados para la Base de Conocimiento.", "success")
         else:
-             flash("Se usará el contenido actual de la carpeta BaseConocimiento.", "info")
+             flash("No se subieron PDFs: se usará la Base de Conocimiento por defecto.", "info")
 
     # --- Validación de tamaño para el archivo de Proyecto ---
     if not use_existing_project_file_checkbox:
@@ -286,11 +289,11 @@ def analyze_route():
 
         dashboard_relative_path = run_analysis(
             selected_llm_model_id=selected_llm_model_id,
-            force_recreate_db=recreate_db_for_this_run
+            directorio_kb=directorio_kb
         )
 
         if not dashboard_relative_path:
-            flash("El proceso de análisis no generó un dashboard. Revisa los logs.", "info")
+            flash("El proceso de análisis no generó un dashboard. Revisa los logs.", "error")
             return redirect(url_for('home'))
 
         dashboard_absolute_path = os.path.join(PROJECT_ROOT, dashboard_relative_path)
@@ -301,6 +304,9 @@ def analyze_route():
 
         return send_file(dashboard_absolute_path)
 
+    except AnalisisError as e_analisis:
+        app.logger.error(f"Falló el análisis: {e_analisis}")
+        flash(f"No se pudo completar el análisis: {e_analisis}", "error")
     except (ValidationError, TypeError) as e_val:
         app.logger.error(f"Error de validación o tipo en la respuesta del LLM: {e_val}")
         flash(f"Error Crítico: La respuesta del LLM no cumplió con el formato esperado. Detalles: {e_val}", "error")
@@ -313,5 +319,6 @@ def analyze_route():
 if __name__ == '__main__':
     app.logger.info("Iniciando servidor Flask de desarrollo...")
     port = int(os.environ.get("PORT", 8080))
-    # --- CAMBIO REALIZADO: Añadido use_reloader=False ---
-    app.run(debug=True, host='0.0.0.0', port=port, use_reloader=False)
+    host = os.environ.get("HOST", "127.0.0.1")
+    debug = os.environ.get("FLASK_DEBUG", "0").strip().lower() in ("1", "true", "yes")
+    app.run(debug=debug, host=host, port=port, use_reloader=False)

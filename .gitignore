@@ -21,11 +21,13 @@ __pycache__/
 datos/ChromaDB_V1/
 datos/ChromaDB_Test_Minimal/
 datos/ChromaDB_Test_Super_Minimal/
+datos/ChromaDB_V1_manifest.json
+
+# KB subida desde la app
+datos/BaseConocimiento_Usuario/
 *.duckdb
 *.duckdb.wal
 
-# Archivos de resultados generados
-datos/Resultados/
 
 # Modelos descargados localmente
 modelos_locales/
@@ -39,6 +41,7 @@ modelos_locales/
 # Archivos de sistema operativo
 .DS_Store
 Thumbs.db
+CLAUDE.md
 
 # Logs y archivos temporales específicos del proyecto (si los tuvieras)
 *.log

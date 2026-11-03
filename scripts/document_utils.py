@@ -112,7 +112,7 @@ def procesar_pdf_proyecto_para_analisis(ruta_pdf_proyecto, max_chars_proyecto):
         doc_proyecto_filtrado = [doc for doc in doc_proyecto_raw if not is_ignorable_page(doc.page_content)]
         if not doc_proyecto_filtrado:
             logger.warning(f"El documento del proyecto '{os.path.basename(ruta_pdf_proyecto)}' no contiene páginas con contenido sustancial.")
-            return f"El documento del proyecto '{os.path.basename(ruta_pdf_proyecto)}' parece estar vacío o solo contiene portadas."
+            return None
         descripcion_nuevo_proyecto = "\n\n".join([doc.page_content for doc in doc_proyecto_filtrado])
         logger.info(f"Descripción del proyecto generada desde {len(doc_proyecto_filtrado)} páginas útiles, total {len(descripcion_nuevo_proyecto)} caracteres.")
         if len(descripcion_nuevo_proyecto) > max_chars_proyecto:
@@ -127,6 +127,3 @@ def obtener_ruta_pdf_proyecto(directorio_proyecto_analizar):
     if not os.path.isdir(directorio_proyecto_analizar): return None
     pdfs = [f for f in os.listdir(directorio_proyecto_analizar) if f.lower().endswith(".pdf")]
     return os.path.join(directorio_proyecto_analizar, pdfs[0]) if pdfs else None
-
-def listar_documentos_kb(directorio_base_conocimiento):
-    return [f for f in os.listdir(directorio_base_conocimiento) if f.lower().endswith(".pdf")] if os.path.isdir(directorio_base_conocimiento) else []

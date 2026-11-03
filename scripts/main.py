@@ -13,10 +13,14 @@ from .report_utils import calcular_exposicion
 
 logger = logging.getLogger(__name__)
 
+
+class AnalisisError(Exception):
+    """Falla conocida del análisis; su mensaje es el motivo real que se le muestra al usuario."""
+
 # Modelo local fijo para el evaluador de evidencia CRAG-lite -- deliberadamente
 # desacoplado de selected_llm_model_id, para que nunca consuma cuota de una API
-# de pago (mismo criterio que RAGAS_JUDGE_MODEL_ID en evaluate_rag.py).
-EVALUADOR_EVIDENCIA_MODEL_ID = "qwen2.5:7b-instruct"
+# de pago.
+EVALUADOR_EVIDENCIA_MODEL_ID = config.OLLAMA_MODEL
 if not logger.handlers:
     logger.setLevel(logging.INFO)
     console_handler = logging.StreamHandler(sys.stdout)
@@ -24,6 +28,30 @@ if not logger.handlers:
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     logger.propagate = True
+
+def _extraer_json(texto: str) -> str:
+    """Recorta del primer '{' al último '}' (descarta cercos ```json y texto alrededor)."""
+    inicio, fin = texto.find("{"), texto.rfind("}")
+    return texto[inicio:fin + 1] if inicio != -1 and fin > inicio else texto
+
+
+def _parsear_respuesta_llm(raw: str, llm) -> LLMResponse:
+    """Parsea y valida la respuesta del LLM. Si falla, hace UN reintento mostrándole el error."""
+    try:
+        return LLMResponse.model_validate(json.loads(_extraer_json(raw)))
+    except (json.JSONDecodeError, ValidationError) as e:
+        logger.warning(f"Respuesta del LLM inválida, se reintenta una vez con el error: {e}")
+        prompt_reintento = (
+            "Tu respuesta anterior no cumplió el formato JSON pedido.\n"
+            f"ERROR DE VALIDACIÓN:\n{e}\n\n"
+            f"RESPUESTA ANTERIOR:\n{raw}\n\n"
+            "Devolvé ÚNICAMENTE el objeto JSON corregido, con la clave \"riesgos_identificados\" "
+            "y los 9 campos por riesgo, sin texto adicional."
+        )
+        respuesta = llm.invoke(prompt_reintento)
+        raw_reintento = getattr(respuesta, "content", respuesta)
+        return LLMResponse.model_validate(json.loads(_extraer_json(raw_reintento)))
+
 
 def _iniciar_log_de_analisis():
     """Guarda el log de una corrida hecha desde la app en la MISMA carpeta que el
@@ -75,6 +103,7 @@ def _run_analysis_impl(
     db_connection: Optional[object] = None,
     usar_rag: bool = True,
     marca_tiempo: Optional[str] = None,
+    directorio_kb: Optional[str] = None,
 ):
     if not is_evaluation_mode: logger.info(f"--- INICIANDO ANÁLISIS (Modelo: {selected_llm_model_id}) ---")
     # Cada ejecución guarda su JSON y su dashboard con esta marca en el nombre, para no
@@ -87,26 +116,27 @@ def _run_analysis_impl(
             vector_db = db_connection
         else:
             embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
-            if not embedding_function: return None
+            if not embedding_function: raise AnalisisError("No se pudo inicializar el modelo de embeddings.")
             vector_db = vector_db_manager.crear_o_cargar_chroma_db(
-                chroma_db_path=config.CHROMA_DB_PATH, docs_base_conocimiento_path=config.DIRECTORIO_BASE_CONOCIMIENTO,
+                chroma_db_path=config.CHROMA_DB_PATH, docs_base_conocimiento_path=directorio_kb or config.DIRECTORIO_BASE_CONOCIMIENTO,
                 embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP,
                 recrear_db_flag=force_recreate_db or config.RECREAR_DB
             )
-        if not vector_db: return None
+        if not vector_db: raise AnalisisError("No se pudo crear o cargar la base vectorial (¿la Base de Conocimiento no tiene PDFs con texto?).")
 
         llm = rag_components.get_llm_instance(selected_llm_model_id)
-        if not llm: return None
+        if not llm: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
 
         if not is_evaluation_mode:
             pdf_path_analizar_abs = document_utils.obtener_ruta_pdf_proyecto(config.DIRECTORIO_PROYECTO_ANALIZAR)
-            if not pdf_path_analizar_abs: logger.error("No se encontró PDF en la carpeta a analizar."); return None
+            if not pdf_path_analizar_abs: raise AnalisisError("No se encontró ningún PDF en la carpeta del proyecto a analizar.")
             nombre_pdf_proyecto_detectado = os.path.basename(pdf_path_analizar_abs)
             descripcion_nuevo_proyecto = document_utils.procesar_pdf_proyecto_para_analisis(pdf_path_analizar_abs, config.MAX_CHARS_PROYECTO)
         else:
             nombre_pdf_proyecto_detectado, descripcion_nuevo_proyecto = "Modo de Evaluación", eval_question
 
-        if not descripcion_nuevo_proyecto: logger.error("La descripción del proyecto está vacía."); return None
+        if not descripcion_nuevo_proyecto:
+            raise AnalisisError("No se pudo extraer texto del documento del proyecto (¿es un PDF escaneado, sin texto, o está dañado?).")
 
         # -------------------------Evaluador de evidencia CRAG-lite -----------------------------
         #
@@ -172,7 +202,7 @@ def _run_analysis_impl(
             output_dir_especifico = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base_proyecto)
             os.makedirs(output_dir_especifico, exist_ok=True)
             ruta_json_guardado = report_utils.formatear_y_guardar_reporte(reporte_insuficiente, nombre_pdf_proyecto_detectado, output_dir_especifico, sufijo_nombre=f"_{marca_tiempo}")
-            if not ruta_json_guardado: return None
+            if not ruta_json_guardado: raise AnalisisError("No se pudo guardar el reporte JSON.")
             dashboard_html_filename = f"dashboard_{nombre_base_proyecto}_{marca_tiempo}.html"
             ruta_output_dashboard_html = os.path.join(output_dir_especifico, dashboard_html_filename)
             dashboard_generator.generar_dashboard_html(
@@ -181,7 +211,7 @@ def _run_analysis_impl(
             )
             if os.path.exists(ruta_output_dashboard_html):
                 return os.path.normpath(os.path.relpath(ruta_output_dashboard_html, config.PROJECT_ROOT)).replace("\\", "/")
-            return None
+            raise AnalisisError("El dashboard HTML no fue generado.")
         # --- FIN evaluador de evidencia ---
 
         if usar_rag:
@@ -189,30 +219,22 @@ def _run_analysis_impl(
             # re-ranking): no se repite el paso más caro. Si no hubo recuperación previa, la
             # cadena busca por su cuenta como antes.
             qa_chain = rag_components.crear_cadena_rag(llm, vector_db, documentos_precalculados=fuentes_docs_evaluador or None)
-            if not qa_chain: return None
+            if not qa_chain: raise AnalisisError("No se pudo crear la cadena RAG.")
             logger.info("Invocando la cadena RAG principal...")
             respuesta_rag_dict = qa_chain.invoke({"query": descripcion_nuevo_proyecto})
             raw_json_string = respuesta_rag_dict.get("result", "{}")
             fuentes_docs = respuesta_rag_dict.get("source_documents", [])
         else:
             cadena_sin_rag = rag_components.crear_cadena_sin_rag(llm)
-            if not cadena_sin_rag: return None
+            if not cadena_sin_rag: raise AnalisisError("No se pudo crear la cadena sin RAG.")
             logger.info("Invocando la cadena SIN RAG (ablation, sin contexto recuperado)...")
             raw_json_string = cadena_sin_rag.invoke({"question": descripcion_nuevo_proyecto})
             fuentes_docs = []  # Sin RAG, por diseño, no hay fragmentos recuperados
 
-        if "```json" in raw_json_string:
-            clean_json_string = raw_json_string.split("```json")[1].split("```")[0].strip()
-        elif "```" in raw_json_string:
-            clean_json_string = raw_json_string.split("```")[1].split("```")[0].strip()
-        else:
-            clean_json_string = raw_json_string
-
         try:
-            llm_response_data = json.loads(clean_json_string)
-            llm_response_obj = LLMResponse.model_validate(llm_response_data)
+            llm_response_obj = _parsear_respuesta_llm(raw_json_string, llm)
         except (json.JSONDecodeError, ValidationError) as e:
-            logger.error(f"Error CRÍTICO al parsear o validar la respuesta JSON del LLM: {e}")
+            logger.error(f"Error CRÍTICO al parsear o validar la respuesta JSON del LLM (tras 1 reintento): {e}")
             logger.error(f"Respuesta recibida del LLM (string crudo):\n---INICIO---\n{raw_json_string}\n---FIN---")
             if is_evaluation_mode:
                 return {
@@ -224,7 +246,6 @@ def _run_analysis_impl(
                     "usa_rag": usar_rag,
                 }
             raise
-        # --- FIN DE LA CORRECCIÓN ---
 
         logger.info(f"Metadatos de la evidencia recuperada: {[doc.metadata for doc in fuentes_docs]}")
 
@@ -291,7 +312,7 @@ def _run_analysis_impl(
         output_dir_especifico = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base_proyecto)
         os.makedirs(output_dir_especifico, exist_ok=True)
         ruta_json_guardado = report_utils.formatear_y_guardar_reporte(reporte_final, nombre_pdf_proyecto_detectado, output_dir_especifico, sufijo_nombre=f"_{marca_tiempo}")
-        if not ruta_json_guardado: return None
+        if not ruta_json_guardado: raise AnalisisError("No se pudo guardar el reporte JSON.")
 
         dashboard_html_filename = f"dashboard_{nombre_base_proyecto}_{marca_tiempo}.html"
         ruta_output_dashboard_html = os.path.join(output_dir_especifico, dashboard_html_filename)
@@ -301,11 +322,12 @@ def _run_analysis_impl(
         )
         if os.path.exists(ruta_output_dashboard_html):
             return os.path.normpath(os.path.relpath(ruta_output_dashboard_html, config.PROJECT_ROOT)).replace("\\", "/")
-        logger.error("El dashboard HTML no fue generado."); return None
-    except (ValidationError, TypeError) as e:
-        logger.error(f"Error de validación o tipo: {e}", exc_info=True); raise
+        raise AnalisisError("El dashboard HTML no fue generado.")
+    except (ValidationError, TypeError, AnalisisError) as e:
+        logger.error(f"Error en el análisis: {e}", exc_info=True); raise
     except Exception as e_main_flow:
-        logger.error(f"Error catastrófico en el flujo principal: {e_main_flow}", exc_info=True); return None
+        logger.error(f"Error catastrófico en el flujo principal: {e_main_flow}", exc_info=True)
+        raise AnalisisError(str(e_main_flow)) from e_main_flow
 
 
 def run_analysis(
@@ -316,6 +338,7 @@ def run_analysis(
     eval_ground_truth: Optional[str] = None,
     db_connection: Optional[object] = None,
     usar_rag: bool = True,
+    directorio_kb: Optional[str] = None,
 ):
     """Punto de entrada público (misma firma de siempre, lo usan app.py y evaluate_rag.py).
     En modo app deja un log en la carpeta del dashboard; en modo evaluación no lo hace,
@@ -331,6 +354,7 @@ def run_analysis(
             db_connection=db_connection,
             usar_rag=usar_rag,
             marca_tiempo=getattr(handler_log, "marca_tiempo", None),
+            directorio_kb=directorio_kb,
         )
     finally:
         _cerrar_log_de_analisis(handler_log)

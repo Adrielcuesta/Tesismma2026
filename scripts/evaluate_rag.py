@@ -81,8 +81,7 @@ def run_evaluation_for_model(model_id: str, eval_dataset: Dataset, db_connection
     # Los modelos locales (Ollama) no tienen límite de velocidad ni de cuota:
     # la pausa de 10s entre preguntas solo tiene sentido para no chocar con
     # los límites de APIs en la nube. Se saltea para modelos locales.
-    model_base_url = config.LLM_MODELS.get(model_id, {}).get("base_url", "")
-    is_local_model = "localhost" in model_base_url or "127.0.0.1" in model_base_url
+    is_local_model = config.LLM_MODELS.get(model_id, {}).get("provider") == "ollama"
 
     modo_txt = "con RAG" if usar_rag else "SIN RAG (ablation)"
     logging.info(f"--- Iniciando evaluación para el modelo: {model_id} [{modo_txt}] ({len(eval_dataset)} preguntas) ---")
@@ -228,7 +227,8 @@ def main():
     models_to_evaluate = list(config.LLM_MODELS.keys())
 
     for model_id in models_to_evaluate:
-        if not os.getenv(config.LLM_MODELS[model_id].get("api_key_env")):
+        api_key_env = config.LLM_MODELS[model_id].get("api_key_env")
+        if api_key_env and not os.getenv(api_key_env):
             logging.warning(f"No se encontró API Key para '{model_id}'. Saltando su evaluación."); continue
 
         # Ablation automático: cada modelo se evalúa dos veces, con RAG y sin
@@ -267,10 +267,16 @@ def main():
 
             # Ragas solo puede puntuar respuestas con esquema válido. Se descarta
             # también la clave interna 'schema_valido' y 'evaluacion_evidencia',
-            # que no forman parte del dataset que espera Ragas.
+            # que no forman parte del dataset que espera Ragas. Las preguntas con evidencia
+            # INSUFICIENTE (respuesta vacía por diseño) quedan fuera de Ragas y se informan
+            # aparte (evidencia_insuficiente en las métricas propias).
+            n_insuficientes = sum(1 for r in model_results_list if r.get("evaluacion_evidencia") == "INSUFICIENTE")
+            if n_insuficientes:
+                logging.info(f"{n_insuficientes} pregunta(s) con evidencia INSUFICIENTE de {etiqueta}: excluidas de Ragas.")
             intentos_validos_ragas = [
                 {k: v for k, v in r.items() if k not in ("schema_valido", "evaluacion_evidencia")}
-                for r in model_results_list if r.get("schema_valido", False)
+                for r in model_results_list
+                if r.get("schema_valido", False) and r.get("evaluacion_evidencia") != "INSUFICIENTE"
             ]
             if not intentos_validos_ragas:
                 logging.warning(f"Ningún intento con esquema válido para {etiqueta}. Saltando Ragas."); continue
