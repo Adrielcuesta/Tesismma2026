@@ -25,6 +25,10 @@ if 'SSL_CERT_FILE' in os.environ:
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 DATA_DIR = os.path.join(PROJECT_ROOT, "datos")
 DIRECTORIO_BASE_CONOCIMIENTO = os.path.join(DATA_DIR, "BaseConocimiento")
+# Normativa (NORM_01 a 05): se indexa y se recupera por similitud. Lineamientos (NORM_06, NORM_07 y criterios_empresa.json):
+# es el método de la empresa, nunca se indexa. Nadie debe leer DIRECTORIO_BASE_CONOCIMIENTO directamente.
+DIRECTORIO_NORMATIVA = os.path.join(DIRECTORIO_BASE_CONOCIMIENTO, "Normativa")
+DIRECTORIO_LINEAMIENTOS = os.path.join(DIRECTORIO_BASE_CONOCIMIENTO, "Lineamientos")
 DIRECTORIO_PROYECTO_ANALIZAR = os.path.join(DATA_DIR, "ProyectoAnalizar")
 # PDFs subidos desde la app como Base de Conocimiento propia (nunca pisan DIRECTORIO_BASE_CONOCIMIENTO)
 DIRECTORIO_BASE_CONOCIMIENTO_USUARIO = os.path.join(DATA_DIR, "BaseConocimiento_Usuario")
@@ -54,7 +58,7 @@ else:
 # --- Configuración de RAG y Embeddings ---
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 100
-MAX_CHARS_PROYECTO = 15000
+MAX_CHARS_PROYECTO = 15000  # legacy: solo lo usa el modo evaluación; el pipeline por secciones no trunca la oferta
 # Largo máximo (en caracteres) del texto con el que se BUSCA en la base vectorial y se re-rankea.
 # El análisis sigue recibiendo la descripción completa (hasta MAX_CHARS_PROYECTO); esto solo acota
 # la consulta de recuperación. Las preguntas de evaluación miden entre 217 y 301 caracteres.
@@ -71,8 +75,6 @@ VERSION_CHUNKER_ARTICULOS = 1
 MAX_CHARS_ARTICULO = 3000
 # Una línea (normalizada, sin dígitos) repetida en al menos esta fracción de páginas es encabezado/pie
 UMBRAL_ENCABEZADO = 0.5
-# Norma que va completa en el prompt y no se indexa
-NORMA_COMPLETA = "NORM_06"
 
 # --- Análisis de la oferta por sección ---
 # True: la oferta se divide en secciones y cada una se analiza contra el índice por artículos
@@ -123,7 +125,7 @@ OLLAMA_NUM_CTX = 16384
 OLLAMA_SEED = 42
 # Prueba controlada: razonamiento de Qwen3 SOLO en las llamadas de verificación (redacción y resumen siguen sin él).
 # Muestreo recomendado por Qwen para thinking; misma semilla.
-THINKING_VERIFICACION = True
+THINKING_VERIFICACION = False
 VERIF_TEMPERATURE = 0.6
 VERIF_TOP_P = 0.95
 VERIF_TOP_K = 20
@@ -195,7 +197,7 @@ INFO_TESIS = {
 # --- Funciones de Inicialización ---
 def inicializar_directorios_datos():
     directorios_a_crear = [
-        DIRECTORIO_BASE_CONOCIMIENTO, DIRECTORIO_BASE_CONOCIMIENTO_USUARIO, DIRECTORIO_PROYECTO_ANALIZAR,
+        DIRECTORIO_NORMATIVA, DIRECTORIO_LINEAMIENTOS, DIRECTORIO_BASE_CONOCIMIENTO_USUARIO, DIRECTORIO_PROYECTO_ANALIZAR,
         DIRECTORIO_PROYECTO_ANALIZAR_USUARIO, CHROMA_DB_PATH, DIRECTORIO_RESULTADOS_BASE, MODELOS_LOCALES_PATH, CACHE_DIR_HF
     ]
     try:

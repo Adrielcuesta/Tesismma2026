@@ -339,11 +339,11 @@ def chunkear_norma_por_articulos(ruta: str) -> list:
     return analizar_norma_por_articulos(ruta)["chunks"]
 
 def cargar_kb_por_articulos(carpeta_path: str) -> list:
-    """Chunks por artículo de todas las normas de la carpeta, salvo config.NORMA_COMPLETA (va entera en el prompt)."""
+    """Chunks por artículo de todas las normas de la carpeta (sin recursión)."""
     chunks = []
     if not os.path.isdir(carpeta_path): return chunks
     for filename in sorted(os.listdir(carpeta_path)):
-        if not filename.lower().endswith(EXTENSIONES_SOPORTADAS) or norma_de_archivo(filename) == config.NORMA_COMPLETA:
+        if not filename.lower().endswith(EXTENSIONES_SOPORTADAS):
             continue
         try:
             nuevos = chunkear_norma_por_articulos(os.path.join(carpeta_path, filename))
@@ -353,14 +353,9 @@ def cargar_kb_por_articulos(carpeta_path: str) -> list:
             logger.error(f"  Error al procesar {filename}: {e}", exc_info=True)
     return chunks
 
-def cargar_norma_completa(norma: str = None, carpeta: str = None) -> str:
-    """Texto limpio (sin encabezados/pies ni páginas de metadatos/índice) de una norma, para usarla entera en prompts."""
-    norma = norma or config.NORMA_COMPLETA
-    carpeta = carpeta or config.DIRECTORIO_BASE_CONOCIMIENTO
-    archivos = [f for f in sorted(os.listdir(carpeta)) if f.lower().endswith(EXTENSIONES_SOPORTADAS) and norma_de_archivo(f) == norma.upper()]
-    if not archivos:
-        raise FileNotFoundError(f"No se encontró {norma} en {carpeta}")
-    paginas = _paginas_limpias(os.path.join(carpeta, archivos[0]))
+def texto_limpio_de_archivo(ruta: str) -> str:
+    """Texto de un documento sin encabezados/pies ni páginas vacías, de metadatos o índice."""
+    paginas = _paginas_limpias(ruta)
     return "\n".join("\n".join(l for l in lineas if l) for _, lineas, motivo in paginas if not motivo)
 
 # --- Oferta: texto limpio y división en secciones ---

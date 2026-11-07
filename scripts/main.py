@@ -251,7 +251,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     norma_completa = ""
     t0 = time.perf_counter()
     if usar_rag:
-        carpeta_kb = directorio_kb or config.DIRECTORIO_BASE_CONOCIMIENTO
+        carpeta_kb = directorio_kb or config.DIRECTORIO_NORMATIVA
         embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
         if not embedding_function: raise AnalisisError("No se pudo inicializar el modelo de embeddings.")
         vector_db = vector_db_manager.crear_o_cargar_chroma_db(
@@ -259,10 +259,6 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, recrear_db_flag=force_recreate_db or config.RECREAR_DB,
             collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True)
         if not vector_db: raise AnalisisError("No se pudo crear o cargar el índice de la KB por artículos (¿la carpeta de normas tiene PDFs o DOCX con texto?).")
-        try:
-            norma_completa = document_utils.cargar_norma_completa(config.NORMA_COMPLETA, carpeta_kb)
-        except FileNotFoundError as e:
-            raise AnalisisError(f"Falta {config.NORMA_COMPLETA} en la Base de Conocimiento (va completa en el prompt): {e}") from e
         if usar_crag:
             # El evaluador CRAG usa el modelo local fijo, sin formato JSON (responde una sola palabra)
             llm_evaluador = rag_components.get_llm_instance(EVALUADOR_EVIDENCIA_MODEL_ID)
@@ -428,7 +424,7 @@ def _run_analysis_impl(
             embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
             if not embedding_function: raise AnalisisError("No se pudo inicializar el modelo de embeddings.")
             vector_db = vector_db_manager.crear_o_cargar_chroma_db(
-                chroma_db_path=config.CHROMA_DB_PATH, docs_base_conocimiento_path=directorio_kb or config.DIRECTORIO_BASE_CONOCIMIENTO,
+                chroma_db_path=config.CHROMA_DB_PATH, docs_base_conocimiento_path=directorio_kb or config.DIRECTORIO_NORMATIVA,
                 embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP,
                 recrear_db_flag=force_recreate_db or config.RECREAR_DB
             )

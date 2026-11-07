@@ -193,7 +193,7 @@ def main():
     embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
     if not embedding_function: logging.error("No se pudo crear la función de embeddings."); return
     db_connection = vector_db_manager.crear_o_cargar_chroma_db(
-        chroma_db_path=config.CHROMA_DB_PATH, docs_base_conocimiento_path=config.DIRECTORIO_BASE_CONOCIMIENTO,
+        chroma_db_path=config.CHROMA_DB_PATH, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
         embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE,
         chunk_overlap=config.CHUNK_OVERLAP, recrear_db_flag=True
     )

@@ -31,8 +31,6 @@ def _firma_indexado(docs_path, chunk_size, chunk_overlap, embedding_function, po
     if os.path.isdir(docs_path):
         for nombre in sorted(os.listdir(docs_path)):
             if nombre.lower().endswith(document_utils.EXTENSIONES_SOPORTADAS):
-                if por_articulos and document_utils.norma_de_archivo(nombre) == config.NORMA_COMPLETA:
-                    continue  # va completa en el prompt: no forma parte del índice
                 ruta = os.path.join(docs_path, nombre)
                 archivos.append([nombre, os.path.getsize(ruta), int(os.path.getmtime(ruta))])
     firma = {"archivos": archivos, "embedding": str(getattr(embedding_function, "model_name", "desconocido"))}
@@ -64,7 +62,10 @@ def crear_o_cargar_chroma_db(chroma_db_path, docs_base_conocimiento_path, embedd
     db_exists = os.path.exists(os.path.join(chroma_db_path, 'chroma.sqlite3'))
     firma = _firma_indexado(docs_base_conocimiento_path, chunk_size, chunk_overlap, embedding_function, por_articulos)
     if db_exists and not recrear_db_flag and _leer_manifest(manifest_path) != firma:
-        logger.info("La Base de Conocimiento, CHUNK_SIZE o el embedding cambiaron respecto de lo indexado: se reindexa.")
+        previa = _leer_manifest(manifest_path)
+        cambios = sorted(k for k in set(firma) | set(previa or {}) if (previa or {}).get(k) != firma.get(k))
+        logger.info(f"La Base de Conocimiento, CHUNK_SIZE o el embedding cambiaron respecto de lo indexado (cambió: {cambios or 'manifest ilegible'}): "
+                    "se reindexa una sola vez.")
         recrear_db_flag = True
     if recrear_db_flag or not db_exists:
         if recrear_db_flag and db_exists:
@@ -120,15 +121,12 @@ def _saltos_de_numeracion(numeros):
 def imprimir_resumen(carpeta=None):
     """Verificación sin embeddings ni Chroma: cómo quedaría el índice por artículos, norma por norma."""
     from collections import Counter
-    carpeta = carpeta or config.DIRECTORIO_BASE_CONOCIMIENTO
+    carpeta = carpeta or config.DIRECTORIO_NORMATIVA
     archivos = [f for f in sorted(os.listdir(carpeta)) if f.lower().endswith(document_utils.EXTENSIONES_SOPORTADAS)]
     for nombre in archivos:
         ruta = os.path.join(carpeta, nombre)
         norma = document_utils.norma_de_archivo(nombre)
         print(f"\n=== {norma} ({nombre}) ===")
-        if norma == config.NORMA_COMPLETA:
-            print(f"  Fuera del índice. Texto completo para el prompt: {len(document_utils.cargar_norma_completa(norma, carpeta))} caracteres.")
-            continue
         r = document_utils.analizar_norma_por_articulos(ruta)
         chunks = r["chunks"]
         arts = [c for c in chunks if c.metadata["articulo"] != "preambulo"]
@@ -175,18 +173,18 @@ def _pares_umbral_alerta(nodo):
 
 def imprimir_cobertura_gt(ruta_gt, carpeta=None):
     """Pares (norma, artículo) del ground truth que no existen como chunk en la KB (solo se leen las claves 'umbral_alerta')."""
-    carpeta = carpeta or config.DIRECTORIO_BASE_CONOCIMIENTO
+    carpeta = carpeta or config.DIRECTORIO_NORMATIVA
     with open(ruta_gt, encoding="utf-8") as f:
         pares = _pares_umbral_alerta(json.load(f))
     if len(pares) != 60:
         raise SystemExit(f"ERROR: se esperaban 60 pares únicos (norma, artículo) en 'umbral_alerta' y se leyeron {len(pares)}; la cobertura no es confiable.")
     existentes = set()
     for nombre in sorted(os.listdir(carpeta)):
-        if nombre.lower().endswith(document_utils.EXTENSIONES_SOPORTADAS) and document_utils.norma_de_archivo(nombre) != config.NORMA_COMPLETA:
+        if nombre.lower().endswith(document_utils.EXTENSIONES_SOPORTADAS):
             existentes |= {(c.metadata["norma"], c.metadata["articulo"])
                            for c in document_utils.chunkear_norma_por_articulos(os.path.join(carpeta, nombre))}
-    faltantes = sorted((n, a) for n, a in pares if n != config.NORMA_COMPLETA and (n, a) not in existentes)
-    print(f"Pares únicos en el ground truth: {len(pares)} (de {config.NORMA_COMPLETA}, fuera del índice: {sum(1 for n, _ in pares if n == config.NORMA_COMPLETA)})")
+    faltantes = sorted((n, a) for n, a in pares if (n, a) not in existentes)
+    print(f"Pares únicos en el ground truth: {len(pares)}")
     print(f"Faltantes en la KB: {len(faltantes)} {faltantes or ''}")
 
 if __name__ == "__main__":
@@ -204,7 +202,7 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.INFO)
         config.inicializar_directorios_datos()
         crear_o_cargar_chroma_db(
-            chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_BASE_CONOCIMIENTO,
+            chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
             embedding_function=get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH),
             chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, recrear_db_flag=False,
             collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True)

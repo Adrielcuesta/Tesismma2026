@@ -111,7 +111,7 @@ def main(argv=None) -> int:
         print("No se pudo inicializar el modelo de embeddings.", file=sys.stderr)
         return 1
     vector_db = vector_db_manager.crear_o_cargar_chroma_db(
-        chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_BASE_CONOCIMIENTO,
+        chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
         embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP,
         recrear_db_flag=False, collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True)
     if not vector_db:
