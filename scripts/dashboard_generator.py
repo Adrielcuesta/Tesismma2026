@@ -38,6 +38,42 @@ def formatear_respaldo(riesgo):
     respaldo = riesgo.get("respaldo_base_conocimiento")
     return f"{respaldo:.0%}" if respaldo is not None else "N/D"
 
+def formatear_fuentes(riesgo):
+    """Fuentes normativas del riesgo, p. ej. 'NORM_01 Art. 4.2; NORM_02 Art. 1.1' (ya escapadas)."""
+    fuentes = riesgo.get("fuentes") or []
+    return escape("; ".join(f"{f.get('norma', '?')} Art. {f.get('articulo', '?')}" for f in fuentes)) if fuentes else "—"
+
+def formatear_marcas(riesgo):
+    """Marcas de validación del riesgo (ya escapadas), o '—' si no tiene."""
+    marcas = riesgo.get("marcas") or []
+    return " ".join(f'<span class="marca">{escape(str(m))}</span>' for m in marcas) if marcas else "—"
+
+CLASE_ESTADO = {"Rojo": "rojo", "Ámbar": "ambar", "Verde": "verde"}
+
+def formatear_requisitos(riesgo):
+    """Requisitos del artículo como lista HTML (ya escapados), o '—'."""
+    requisitos = riesgo.get("requisitos") or []
+    return "<ul>" + "".join(f"<li>{escape(str(r))}</li>" for r in requisitos) + "</ul>" if requisitos else "—"
+
+def tarjetas_verificacion(titulo, emoji, riesgos):
+    """Sección de hallazgos (Incumple) o de alertas a revisar (Revisar): por cada uno, cita, artículo, requisitos y motivo."""
+    if not riesgos:
+        return ""
+    tarjetas = "".join(f'''
+                <div class="risk-card {CLASE_ESTADO.get(r.get("estado_RAG_sugerido"), "gris")}">
+                    <h6>{escape(r.get("descripcion_riesgo", "N/A"))}</h6>
+                    <div class="risk-card-body">
+                        <p><span class="detail-label">Cita de la oferta:</span> {escape(r.get("cita_oferta") or "N/D")}</p>
+                        <p><span class="detail-label">Artículo:</span> {formatear_fuentes(r)}</p>
+                        <p><span class="detail-label">Requisitos:</span></p>{formatear_requisitos(r)}
+                        <p><span class="detail-label">Motivo:</span> {escape(r.get("motivo") or "N/D")}</p>
+                        <p><span class="detail-label">Sección:</span> {escape(r.get("seccion_oferta") or "N/D")}</p>
+                        <p><span class="detail-label">Acción:</span> {escape(r.get("accion_mitigacion", "N/A"))}</p>
+                        <p><span class="detail-label">Exposición (impacto × prob.):</span> {formatear_exposicion(r)}</p>
+                    </div>
+                </div>''' for r in riesgos)
+    return f'<div class="risk-section"><h3 class="risk-section-title"><span class="section-emoji">{emoji}</span>{titulo} ({len(riesgos)})</h3><div class="dashboard-grid">{tarjetas}</div></div>'
+
 def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, info_tesis_config=None):
     try:
         with open(ruta_json_resultados, 'r', encoding='utf-8') as f:
@@ -52,6 +88,10 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
     # Resultado del evaluador de evidencia CRAG-lite
     evaluacion_evidencia = datos_analisis.get("evaluacion_evidencia")
     advertencia_evidencia = datos_analisis.get("advertencia_evidencia")
+    # Cierre del informe del análisis por sección
+    suficiencia_evidencia = datos_analisis.get("suficiencia_evidencia")
+    comentarios_generales = datos_analisis.get("comentarios_generales")
+    acciones_generales = datos_analisis.get("acciones_generales") or []
     it = info_tesis_config or {}
 
     header_banner_base64 = image_to_base64("header_banner_abstract.png")
@@ -65,8 +105,12 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
         "Verde": {"clase": "verde", "titulo": "Riesgos Bajos"},
         "Gris (Indeterminado)": {"clase": "gris", "titulo": "Riesgos Indeterminados"}
     }
+    # Modo verificación: hallazgos (Incumple) y alertas a revisar (Revisar) van en secciones propias;
+    # el resto (modo lista) se agrupa por estado RAG como siempre. El registro técnico no se muestra.
+    hallazgos = [r for r in riesgos_identificados if r.get("veredicto") == "Incumple"]
+    alertas_revisar = [r for r in riesgos_identificados if r.get("veredicto") == "Revisar"]
     riesgos_agrupados = {key: [] for key in estado_map}
-    for riesgo in riesgos_identificados:
+    for riesgo in (r for r in riesgos_identificados if r.get("veredicto") not in ("Incumple", "Revisar")):
         estado = riesgo.get("estado_RAG_sugerido", "Gris (Indeterminado)")
         riesgos_agrupados.get(estado, riesgos_agrupados["Gris (Indeterminado)"]).append(riesgo)
     orden_secciones = ["Rojo", "Ámbar", "Verde", "Gris (Indeterminado)"]
@@ -93,6 +137,9 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
         .evidencia-banner.ambiguo{{background-color:#fff8e1;border:1px solid #f39c12;color:#7a5c00;}}
         .evidencia-banner.insuficiente{{background-color:#fdecea;border:1px solid #e74c3c;color:#7a1f14;}}
         .evidencia-banner strong{{display:block;margin-bottom:4px;font-size:1.05em;}}
+        .informe-general{{background-color:#f5f8fb;border:1px solid #d6e0ea;border-radius:8px;padding:16px 20px;margin-bottom:25px;font-size:.95em;line-height:1.5;}}
+        .informe-general h3{{margin:0 0 8px;font-size:1.1em;color:#2c3e50;}} .informe-general ul{{margin:6px 0 0;padding-left:22px;}}
+        .marca{{display:inline-block;background-color:#fff3cd;border:1px solid #f0c36d;color:#7a5c00;border-radius:10px;padding:0 8px;font-size:.85em;margin-right:4px;}}
         .risk-section{{margin-bottom:35px;}}
         .risk-section-title{{font-size:1.4em;color:#2c3e50;border-bottom:1px solid #e0e0e0;padding-bottom:10px;margin-bottom:20px;display:flex;align-items:center;}}
         .section-emoji{{margin-right:12px;font-size:1.2em;}}
@@ -139,6 +186,17 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
             {escape(advertencia_evidencia or "La evidencia recuperada es temáticamente relacionada pero no específica para este proyecto.")}
         </div>'''
 
+    if suficiencia_evidencia or comentarios_generales or acciones_generales:
+        acciones_html = "".join(f"<li>{escape(str(a))}</li>" for a in acciones_generales)
+        acciones_bloque = f'<p class="detail-label">Acciones generales:</p><ul>{acciones_html}</ul>' if acciones_html else ""
+        final_html += f'''
+        <div class="informe-general">
+            <h3>Resumen del informe</h3>
+            <p><span class="detail-label">Suficiencia de la evidencia:</span> {escape(str(suficiencia_evidencia or "N/D"))}</p>
+            <p><span class="detail-label">Comentarios generales:</span> {escape(str(comentarios_generales or "N/D"))}</p>
+            {acciones_bloque}
+        </div>'''
+
     # --- SECCIÓN DE TARJETAS DE RESUMEN ---
     summary_html_parts = []
     for estado_key in orden_secciones:
@@ -157,6 +215,10 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
                         <p><span class="detail-label">Probabilidad:</span> {escape(riesgo.get("probabilidad_estimada","N/A"))}</p>
                         <p><span class="detail-label">Responsable:</span> {escape(riesgo.get("responsable_accidente", "N/A"))}</p>
                         <p><span class="detail-label">Acción:</span> {escape(riesgo.get("accion_mitigacion", "N/A"))}</p>
+                        <p><span class="detail-label">Fuentes:</span> {formatear_fuentes(riesgo)}</p>
+                        <p><span class="detail-label">Sección:</span> {escape(riesgo.get("seccion_oferta") or "N/D")}</p>
+                        <p><span class="detail-label">Subsanación:</span> {escape(riesgo.get("subsanacion") or "N/D")}</p>
+                        <p><span class="detail-label">Marcas:</span> {formatear_marcas(riesgo)}</p>
                     </div>
                     <div class="risk-card-confidence">
                         <p><span class="detail-label">Exposición (impacto × prob.):</span> <span class="confidence-score conf-none-text">{formatear_exposicion(riesgo)}</span></p>
@@ -165,7 +227,9 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
                 </div>''')
             summary_html_parts.append('</div></div>')
 
-    if not any(riesgos_agrupados.values()):
+    final_html += tarjetas_verificacion("Hallazgos", "🔥", hallazgos) + tarjetas_verificacion("Alertas a revisar", "🔎", alertas_revisar)
+
+    if not any(riesgos_agrupados.values()) and not hallazgos and not alertas_revisar:
         if evaluacion_evidencia == "INSUFICIENTE":
             final_html += "<p style='text-align:center; font-style:italic;'>No se generó un análisis de riesgos porque la evidencia disponible fue insuficiente (ver aviso arriba).</p>"
         else:
@@ -181,6 +245,11 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
             <div class="risk-detail-item">
                 <h4><span class="section-emoji">ℹ️</span>{escape(riesgo.get("descripcion_riesgo","N/A"))}</h4>
                 <p><span class="detail-label">Explicación:</span> {escape(riesgo.get("explicacion_riesgo","N/A"))}</p>
+                <p><span class="detail-label">Cita de la oferta:</span> {escape(riesgo.get("cita_oferta") or "N/D")}</p>
+                <p><span class="detail-label">Sección de la oferta:</span> {escape(riesgo.get("seccion_oferta") or "N/D")}</p>
+                <p><span class="detail-label">Fuentes normativas:</span> {formatear_fuentes(riesgo)}</p>
+                <p><span class="detail-label">Comentario:</span> {escape(riesgo.get("comentario") or "N/D")}</p>
+                <p><span class="detail-label">Subsanación:</span> {escape(riesgo.get("subsanacion") or "N/D")} | <span class="detail-label">Marcas:</span> {formatear_marcas(riesgo)}</p>
                 <p><span class="detail-label">Impacto:</span> {escape(riesgo.get("impacto_estimado","N/A"))} | <span class="detail-label">Probabilidad:</span> {escape(riesgo.get("probabilidad_estimada","N/A"))}</p>
                 <p><span class="detail-label">Responsable (Mitigación):</span> {escape(riesgo.get("responsabilidad_mitigacion", "N/A"))}</p>
                 <p><span class="detail-label">Responsable (Accidente):</span> {escape(riesgo.get("responsable_accidente", "N/A"))}</p>

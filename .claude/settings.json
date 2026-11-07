@@ -6,8 +6,7 @@
       "Read(./datos/Resultados/**)",
       "Read(./datos/ChromaDB*/**)",
       "Read(./modelos_locales/**)",
-      "Read(./.cache/**)",
-      "Read(./venv/**)"
+      "Read(./.cache/**)"      
     ]
   }
 }

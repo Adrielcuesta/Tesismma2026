@@ -1,5 +1,6 @@
 # scripts/config.py
 import os
+import datetime
 import certifi
 import logging
 
@@ -73,15 +74,61 @@ UMBRAL_ENCABEZADO = 0.5
 # Norma que va completa en el prompt y no se indexa
 NORMA_COMPLETA = "NORM_06"
 
+# --- Análisis de la oferta por sección ---
+# True: la oferta se divide en secciones y cada una se analiza contra el índice por artículos
+USAR_KB_ARTICULOS = True
+# Tope de caracteres de una sección (se agrupan subsecciones contiguas sin cruzar capítulos)
+SECTION_MAX_CHARS = 2500
+# Largo máximo del texto con el que se busca en la KB para cada sección
+SECTION_QUERY_MAX_CHARS = 1500
+# Fragmentos recuperados por sección antes del re-ranking, y cuántos se conservan después
+K_RECUPERACION = 20
+TOP_N_POR_SECCION = 4
+# Recuperación por subsección (activa): cada subsección de al menos MIN_CHARS_SUBSECCION caracteres busca con su
+# propio texto (K_SUBSECCION -> reranker -> TOP_N_SUBSECCION) y los fragmentos se unen por (norma, artículo)
+# quedándose con los TOPE_FRAGMENTOS_SECCION de mayor score
+RECUPERACION_POR_SUBSECCION = True
+SUBSECTION_QUERY_MAX_CHARS = 800
+K_SUBSECCION = 10
+TOP_N_SUBSECCION = 5
+TOPE_FRAGMENTOS_SECCION = 12
+MIN_CHARS_SUBSECCION = 150
+# Evaluador de evidencia CRAG por sección (solo informa): apagado por defecto, el código se conserva
+USAR_CRAG = False
+# "verificacion": una llamada por fragmento recuperado (veredicto Incumple/Revisar/Cumple/No aplica) y redacción de los
+# Incumple y Revisar. "lista": una llamada por sección que devuelve la lista de riesgos (la usa la condición sin_rag)
+MODO_GENERACION = "verificacion"
+# Máximo de fragmentos que se verifican por sección (sin preámbulos)
+VERIFICAR_TOPE = 15
+# Líneas más cortas que esto (normalizadas, sin dígitos) no se quitan como encabezado/pie en la oferta:
+# "Página 3 de 9" (9) sí se quita; unidades de tablas como "1.600 mm" (4) se conservan
+MIN_LARGO_ENCABEZADO_OFERTA = 6
+# La sección "Introducción" (texto previo al primer encabezado) no se recupera ni se genera; se lista en el informe con 0 riesgos
+EXCLUIR_INTRODUCCION = True
+# False: no se puntúa cada riesgo contra la evidencia (507 s en P1 y no discrimina); respaldo_base_conocimiento queda en None (el dashboard muestra N/D)
+CALCULAR_RESPALDO = False
+
 # --- Configuración para el Re-ranker ---
 USE_RERANKER = True
 K_RETRIEVED_DOCS_BEFORE_RERANK = 50
 RERANKER_TOP_N = 4
+# Tokens máximos por par (consulta, fragmento) que ve el cross-encoder; acota el costo del re-ranking en CPU
+RERANKER_MAX_LENGTH = 512
 
 # --- Configuración de Ollama (único modelo local: generación y evaluador de evidencia) ---
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434").strip().rstrip("/")
 OLLAMA_MODEL = "qwen3:8b"
 OLLAMA_NUM_CTX = 16384
+# Reproducibilidad: temperature=0 y esta semilla en todas las llamadas a ChatOllama
+OLLAMA_SEED = 42
+# Prueba controlada: razonamiento de Qwen3 SOLO en las llamadas de verificación (redacción y resumen siguen sin él).
+# Muestreo recomendado por Qwen para thinking; misma semilla.
+THINKING_VERIFICACION = True
+VERIF_TEMPERATURE = 0.6
+VERIF_TOP_P = 0.95
+VERIF_TOP_K = 20
+# Fecha que ve el modelo al verificar vigencias y plazos (AAAA-MM-DD); por defecto, la del día
+FECHA_REFERENCIA = os.environ.get("FECHA_REFERENCIA", "").strip() or datetime.date.today().isoformat()
 # KV q8_0 y flash attention son variables del SERVIDOR de Ollama (no se fijan por request):
 # arrancarlo con OLLAMA_KV_CACHE_TYPE=q8_0 y OLLAMA_FLASH_ATTENTION=1.
 OLLAMA_KV_CACHE_TYPE = "q8_0"

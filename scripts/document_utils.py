@@ -190,15 +190,16 @@ def norma_de_archivo(nombre: str) -> str:
 def _normalizar_linea(linea: str) -> str:
     return re.sub(r'\s+', ' ', re.sub(r'\d+', '', linea.lower())).strip()
 
-def _quitar_encabezados_y_pies(paginas: list) -> list:
-    """Quita las líneas que, normalizadas y sin dígitos, se repiten en al menos UMBRAL_ENCABEZADO de las páginas."""
+def _quitar_encabezados_y_pies(paginas: list, min_largo: int = 0) -> list:
+    """Quita las líneas que, normalizadas y sin dígitos, se repiten en al menos UMBRAL_ENCABEZADO de las páginas.
+    min_largo: solo se quitan las de al menos esa cantidad de caracteres normalizados (0 = todas)."""
     if len(paginas) < 4:  # con pocas páginas todo texto "se repite"
         return [(p, [l.strip() for l in t.split('\n')]) for p, t in paginas]
     conteo = {}
     for _, texto in paginas:
         for norm in {_normalizar_linea(l) for l in texto.split('\n')} - {''}:
             conteo[norm] = conteo.get(norm, 0) + 1
-    repetidas = {n for n, c in conteo.items() if c / len(paginas) >= config.UMBRAL_ENCABEZADO}
+    repetidas = {n for n, c in conteo.items() if c / len(paginas) >= config.UMBRAL_ENCABEZADO and len(n) >= min_largo}
     return [(p, [l.strip() for l in t.split('\n') if _normalizar_linea(l) not in repetidas]) for p, t in paginas]
 
 def _paginas_limpias(ruta: str) -> list:
@@ -361,3 +362,147 @@ def cargar_norma_completa(norma: str = None, carpeta: str = None) -> str:
         raise FileNotFoundError(f"No se encontró {norma} en {carpeta}")
     paginas = _paginas_limpias(os.path.join(carpeta, archivos[0]))
     return "\n".join("\n".join(l for l in lineas if l) for _, lineas, motivo in paginas if not motivo)
+
+# --- Oferta: texto limpio y división en secciones ---
+
+# Encabezado estricto: línea completa, numeración seguida de un título que empieza con mayúscula y minúscula
+# ("42 t", "1.600 mm", "2.5 MPa" no cumplen). Nivel 2 se prueba primero porque "1.2 Título" también abre con "1."
+RE_ENCABEZADO_NIVEL2 = re.compile(r'^(\d+)\.(\d+)\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]')
+RE_ENCABEZADO_NIVEL1 = re.compile(r'^(\d+)\.\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]')
+# "7.2 SAT bajo carga": nivel 2 con acrónimo; solo vale si la numeración es consecutiva (ver _numeracion_encabezado)
+RE_ENCABEZADO_NIVEL2_ACRONIMO = re.compile(r'^(\d+)\.(\d+)\s+[A-ZÁÉÍÓÚÑ]{2,}(?![A-Za-záéíóúñ])')
+MAX_LARGO_ENCABEZADO = 90
+MIN_CHARS_INTRODUCCION = 200
+
+def extraer_texto_oferta(ruta: str) -> str:
+    """Texto completo de la oferta (sin truncar), sin encabezados/pies repetidos y concatenado de todas las
+    páginas: un encabezado que queda al pie de una página y su cuerpo en la siguiente quedan contiguos."""
+    paginas = _quitar_encabezados_y_pies(extraer_paginas(ruta), config.MIN_LARGO_ENCABEZADO_OFERTA)
+    return "\n".join("\n".join(l for l in lineas if l) for _, lineas in paginas).strip()
+
+def _numeracion_encabezado(linea: str, ultimo: tuple = ()):
+    """Tupla de enteros ((1,) o (1, 2)) si la línea es un encabezado por su forma, o None. `ultimo` es la numeración
+    del encabezado anterior: un nivel 2 con acrónimo ("7.2 SAT") solo cuenta si sigue a `ultimo` de forma consecutiva."""
+    if len(linea) >= MAX_LARGO_ENCABEZADO:
+        return None
+    m = RE_ENCABEZADO_NIVEL2.match(linea)
+    if m:
+        return (int(m.group(1)), int(m.group(2)))
+    m = RE_ENCABEZADO_NIVEL2_ACRONIMO.match(linea)
+    if m:
+        capitulo, menor = int(m.group(1)), int(m.group(2))
+        ultimo_cap = ultimo[0] if ultimo else 0
+        ultimo_menor = ultimo[1] if len(ultimo) == 2 else 0
+        if (capitulo == ultimo_cap and menor == ultimo_menor + 1) or (menor == 1 and capitulo > ultimo_cap):
+            return (capitulo, menor)
+        return None
+    m = RE_ENCABEZADO_NIVEL1.match(linea)
+    return (int(m.group(1)),) if m else None
+
+def _bloques_por_encabezado(texto: str) -> list:
+    """[{capitulo, titulo, lineas}]. Un encabezado solo cuenta si su numeración supera la del anterior;
+    si no, es texto del bloque en curso. El bloque 0 es el texto previo al primer encabezado."""
+    bloques, ultimo = [], ()
+    actual = {"capitulo": 0, "titulo": "Introducción", "lineas": []}
+    for linea in (l.strip() for l in texto.split('\n')):
+        if not linea:
+            continue
+        numero = _numeracion_encabezado(linea, ultimo)
+        if numero and numero > ultimo:
+            bloques.append(actual)
+            actual = {"capitulo": numero[0], "titulo": linea, "lineas": [linea]}
+            ultimo = numero
+        else:
+            actual["lineas"].append(linea)
+    bloques.append(actual)
+    return bloques
+
+def _partir_subseccion(titulo: str, lineas: list) -> list:
+    """[(titulo, texto)]; si la subsección sola supera SECTION_MAX_CHARS se parte por párrafos."""
+    texto = "\n".join(lineas)
+    if len(texto) <= config.SECTION_MAX_CHARS:
+        return [(titulo, texto)]
+    partes = _partes("", _parrafos(lineas), config.SECTION_MAX_CHARS)
+    if len(partes) == 1:
+        return [(titulo, partes[0])]
+    return [(f"{titulo} (parte {n})", p) for n, p in enumerate(partes, 1)]
+
+def es_introduccion(seccion: dict) -> bool:
+    """True si la sección es el texto previo al primer encabezado (título 'Introducción', con o sin '(parte n)')."""
+    return all(t.split(" (parte ")[0] == "Introducción" for t in seccion["titulos"])
+
+def dividir_en_secciones(texto: str) -> list:
+    """Divide la oferta en secciones [{id, titulos, subsecciones[(titulo, texto)], texto}].
+    Agrupa subsecciones contiguas hasta SECTION_MAX_CHARS sin cruzar capítulos de nivel 1."""
+    bloques = _bloques_por_encabezado(texto)
+    sin_encabezados = len(bloques) == 1
+    subsecciones = []   # (capitulo, titulo, texto)
+    for b in bloques:
+        if not b["lineas"]:
+            continue
+        # Sin ningún encabezado el texto es el documento entero; si no, la introducción solo cuenta si es sustancial
+        if b["capitulo"] == 0 and not sin_encabezados and len("\n".join(b["lineas"])) <= MIN_CHARS_INTRODUCCION:
+            continue
+        titulo = "Documento" if sin_encabezados else b["titulo"]
+        subsecciones.extend((b["capitulo"], t, x) for t, x in _partir_subseccion(titulo, b["lineas"]))
+
+    secciones, grupo = [], None
+    for capitulo, titulo, contenido in subsecciones:
+        if grupo and grupo["capitulo"] == capitulo and grupo["largo"] + 1 + len(contenido) <= config.SECTION_MAX_CHARS:
+            grupo["subsecciones"].append((titulo, contenido))
+            grupo["largo"] += 1 + len(contenido)
+        else:
+            grupo = {"capitulo": capitulo, "subsecciones": [(titulo, contenido)], "largo": len(contenido)}
+            secciones.append(grupo)
+    return [
+        {"id": f"S{n}", "titulos": [t for t, _ in g["subsecciones"]], "subsecciones": g["subsecciones"],
+         "texto": "\n".join(x for _, x in g["subsecciones"])}
+        for n, g in enumerate(secciones, 1)
+    ]
+
+
+# --- Oraciones numeradas de una sección (verificación por artículo) ---
+
+MAX_CHARS_LINEA_CORTA = 25
+# Abreviaturas cuyo punto no termina la oración, aunque lo siga una mayúscula
+ABREVIATURAS = {"art", "arts", "nº", "n°", "no", "núm", "pág", "págs", "cap", "sec", "fig", "tab", "inc", "ej", "etc",
+                "aprox", "máx", "mín", "sr", "sra", "ing", "dr", "dra", "lic", "vs", "ref"}
+RE_FIN_ORACION = re.compile(r'([.!?]+)\s+(?=[A-ZÁÉÍÓÚÑ¿¡«"(\[])')
+
+def _oraciones_de_unidad(unidad: str) -> list:
+    """Parte una unidad en oraciones: corta tras . ! ? seguidos de espacio y mayúscula, salvo tras una abreviatura o
+    una inicial. Los decimales ('1.600', '0,05') y las referencias ('Art. 4.2') no tienen espacio tras el punto."""
+    oraciones, inicio = [], 0
+    for m in RE_FIN_ORACION.finditer(unidad):
+        previa = unidad[inicio:m.start()].split()
+        palabra = previa[-1].lower().strip('()[]"«»') if previa else ""
+        if m.group(1) == "." and (palabra in ABREVIATURAS or (len(palabra) == 1 and palabra.isalpha())):
+            continue
+        oraciones.append(unidad[inicio:m.end(1)])
+        inicio = m.end()
+    oraciones.append(unidad[inicio:])
+    return [o.strip() for o in oraciones if o.strip()]
+
+def numerar_oraciones(texto_seccion: str) -> list:
+    """[(id 'O1'.., texto)] de una sección. Las líneas visuales del PDF se unen como en _parrafos (una unidad termina en una
+    línea que acaba en . : ; ! ?, en un encabezado numerado o en una línea corta); las líneas cortas
+    (<= MAX_CHARS_LINEA_CORTA, p. ej. celdas de tabla) se pegan a la oración anterior. Después cada unidad se parte en oraciones."""
+    unidades, actual, termina_en_celda = [], None, False
+    for linea in (l.strip() for l in texto_seccion.split('\n')):
+        if not linea:
+            continue
+        corta = len(linea) <= MAX_CHARS_LINEA_CORTA and not _numeracion_encabezado(linea)
+        if actual is None:
+            actual = linea
+        elif corta:
+            actual += " " + linea
+        elif termina_en_celda or actual.endswith(('.', ':', ';', '!', '?')) or _numeracion_encabezado(actual):
+            unidades.append(actual)
+            actual = linea
+        else:
+            actual += " " + linea
+        termina_en_celda = corta and actual != linea
+    if actual:
+        unidades.append(actual)
+    oraciones = [o for u in unidades for o in _oraciones_de_unidad(u)]
+    return [(f"O{n}", o) for n, o in enumerate(oraciones, 1)]

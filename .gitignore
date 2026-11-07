@@ -45,6 +45,9 @@ modelos_locales/
 .DS_Store
 Thumbs.db
 CLAUDE.md
+.claude/progreso_b2.md
+.claude/progreso_b2b.md
+.claude/progreso_b3.md
 
 # Logs y archivos temporales específicos del proyecto (si los tuvieras)
 *.log

@@ -3,12 +3,14 @@ import os
 import sys
 import logging
 import json
+import re
+import time
 import datetime
 from pydantic import ValidationError
 from typing import Optional
 
 from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator
-from .schemas import RiskReport, SourceChunk, LLMResponse, RiskItem
+from .schemas import RiskReport, SourceChunk, LLMResponse, RiskItem, ResumenGeneral, SeccionInforme, FragmentoRecuperado, FuenteNorma, VerificacionArticulo, Redaccion
 from .report_utils import calcular_exposicion
 
 logger = logging.getLogger(__name__)
@@ -29,28 +31,46 @@ if not logger.handlers:
     logger.addHandler(console_handler)
     logger.propagate = True
 
+_RE_THINK = re.compile(r"<think>(.*?)</think>", re.DOTALL)
+RAZONAMIENTO_MAX_CHARS = 1500
+
+
+def _quitar_think(texto: str) -> str:
+    """Quita los bloques <think>…</think> (si el modelo devuelve el razonamiento dentro del contenido)."""
+    return _RE_THINK.sub("", texto).strip()
+
+
+def _razonamiento(mensaje) -> str:
+    """Razonamiento del mensaje (campo aparte o bloque <think> del contenido), recortado para auditoría."""
+    texto = getattr(mensaje, "additional_kwargs", {}).get("reasoning_content") or ""
+    if not texto:
+        texto = "\n".join(_RE_THINK.findall(str(getattr(mensaje, "content", mensaje))))
+    return texto.strip()[:RAZONAMIENTO_MAX_CHARS]
+
+
 def _extraer_json(texto: str) -> str:
     """Recorta del primer '{' al último '}' (descarta cercos ```json y texto alrededor)."""
+    texto = _quitar_think(texto)
     inicio, fin = texto.find("{"), texto.rfind("}")
     return texto[inicio:fin + 1] if inicio != -1 and fin > inicio else texto
 
 
-def _parsear_respuesta_llm(raw: str, llm) -> LLMResponse:
-    """Parsea y valida la respuesta del LLM. Si falla, hace UN reintento mostrándole el error."""
+def _parsear_respuesta_llm(raw: str, llm, esquema=LLMResponse):
+    """Parsea y valida la respuesta del LLM contra `esquema`. Si falla, hace UN reintento mostrándole el error."""
     try:
-        return LLMResponse.model_validate(json.loads(_extraer_json(raw)))
+        return esquema.model_validate(json.loads(_extraer_json(raw)))
     except (json.JSONDecodeError, ValidationError) as e:
         logger.warning(f"Respuesta del LLM inválida, se reintenta una vez con el error: {e}")
         prompt_reintento = (
             "Tu respuesta anterior no cumplió el formato JSON pedido.\n"
             f"ERROR DE VALIDACIÓN:\n{e}\n\n"
             f"RESPUESTA ANTERIOR:\n{raw}\n\n"
-            "Devolvé ÚNICAMENTE el objeto JSON corregido, con la clave \"riesgos_identificados\" "
-            "y los 9 campos por riesgo, sin texto adicional."
+            "Devolvé ÚNICAMENTE el objeto JSON corregido, respetando exactamente el esquema pedido, "
+            "sin texto adicional."
         )
         respuesta = llm.invoke(prompt_reintento)
         raw_reintento = getattr(respuesta, "content", respuesta)
-        return LLMResponse.model_validate(json.loads(_extraer_json(raw_reintento)))
+        return esquema.model_validate(json.loads(_extraer_json(raw_reintento)))
 
 
 def _iniciar_log_de_analisis(directorio_proyecto: Optional[str] = None):
@@ -94,6 +114,290 @@ def _cerrar_log_de_analisis(handler):
         pass
 
 
+# --- Análisis por sección de la oferta ---
+
+def _segundos(t0: float) -> float:
+    return round(time.perf_counter() - t0, 2)
+
+
+def _guardar_y_generar_dashboard(reporte: RiskReport, nombre_pdf: str, marca_tiempo: str) -> str:
+    """Guarda el JSON y el dashboard del reporte en datos/Resultados/<proyecto>/ y devuelve la ruta relativa del HTML."""
+    nombre_base = "".join(c for c in os.path.splitext(nombre_pdf)[0] if c.isalnum() or c in (' ', '_')).rstrip()
+    carpeta = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base)
+    os.makedirs(carpeta, exist_ok=True)
+    ruta_json = report_utils.formatear_y_guardar_reporte(reporte, nombre_pdf, carpeta, sufijo_nombre=f"_{marca_tiempo}")
+    if not ruta_json: raise AnalisisError("No se pudo guardar el reporte JSON.")
+    ruta_html = os.path.join(carpeta, f"dashboard_{nombre_base}_{marca_tiempo}.html")
+    dashboard_generator.generar_dashboard_html(ruta_json_resultados=ruta_json, ruta_output_dashboard_html=ruta_html, info_tesis_config=config.INFO_TESIS)
+    if not os.path.exists(ruta_html): raise AnalisisError("El dashboard HTML no fue generado.")
+    return os.path.normpath(os.path.relpath(ruta_html, config.PROJECT_ROOT)).replace("\\", "/")
+
+
+def _fuentes_texto(riesgo: RiskItem) -> str:
+    return "; ".join(f"{f.norma} Art. {f.articulo}" for f in riesgo.fuentes) or "ninguna"
+
+
+def _unir_y_deduplicar(riesgos: list) -> list:
+    """Deduplica por (norma, artículo principal, cita normalizada), conservando el primero.
+    Un riesgo sin cita no se deduplica: la clave quedaría vacía y colapsaría riesgos distintos."""
+    vistos, unidos = set(), []
+    for r in riesgos:
+        cita = rag_components.normalizar_para_comparar(r.cita_oferta)
+        if cita:
+            principal = r.fuentes[0] if r.fuentes else None
+            clave = (principal.norma if principal else "", principal.articulo if principal else "", cita)
+            if clave in vistos:
+                continue
+            vistos.add(clave)
+        unidos.append(r)
+    return unidos
+
+
+def _verificar_seccion(seccion, docs, cadena_verif, cadena_redac, llm_verif, llm_redac, norma_completa, t_sec, llamadas):
+    """Modo verificación de una sección: una llamada por fragmento (veredicto), validación por código, y una llamada de
+    redacción por cada Incumple o Revisar válido. Devuelve (riesgos, registro); registro tiene TODAS las verificaciones."""
+    id_sec = seccion["id"]
+    oraciones = document_utils.numerar_oraciones(seccion["texto"])
+    seccion_numerada = rag_components.formatear_oraciones(oraciones)
+    registro, pendientes = [], []
+
+    t0 = time.perf_counter()
+    for d in docs:
+        meta = {"seccion": id_sec, "norma": d.metadata.get("norma", ""), "articulo": str(d.metadata.get("articulo", ""))}
+        mensaje = cadena_verif.invoke({"seccion_numerada": seccion_numerada, "articulo": rag_components.formatear_articulo(d)})
+        llamadas["verificacion"] += 1
+        razon = {"razonamiento": _razonamiento(mensaje)} if config.THINKING_VERIFICACION else {}
+        try:
+            original = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_verif, VerificacionArticulo)
+        except (json.JSONDecodeError, ValidationError) as e:
+            logger.warning(f"{id_sec} {meta['norma']} Art. {meta['articulo']}: verificación con formato inválido tras reintentar, se descarta: {e}")
+            registro.append({**meta, "veredicto": None, "oraciones": [], "estado": "descartada", "motivo": f"formato inválido tras reintentar: {str(e)[:200]}", **razon})
+            continue
+        verificada, extra = rag_components.procesar_verificacion(original, oraciones, d.page_content)
+        final = verificada or original
+        registro.append({**meta, "veredicto": final.veredicto, "oraciones": final.oraciones, "explicacion": original.explicacion, **extra, **razon})
+        if verificada and verificada.veredicto in ("Incumple", "Revisar"):
+            pendientes.append((d, verificada, extra["estado"] == "discrepancia_numerica"))
+    t_sec["verificacion"] = _segundos(t0)
+
+    t0 = time.perf_counter()
+    riesgos = []
+    for d, v, discrepancia in pendientes:
+        meta = {"seccion": id_sec, "norma": d.metadata.get("norma", ""), "articulo": str(d.metadata.get("articulo", ""))}
+        mensaje = cadena_redac.invoke({"seccion_numerada": seccion_numerada, "articulo": rag_components.formatear_articulo(d),
+                                       "verificacion": v.model_dump_json(exclude_none=True), "norma_completa": norma_completa})
+        llamadas["redaccion"] += 1
+        try:
+            redaccion = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_redac, Redaccion)
+        except (json.JSONDecodeError, ValidationError) as e:
+            logger.warning(f"{id_sec} {meta['norma']} Art. {meta['articulo']}: redacción con formato inválido tras reintentar, no se informa: {e}")
+            registro.append({**meta, "veredicto": v.veredicto, "oraciones": v.oraciones, "estado": "redaccion_fallida", "motivo": str(e)[:200]})
+            continue
+        riesgos.append(rag_components.armar_riesgo(v, redaccion, d, oraciones, seccion["subsecciones"], discrepancia))
+    t_sec["redaccion"] = _segundos(t0)
+    return riesgos, registro
+
+
+def _generar_resumen_general(llm_resumen, riesgos: list, clasificaciones: list, usar_rag: bool) -> ResumenGeneral:
+    """Una llamada final: suficiencia, comentarios y acciones generales a partir de los riesgos unidos y el conteo CRAG."""
+    lineas = [
+        f"- {'[' + r.veredicto + '] ' if r.veredicto else ''}{r.descripcion_riesgo} | fuentes: {_fuentes_texto(r)} | marcas: {', '.join(r.marcas) or 'ninguna'} | subsanación: {r.subsanacion}"
+        for r in riesgos
+    ]
+    if usar_rag and any(c is not None for c in clasificaciones):
+        conteo = ", ".join(f"{c}: {clasificaciones.count(c)}" for c in ("CORRECTO", "AMBIGUO", "INSUFICIENTE"))
+        conteo += f", sin clasificar: {clasificaciones.count(None)}"
+    elif usar_rag:
+        conteo = "(evaluador de evidencia desactivado: las secciones no se clasificaron)"
+    else:
+        conteo = "(sin RAG: no se recuperó ni clasificó evidencia normativa)"
+    raw = rag_components.crear_cadena_resumen(llm_resumen).invoke({"riesgos": "\n".join(lineas) or "(ninguno)", "conteo_crag": conteo})
+    return _parsear_respuesta_llm(raw, llm_resumen, ResumenGeneral)
+
+
+def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, marca_tiempo, directorio_kb, directorio_proyecto):
+    """Oferta completa (sin truncar) -> secciones -> por sección: recuperación (K -> rerank top N), CRAG informativo y
+    generación JSON -> validación de fuentes y citas por código -> unión sin tope de riesgos -> resumen final."""
+    t_total = time.perf_counter()
+    tiempos = {}
+    condicion = "sin_rag" if not usar_rag else ("rag_seccion" if config.USE_RERANKER else "rag_seccion_sin_reranker")
+    # sin_rag no tiene artículos que verificar: siempre genera la lista de riesgos
+    modo = config.MODO_GENERACION if usar_rag else "lista"
+    verificacion = modo == "verificacion"
+    usar_crag = usar_rag and config.USAR_CRAG
+    llamadas = {"verificacion": 0, "redaccion": 0}
+    logger.info(f"--- ANÁLISIS POR SECCIÓN (Modelo: {selected_llm_model_id}, condición: {condicion}, modo: {modo}) ---")
+
+    pdf_path = document_utils.obtener_ruta_pdf_proyecto(directorio_proyecto or config.DIRECTORIO_PROYECTO_ANALIZAR)
+    if not pdf_path: raise AnalisisError("No se encontró ningún PDF o DOCX en la carpeta del proyecto a analizar.")
+    nombre_pdf = os.path.basename(pdf_path)
+
+    t0 = time.perf_counter()
+    try:
+        texto_oferta = document_utils.extraer_texto_oferta(pdf_path)
+    except Exception as e:
+        raise AnalisisError(f"No se pudo leer '{nombre_pdf}': {e}") from e
+    tiempos["extraccion"] = _segundos(t0)
+    if not texto_oferta:
+        raise AnalisisError("No se pudo extraer texto del documento de la oferta (¿es un PDF escaneado, sin texto, o está dañado?).")
+
+    t0 = time.perf_counter()
+    secciones = document_utils.dividir_en_secciones(texto_oferta)
+    tiempos["division"] = _segundos(t0)
+    if not secciones: raise AnalisisError("No se pudo dividir la oferta en secciones.")
+    logger.info(f"Oferta de {len(texto_oferta)} caracteres dividida en {len(secciones)} secciones.")
+
+    vector_db = evaluador = None
+    norma_completa = ""
+    t0 = time.perf_counter()
+    if usar_rag:
+        carpeta_kb = directorio_kb or config.DIRECTORIO_BASE_CONOCIMIENTO
+        embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
+        if not embedding_function: raise AnalisisError("No se pudo inicializar el modelo de embeddings.")
+        vector_db = vector_db_manager.crear_o_cargar_chroma_db(
+            chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=carpeta_kb, embedding_function=embedding_function,
+            chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, recrear_db_flag=force_recreate_db or config.RECREAR_DB,
+            collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True)
+        if not vector_db: raise AnalisisError("No se pudo crear o cargar el índice de la KB por artículos (¿la carpeta de normas tiene PDFs o DOCX con texto?).")
+        try:
+            norma_completa = document_utils.cargar_norma_completa(config.NORMA_COMPLETA, carpeta_kb)
+        except FileNotFoundError as e:
+            raise AnalisisError(f"Falta {config.NORMA_COMPLETA} en la Base de Conocimiento (va completa en el prompt): {e}") from e
+        if usar_crag:
+            # El evaluador CRAG usa el modelo local fijo, sin formato JSON (responde una sola palabra)
+            llm_evaluador = rag_components.get_llm_instance(EVALUADOR_EVIDENCIA_MODEL_ID)
+            if not llm_evaluador: raise AnalisisError(f"No se pudo inicializar el modelo '{EVALUADOR_EVIDENCIA_MODEL_ID}' del evaluador de evidencia.")
+            evaluador = rag_components.crear_evaluador_evidencia(llm_evaluador)
+    tiempos["carga_kb"] = _segundos(t0)
+
+    llm_resumen = rag_components.get_llm_instance(selected_llm_model_id, formato=ResumenGeneral.model_json_schema())
+    if verificacion:
+        llm_verif = rag_components.get_llm_instance(selected_llm_model_id, formato=VerificacionArticulo.model_json_schema(),
+                                                    razonamiento=config.THINKING_VERIFICACION)
+        llm_redac = rag_components.get_llm_instance(selected_llm_model_id, formato=Redaccion.model_json_schema())
+        if not llm_verif or not llm_redac or not llm_resumen: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
+        cadena_verif, cadena_redac = rag_components.crear_cadena_verificacion(llm_verif), rag_components.crear_cadena_redaccion(llm_redac)
+    else:
+        llm_generacion = rag_components.get_llm_instance(selected_llm_model_id, formato=LLMResponse.model_json_schema())
+        if not llm_generacion or not llm_resumen: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
+        cadena = rag_components.crear_cadena_seccion(llm_generacion, usar_rag)
+
+    informe_secciones, riesgos_todos, fragmentos_unicos, por_seccion, registro_tecnico = [], [], {}, [], []
+    for seccion in secciones:
+        id_sec, t_sec = seccion["id"], {"id": seccion["id"]}
+        if config.EXCLUIR_INTRODUCCION and document_utils.es_introduccion(seccion):
+            logger.info(f"{id_sec} ({', '.join(seccion['titulos'])}): introducción excluida, 0 riesgos")
+            informe_secciones.append(SeccionInforme(id=id_sec, titulos=seccion["titulos"]))
+            por_seccion.append(t_sec)
+            continue
+        docs, candidatos, clasificacion = [], None, None
+        if usar_rag:
+            t0 = time.perf_counter()
+            candidatos, docs = rag_components.recuperar_seccion(vector_db, seccion, **({"tope": config.VERIFICAR_TOPE, "sin_preambulo": True} if verificacion else {}))
+            t_sec["recuperacion"] = _segundos(t0)
+            if usar_crag:
+                # CRAG por sección: solo informa, no bloquea la generación
+                t0 = time.perf_counter()
+                try:
+                    respuesta = evaluador.invoke({"context": "\n\n".join(d.page_content for d in docs) or "(sin fragmentos recuperados)", "question": seccion["texto"]})
+                    clasificacion = rag_components.clasificar_evidencia(respuesta)
+                except Exception as e_crag:
+                    logger.warning(f"El evaluador de evidencia falló en {id_sec}, se continúa sin clasificarla: {e_crag}")
+                t_sec["crag"] = _segundos(t0)
+            for d in docs:
+                m = d.metadata
+                clave = (m.get("norma"), m.get("articulo"), m.get("parte"))
+                score = m.get("relevance_score")
+                previo = fragmentos_unicos.get(clave)
+                if previo is None or (score or 0) > (previo.score_relevancia or 0):
+                    fragmentos_unicos[clave] = SourceChunk(contenido=d.page_content, nombre_documento_fuente=m.get("fuente", "Desconocido"),
+                                                           numero_pagina=m.get("pagina", -1), score_relevancia=score)
+        logger.info(f"{id_sec} ({', '.join(seccion['titulos'])}): {len(docs)} fragmentos, evidencia {clasificacion}")
+
+        if verificacion:
+            riesgos, registro = _verificar_seccion(seccion, docs, cadena_verif, cadena_redac, llm_verif, llm_redac, norma_completa, t_sec, llamadas)
+            registro_tecnico.extend(registro)
+        else:
+            t0 = time.perf_counter()
+            entrada = {"fragmentos": rag_components.formatear_fragmentos(docs), "norma_completa": norma_completa, "seccion": seccion["texto"]} if usar_rag else {"seccion": seccion["texto"]}
+            mensaje = cadena.invoke(entrada)
+            raw = getattr(mensaje, "content", mensaje)
+            t_sec["tokens_prompt"] = (getattr(mensaje, "response_metadata", None) or {}).get("prompt_eval_count")
+            try:
+                riesgos = _parsear_respuesta_llm(raw, llm_generacion).riesgos_identificados
+            except (json.JSONDecodeError, ValidationError) as e:
+                logger.error(f"Respuesta del LLM para {id_sec} (string crudo):\n---INICIO---\n{raw}\n---FIN---")
+                raise AnalisisError(f"La respuesta del modelo para la sección {id_sec} ({', '.join(seccion['titulos'])}) no cumplió el formato JSON ni tras reintentar: {e}") from e
+            t_sec["generacion"] = _segundos(t0)
+
+        t0 = time.perf_counter()
+        if not verificacion:
+            riesgos = rag_components.validar_riesgos(riesgos, rag_components.claves_fragmentos(docs), seccion["subsecciones"])
+        for r in riesgos:
+            r.exposicion_riesgo = calcular_exposicion(r.impacto_estimado, r.probabilidad_estimada)
+        if config.CALCULAR_RESPALDO:
+            for r, respaldo in zip(riesgos, rag_components.puntuar_riesgos_contra_evidencia([f"{r.descripcion_riesgo}. {r.explicacion_riesgo}" for r in riesgos], docs)):
+                r.respaldo_base_conocimiento = respaldo
+        t_sec["validacion"] = _segundos(t0)
+        logger.info(f"{id_sec}: {len(riesgos)} riesgos" + (f" ({len(docs)} verificaciones, {t_sec['verificacion']} s de verificación, {t_sec['redaccion']} s de redacción)" if verificacion else f" ({t_sec['generacion']} s de generación)"))
+
+        riesgos_todos.extend(riesgos)
+        informe_secciones.append(SeccionInforme(
+            id=id_sec, titulos=seccion["titulos"], clasificacion_crag=clasificacion,
+            candidatos=[FuenteNorma(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", ""))) for d in candidatos] if usar_rag else None,
+            fragmentos=[FragmentoRecuperado(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", "")), score=d.metadata.get("relevance_score")) for d in docs]))
+        por_seccion.append(t_sec)
+    for etapa in ("recuperacion", "crag", "generacion", "verificacion", "redaccion", "validacion"):
+        tiempos[etapa] = round(sum(t.get(etapa, 0) for t in por_seccion), 2)
+    tiempos["por_seccion"] = por_seccion
+    tokens_prompt = {t["id"]: t["tokens_prompt"] for t in por_seccion if t.get("tokens_prompt") is not None}
+
+    t0 = time.perf_counter()
+    riesgos_unidos = _unir_y_deduplicar(riesgos_todos)
+    tiempos["union"] = _segundos(t0)
+    logger.info(f"Unión: {len(riesgos_todos)} riesgos -> {len(riesgos_unidos)} tras deduplicar.")
+
+    t0 = time.perf_counter()
+    resumen = None
+    try:
+        resumen = _generar_resumen_general(llm_resumen, riesgos_unidos, [s.clasificacion_crag for s in informe_secciones], usar_rag)
+    except Exception as e_resumen:
+        logger.warning(f"No se pudo generar el resumen general (el informe se guarda sin él): {e_resumen}")
+    tiempos["resumen_final"] = _segundos(t0)
+    tiempos["total"] = _segundos(t_total)
+
+    reporte = RiskReport(
+        riesgos_identificados=riesgos_unidos,
+        fragmentos_fuente=list(fragmentos_unicos.values()),
+        respuesta_cruda_llm=LLMResponse(riesgos_identificados=riesgos_unidos).model_dump_json(indent=2),
+        suficiencia_evidencia=resumen.suficiencia_evidencia if resumen else None,
+        comentarios_generales=resumen.comentarios_generales if resumen else None,
+        acciones_generales=resumen.acciones_generales if resumen else [],
+        secciones=informe_secciones,
+        registro_tecnico=registro_tecnico,
+        configuracion_analisis={
+            "modelo_llm_usado": selected_llm_model_id, "display_name_modelo": config.LLM_MODELS.get(selected_llm_model_id, {}).get("display_name", "N/A"),
+            "condicion": condicion, "n_secciones": len(secciones), "k_recuperacion": config.K_RECUPERACION if usar_rag else "N/A",
+            "top_n_por_seccion": config.TOP_N_POR_SECCION if usar_rag else "N/A",
+            "reranker_max_length": config.RERANKER_MAX_LENGTH if usar_rag and config.USE_RERANKER else "N/A",
+            "recuperacion_por_subseccion": config.RECUPERACION_POR_SUBSECCION if usar_rag else "N/A",
+            "k_subseccion": config.K_SUBSECCION if usar_rag and config.RECUPERACION_POR_SUBSECCION else "N/A",
+            "top_n_subseccion": config.TOP_N_SUBSECCION if usar_rag and config.RECUPERACION_POR_SUBSECCION else "N/A",
+            "tope_fragmentos_por_seccion": (config.VERIFICAR_TOPE if verificacion else config.TOPE_FRAGMENTOS_SECCION) if usar_rag else "N/A",
+            "modo_generacion": modo, "usar_crag": usar_crag,
+            "temperature": 0 if config.LLM_MODELS.get(selected_llm_model_id, {}).get("provider") == "ollama" else "N/A",
+            "seed": config.OLLAMA_SEED if config.LLM_MODELS.get(selected_llm_model_id, {}).get("provider") == "ollama" else "N/A",
+            "thinking_verificacion": config.THINKING_VERIFICACION if verificacion else "N/A",
+            "verif_temperature": config.VERIF_TEMPERATURE if verificacion and config.THINKING_VERIFICACION else "N/A",
+            "verif_top_p": config.VERIF_TOP_P if verificacion and config.THINKING_VERIFICACION else "N/A",
+            "verif_top_k": config.VERIF_TOP_K if verificacion and config.THINKING_VERIFICACION else "N/A",
+            "llamadas_llm": llamadas if verificacion else "N/A",
+            "excluir_introduccion": config.EXCLUIR_INTRODUCCION, "calcular_respaldo": config.CALCULAR_RESPALDO, "tiempos_s": tiempos,
+            "tokens_prompt_por_seccion": tokens_prompt,
+        })
+    return _guardar_y_generar_dashboard(reporte, nombre_pdf, marca_tiempo)
+
+
 def _run_analysis_impl(
     selected_llm_model_id: str,
     force_recreate_db: bool = False,
@@ -112,6 +416,11 @@ def _run_analysis_impl(
     marca_tiempo = marca_tiempo or datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     try:
         config.inicializar_directorios_datos()
+
+        # Análisis por sección (índice por artículos). El modo evaluación sigue con el flujo de abajo.
+        if config.USAR_KB_ARTICULOS and not is_evaluation_mode:
+            return _analizar_por_secciones(
+                selected_llm_model_id, force_recreate_db, usar_rag, marca_tiempo, directorio_kb, directorio_proyecto)
 
         if db_connection:
             vector_db = db_connection
