@@ -155,6 +155,78 @@ class Redaccion(BaseModel):
     def _normalizar_literal(cls, valor, info):
         return _a_literal(valor, get_args(cls.model_fields[info.field_name].annotation))
 
+# --- Clasificación según los lineamientos de la empresa (reemplaza a la redacción) ---
+VeredictoClasificacion = Literal["DESVIO", "EXCEPCION_NO_ACREDITADA", "INFORMACION_FALTANTE", "NO_APLICA", "CUMPLE", "ALERTA"]
+CondicionCritico = Literal["a", "b", "c", "d"]
+ObjetoRequisito = Literal["DOCUMENTAL_PROCEDIMIENTO", "RESERVA_ERGONOMIA_EFICIENCIA", "VERIFICACION_RUTINA", "ENSAYO_ACEPTACION",
+                          "ORDINAL", "CUANTITATIVO_TECNICO", "OTRO_TECNICO"]
+TipoLimite = Literal["MINIMO", "MAXIMO", "TOLERANCIA", "CANTIDAD", "FRECUENCIA"]
+# Las 6 dimensiones del Art. 4.3 de los criterios de la empresa, tal como se escriben ahí. Se guarda siempre el nombre completo.
+DimensionImpacto = Literal["Seguridad de personas", "Integridad del equipo u obra civil", "Plazo", "Costo (sobre monto del contrato)",
+                           "Desempeño o calidad", "Cumplimiento legal"]
+
+
+def _dimension_por_primera_palabra(valor):
+    """Reconoce la dimensión por su primera palabra (seguridad, integridad, plazo, costo, desempeño, cumplimiento); si no
+    coincide con ninguna, devuelve el valor tal cual y la validación lo rechaza."""
+    if isinstance(valor, str):
+        primera = _sin_tildes(valor).replace("_", " ").split()[:1]
+        for dimension in get_args(DimensionImpacto):
+            if primera and _sin_tildes(dimension).split()[0] == primera[0]:
+                return dimension
+    return valor
+
+
+def _vacio_a_none(valor):
+    return None if isinstance(valor, str) and valor.strip().lower() in ("", "null", "none", "n/a") else valor
+
+
+class ClasificacionRiesgo(BaseModel):
+    """Lo que juzga y redacta el modelo para UN par (declaración de la oferta, artículo). La clase, la probabilidad, el nivel,
+    la estrategia, el responsable, la categoría RBS, el umbral, el tipo de solicitud y el plazo los calcula el código.
+    El orden de los campos es el orden de generación: el motivo va antes del veredicto."""
+    motivo: str = Field(description="Por qué ese veredicto (hasta 30 palabras).")
+    veredicto: VeredictoClasificacion
+    condicion_critico: Optional[CondicionCritico] = None
+    objeto_requisito: Optional[ObjetoRequisito] = None
+    valor_ofertado: Optional[str] = Field(default=None, description="Copiado tal cual figura en la oferta.")
+    valor_exigido: Optional[str] = Field(default=None, description="Copiado tal cual figura en el artículo.")
+    unidad: Optional[str] = None
+    tipo_limite: Optional[TipoLimite] = None
+    dimension_impacto: Optional[DimensionImpacto] = None
+    impacto: Optional[int] = Field(default=None, ge=1, le=5)
+    titulo: Optional[str] = None
+    enunciado: Optional[str] = None
+    accion: Optional[str] = None
+    solicitud_oferente: Optional[str] = None
+
+    @field_validator("veredicto", mode="before")
+    @classmethod
+    def _normalizar_veredicto(cls, valor):
+        return _a_literal(valor, get_args(VeredictoClasificacion))
+
+    @field_validator("condicion_critico", "objeto_requisito", "tipo_limite", "dimension_impacto", mode="before")
+    @classmethod
+    def _normalizar_opcionales(cls, valor, info):
+        valor = _vacio_a_none(valor)
+        if info.field_name == "condicion_critico" and isinstance(valor, str):
+            return valor.strip().lower()
+        if info.field_name == "dimension_impacto":
+            return _dimension_por_primera_palabra(valor)
+        return _a_literal(valor, get_args(get_args(cls.model_fields[info.field_name].annotation)[0]))
+
+    @field_validator("valor_ofertado", "valor_exigido", mode="before")
+    @classmethod
+    def _valor_a_texto(cls, valor):
+        valor = _vacio_a_none(valor)
+        return str(valor) if isinstance(valor, (int, float)) and not isinstance(valor, bool) else valor
+
+    @field_validator("unidad", "titulo", "enunciado", "accion", "solicitud_oferente", "impacto", mode="before")
+    @classmethod
+    def _nulos(cls, valor):
+        return _vacio_a_none(valor)
+
+
 class LLMResponse(BaseModel):
     """Define la estructura de datos que se espera directamente del LLM."""
     riesgos_identificados: List[RiskItem] = Field(description="Una lista de todos los riesgos identificados.")
@@ -192,7 +264,7 @@ class ResumenGeneral(BaseModel):
 class RiskReport(BaseModel):
     """El objeto principal que representa el informe completo de análisis de riesgos."""
     configuracion_analisis: dict = Field(default_factory=dict)
-    riesgos_identificados: List[RiskItem] = Field(description="Una lista de todos los riesgos identificados en el análisis.")
+    riesgos_identificados: List[RiskItem] = Field(default_factory=list, description="Riesgos del modo lista (sin_rag y rag_seccion). Opcional.")
     fragmentos_fuente: List[SourceChunk] = Field(default_factory=list)
     nombre_proyecto_analizado: Optional[str] = None
     timestamp_analisis: Optional[str] = None
@@ -207,4 +279,11 @@ class RiskReport(BaseModel):
     comentarios_generales: Optional[str] = None
     acciones_generales: List[str] = Field(default_factory=list)
     secciones: List[SeccionInforme] = Field(default_factory=list)
+    # --- Clasificación según los lineamientos (modo verificación); riesgos_identificados queda para el modo lista ---
+    registro_brechas: List[dict] = Field(default_factory=list, description="Brechas sin agrupar: citas, oraciones, clasificación del LLM, lo calculado y la regla aplicada.")
+    riesgos: List[dict] = Field(default_factory=list, description="Riesgos agrupados (Art. 6.1 y 6.2).")
+    solicitudes: List[dict] = Field(default_factory=list)
+    alertas: List[dict] = Field(default_factory=list, description="Dudas internas del evaluador; no se envían al oferente.")
+    resumen_ejecutivo: Optional[dict] = None
+    lineamientos: Optional[dict] = Field(default=None, description="Huella y cantidad de caracteres de los criterios entregados al modelo.")
     registro_tecnico: List[dict] = Field(default_factory=list, description="Todas las verificaciones (Cumple, No aplica, descartes y correcciones del código), con sección, artículo e IDs de oración. No se muestra en el dashboard.")

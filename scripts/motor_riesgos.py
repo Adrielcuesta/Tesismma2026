@@ -264,3 +264,28 @@ def top5(riesgos, criterios):
     """Art. 8.3. Los cinco mayores por nivel, después impacto, después clase."""
     c, n = rango_clase(criterios), rango_nivel(criterios)
     return sorted(riesgos, key=lambda r: (n[r["nivel"]], r.get("impacto") or 0, c[r["clase"]]), reverse=True)[:5]
+
+
+def solicitudes(riesgos, brechas, criterios):
+    """Art. 8.4. Una solicitud por riesgo. El pedido lista una línea por cada brecha del grupo, con su norma y artículo; el tipo y
+    el plazo son los del componente de mayor clase. Ordenadas por clase y después por categoría RBS."""
+    por_id = {b.get("id"): b for b in brechas}
+    salida = []
+    for r in riesgos:
+        componentes = [por_id[i] for i in r["brechas"] if i in por_id]
+        pedidos = [f"{b['norma']} Art. {b['articulo']}: {b['solicitud_oferente']}" for b in componentes if b.get("solicitud_oferente")]
+        mayor = max(componentes, key=lambda b: _clave_mayor(b, criterios)) if componentes else r
+        tipo, plazo = solicitud(mayor["fuente"], mayor["clase"], criterios)
+        salida.append({"riesgo": r.get("id"), "tipo": tipo, "plazo": plazo, "citas": r["citas"], "oraciones": r["oraciones"],
+                       "cita_oferta": " ".join(dict.fromkeys(b["cita"] for b in componentes)),
+                       "pedido": "\n".join(pedidos), "clase": r["clase"], "responsable": r["responsable"], "rbs": r["rbs"]})
+    orden = rango_clase(criterios)
+    return sorted(salida, key=lambda s: (-orden[s["clase"]], s["rbs"] or ""))
+
+
+def resumen_ejecutivo(riesgos, criterios):
+    """Art. 8.3. Decisión de aceptabilidad, conteo por nivel y por clase, y top 5."""
+    return {"decision": decision_aceptabilidad(riesgos, criterios),
+            "por_nivel": {n: sum(1 for r in riesgos if r["nivel"] == n) for n in criterios["estrategia_por_nivel"]["valores"]},
+            "por_clase": {c: sum(1 for r in riesgos if r["clase"] == c) for c in criterios["rango_impacto_por_clase"]["valores"]},
+            "top5": [r.get("id") for r in top5(riesgos, criterios)]}

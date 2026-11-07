@@ -15,3 +15,11 @@
 ## Etapa 2 — motor_riesgos (hecha, sin commit)
 - scripts/motor_riesgos.py + tests/test_motor_riesgos.py. Ground truth: 60/60 filas coinciden en clase, regla y responsable.
 - Art. 5.4: bloque decision_aceptabilidad en el JSON (clases y niveles sobre el mismo riesgo). 6.2 solo Menores. Brecha nunca negativa; clase() devuelve (clase, regla, marcas).
+
+## Etapa 3 — Clasificación (hecha, sin commit)
+- schemas.ClasificacionRiesgo; RiskReport con registro_brechas, riesgos, solicitudes, alertas, resumen_ejecutivo, lineamientos (riesgos_identificados opcional).
+- rag_components.PROMPT_CLASIFICACION_STR + crear_cadena_clasificacion; retirados PROMPT_REDACCION_STR, PROMPT_RESUMEN_STR y sus cadenas.
+- scripts/clasificacion.py (validación pasos 2-7 + cálculo con motor_riesgos); main._verificar_seccion devuelve (brechas, alertas, registro); sin llamada de resumen.
+- motor_riesgos.solicitudes y resumen_ejecutivo. tests/test_clasificacion.py. 173 tests pasan.
+- Pendiente de confirmar: nombres de las 6 dimensiones del Art. 4.3 (schemas.DimensionImpacto; solo "Seguridad de personas" viene del prompt).
+- Correcciones Etapa 3: DimensionImpacto con nombres completos del Art. 4.3 y validación por primera palabra; solicitudes agrupadas = una línea por brecha, tipo/plazo del componente de mayor clase; prompt del modo lista con RAG sin el espacio de NORM_06; test de identidad con docs/prompts/prompt_B4_clasificacion_NORM07.md. 189 tests pasan.

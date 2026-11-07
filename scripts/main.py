@@ -9,8 +9,8 @@ import datetime
 from pydantic import ValidationError
 from typing import Optional
 
-from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator
-from .schemas import RiskReport, SourceChunk, LLMResponse, RiskItem, ResumenGeneral, SeccionInforme, FragmentoRecuperado, FuenteNorma, VerificacionArticulo, Redaccion
+from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator, lineamientos, motor_riesgos, clasificacion
+from .schemas import RiskReport, SourceChunk, LLMResponse, RiskItem, SeccionInforme, FragmentoRecuperado, FuenteNorma, VerificacionArticulo, ClasificacionRiesgo
 from .report_utils import calcular_exposicion
 
 logger = logging.getLogger(__name__)
@@ -133,10 +133,6 @@ def _guardar_y_generar_dashboard(reporte: RiskReport, nombre_pdf: str, marca_tie
     return os.path.normpath(os.path.relpath(ruta_html, config.PROJECT_ROOT)).replace("\\", "/")
 
 
-def _fuentes_texto(riesgo: RiskItem) -> str:
-    return "; ".join(f"{f.norma} Art. {f.articulo}" for f in riesgo.fuentes) or "ninguna"
-
-
 def _unir_y_deduplicar(riesgos: list) -> list:
     """Deduplica por (norma, artículo principal, cita normalizada), conservando el primero.
     Un riesgo sin cita no se deduplica: la clave quedaría vacía y colapsaría riesgos distintos."""
@@ -153,9 +149,10 @@ def _unir_y_deduplicar(riesgos: list) -> list:
     return unidos
 
 
-def _verificar_seccion(seccion, docs, cadena_verif, cadena_redac, llm_verif, llm_redac, norma_completa, t_sec, llamadas):
+def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, llm_clasif, lin, t_sec, llamadas):
     """Modo verificación de una sección: una llamada por fragmento (veredicto), validación por código, y una llamada de
-    redacción por cada Incumple o Revisar válido. Devuelve (riesgos, registro); registro tiene TODAS las verificaciones."""
+    clasificación (según los lineamientos de la empresa) por cada Incumple o Revisar válido. `lin` es el resultado de
+    lineamientos.cargar_lineamientos. Devuelve (brechas, alertas, registro); registro tiene TODAS las verificaciones y descartes."""
     id_sec = seccion["id"]
     oraciones = document_utils.numerar_oraciones(seccion["texto"])
     seccion_numerada = rag_components.formatear_oraciones(oraciones)
@@ -181,38 +178,39 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_redac, llm_verif, llm
     t_sec["verificacion"] = _segundos(t0)
 
     t0 = time.perf_counter()
-    riesgos = []
+    brechas, alertas = [], []
+    textos = dict(oraciones)
     for d, v, discrepancia in pendientes:
-        meta = {"seccion": id_sec, "norma": d.metadata.get("norma", ""), "articulo": str(d.metadata.get("articulo", ""))}
-        mensaje = cadena_redac.invoke({"seccion_numerada": seccion_numerada, "articulo": rag_components.formatear_articulo(d),
-                                       "verificacion": v.model_dump_json(exclude_none=True), "norma_completa": norma_completa})
-        llamadas["redaccion"] += 1
+        norma, articulo = d.metadata.get("norma", ""), str(d.metadata.get("articulo", ""))
+        meta = {"seccion": id_sec, "norma": norma, "articulo": articulo, "etapa": "clasificacion"}
+        mensaje = cadena_clasif.invoke({"criterios": lin["texto_para_el_modelo"], "articulo": rag_components.formatear_articulo(d),
+                                        "seccion_numerada": seccion_numerada, "verificacion": v.model_dump_json(exclude_none=True)})
+        llamadas["clasificacion"] += 1
         try:
-            redaccion = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_redac, Redaccion)
+            c = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_clasif, ClasificacionRiesgo)
         except (json.JSONDecodeError, ValidationError) as e:
-            logger.warning(f"{id_sec} {meta['norma']} Art. {meta['articulo']}: redacción con formato inválido tras reintentar, no se informa: {e}")
-            registro.append({**meta, "veredicto": v.veredicto, "oraciones": v.oraciones, "estado": "redaccion_fallida", "motivo": str(e)[:200]})
+            logger.warning(f"{id_sec} {norma} Art. {articulo}: clasificación con formato inválido tras reintentar, se descarta: {e}")
+            registro.append({**meta, "veredicto": v.veredicto, "oraciones": v.oraciones, "estado": "clasificacion_fallida", "motivo": str(e)[:200]})
             continue
-        riesgos.append(rag_components.armar_riesgo(v, redaccion, d, oraciones, seccion["subsecciones"], discrepancia))
-    t_sec["redaccion"] = _segundos(t0)
-    return riesgos, registro
-
-
-def _generar_resumen_general(llm_resumen, riesgos: list, clasificaciones: list, usar_rag: bool) -> ResumenGeneral:
-    """Una llamada final: suficiencia, comentarios y acciones generales a partir de los riesgos unidos y el conteo CRAG."""
-    lineas = [
-        f"- {'[' + r.veredicto + '] ' if r.veredicto else ''}{r.descripcion_riesgo} | fuentes: {_fuentes_texto(r)} | marcas: {', '.join(r.marcas) or 'ninguna'} | subsanación: {r.subsanacion}"
-        for r in riesgos
-    ]
-    if usar_rag and any(c is not None for c in clasificaciones):
-        conteo = ", ".join(f"{c}: {clasificaciones.count(c)}" for c in ("CORRECTO", "AMBIGUO", "INSUFICIENTE"))
-        conteo += f", sin clasificar: {clasificaciones.count(None)}"
-    elif usar_rag:
-        conteo = "(evaluador de evidencia desactivado: las secciones no se clasificaron)"
-    else:
-        conteo = "(sin RAG: no se recuperó ni clasificó evidencia normativa)"
-    raw = rag_components.crear_cadena_resumen(llm_resumen).invoke({"riesgos": "\n".join(lineas) or "(ninguno)", "conteo_crag": conteo})
-    return _parsear_respuesta_llm(raw, llm_resumen, ResumenGeneral)
+        primera = rag_components.normalizar_para_comparar(textos[v.oraciones[0]])
+        subsecciones = seccion["subsecciones"]
+        seccion_oferta = next((titulo for titulo, texto in subsecciones if primera in rag_components.normalizar_para_comparar(texto)),
+                              subsecciones[0][0] if subsecciones else "")
+        r = clasificacion.procesar_clasificacion(
+            c, id_sec=id_sec, seccion_oferta=seccion_oferta, norma=norma, articulo=articulo, texto_articulo=d.page_content,
+            oraciones=v.oraciones, textos=textos, criterios=lin["criterios"], parte=d.metadata.get("parte", 1) or 1,
+            verificacion={"veredicto": v.veredicto, "explicacion": v.explicacion, "discrepancia_numerica": discrepancia})
+        if r["tipo"] == "brecha":
+            if discrepancia:
+                r["brecha"]["marcas"].append("verificar calculo")
+            brechas.append(r["brecha"])
+        elif r["tipo"] == "alerta":
+            alertas.append(r["alerta"])
+        else:
+            registro.append({**meta, "veredicto": c.veredicto, "oraciones": v.oraciones,
+                             "estado": "no_es_riesgo" if r["tipo"] == "no_riesgo" else "descartada", "motivo": r["motivo"]})
+    t_sec["clasificacion"] = _segundos(t0)
+    return brechas, alertas, registro
 
 
 def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, marca_tiempo, directorio_kb, directorio_proyecto):
@@ -225,7 +223,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     modo = config.MODO_GENERACION if usar_rag else "lista"
     verificacion = modo == "verificacion"
     usar_crag = usar_rag and config.USAR_CRAG
-    llamadas = {"verificacion": 0, "redaccion": 0}
+    llamadas = {"verificacion": 0, "clasificacion": 0}
     logger.info(f"--- ANÁLISIS POR SECCIÓN (Modelo: {selected_llm_model_id}, condición: {condicion}, modo: {modo}) ---")
 
     pdf_path = document_utils.obtener_ruta_pdf_proyecto(directorio_proyecto or config.DIRECTORIO_PROYECTO_ANALIZAR)
@@ -248,7 +246,13 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     logger.info(f"Oferta de {len(texto_oferta)} caracteres dividida en {len(secciones)} secciones.")
 
     vector_db = evaluador = None
-    norma_completa = ""
+    lin = None
+    if verificacion:
+        try:
+            lin = lineamientos.cargar_lineamientos(config.DIRECTORIO_LINEAMIENTOS)
+        except lineamientos.LineamientosError as e:
+            raise AnalisisError(f"Lineamientos de la empresa: {e}") from e
+        logger.info(f"Lineamientos cargados: {len(lin['texto_para_el_modelo'])} caracteres para el modelo, huella {lin['huella'][:12]}.")
     t0 = time.perf_counter()
     if usar_rag:
         carpeta_kb = directorio_kb or config.DIRECTORIO_NORMATIVA
@@ -266,19 +270,19 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             evaluador = rag_components.crear_evaluador_evidencia(llm_evaluador)
     tiempos["carga_kb"] = _segundos(t0)
 
-    llm_resumen = rag_components.get_llm_instance(selected_llm_model_id, formato=ResumenGeneral.model_json_schema())
     if verificacion:
         llm_verif = rag_components.get_llm_instance(selected_llm_model_id, formato=VerificacionArticulo.model_json_schema(),
                                                     razonamiento=config.THINKING_VERIFICACION)
-        llm_redac = rag_components.get_llm_instance(selected_llm_model_id, formato=Redaccion.model_json_schema())
-        if not llm_verif or not llm_redac or not llm_resumen: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
-        cadena_verif, cadena_redac = rag_components.crear_cadena_verificacion(llm_verif), rag_components.crear_cadena_redaccion(llm_redac)
+        llm_clasif = rag_components.get_llm_instance(selected_llm_model_id, formato=ClasificacionRiesgo.model_json_schema())
+        if not llm_verif or not llm_clasif: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
+        cadena_verif, cadena_clasif = rag_components.crear_cadena_verificacion(llm_verif), rag_components.crear_cadena_clasificacion(llm_clasif)
     else:
         llm_generacion = rag_components.get_llm_instance(selected_llm_model_id, formato=LLMResponse.model_json_schema())
-        if not llm_generacion or not llm_resumen: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
+        if not llm_generacion: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
         cadena = rag_components.crear_cadena_seccion(llm_generacion, usar_rag)
 
     informe_secciones, riesgos_todos, fragmentos_unicos, por_seccion, registro_tecnico = [], [], {}, [], []
+    brechas_todas, alertas_todas = [], []
     for seccion in secciones:
         id_sec, t_sec = seccion["id"], {"id": seccion["id"]}
         if config.EXCLUIR_INTRODUCCION and document_utils.es_introduccion(seccion):
@@ -311,11 +315,14 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         logger.info(f"{id_sec} ({', '.join(seccion['titulos'])}): {len(docs)} fragmentos, evidencia {clasificacion}")
 
         if verificacion:
-            riesgos, registro = _verificar_seccion(seccion, docs, cadena_verif, cadena_redac, llm_verif, llm_redac, norma_completa, t_sec, llamadas)
+            brechas, alertas, registro = _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, llm_clasif, lin, t_sec, llamadas)
+            riesgos = []   # el modo verificación no genera RiskItem: sus resultados son brechas, riesgos agrupados y alertas
+            brechas_todas.extend(brechas)
+            alertas_todas.extend(alertas)
             registro_tecnico.extend(registro)
         else:
             t0 = time.perf_counter()
-            entrada = {"fragmentos": rag_components.formatear_fragmentos(docs), "norma_completa": norma_completa, "seccion": seccion["texto"]} if usar_rag else {"seccion": seccion["texto"]}
+            entrada = {"fragmentos": rag_components.formatear_fragmentos(docs), "seccion": seccion["texto"]} if usar_rag else {"seccion": seccion["texto"]}
             mensaje = cadena.invoke(entrada)
             raw = getattr(mensaje, "content", mensaje)
             t_sec["tokens_prompt"] = (getattr(mensaje, "response_metadata", None) or {}).get("prompt_eval_count")
@@ -335,7 +342,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             for r, respaldo in zip(riesgos, rag_components.puntuar_riesgos_contra_evidencia([f"{r.descripcion_riesgo}. {r.explicacion_riesgo}" for r in riesgos], docs)):
                 r.respaldo_base_conocimiento = respaldo
         t_sec["validacion"] = _segundos(t0)
-        logger.info(f"{id_sec}: {len(riesgos)} riesgos" + (f" ({len(docs)} verificaciones, {t_sec['verificacion']} s de verificación, {t_sec['redaccion']} s de redacción)" if verificacion else f" ({t_sec['generacion']} s de generación)"))
+        logger.info(f"{id_sec}: {len(brechas) if verificacion else len(riesgos)} " + ("brechas" if verificacion else "riesgos") + (f" ({len(docs)} verificaciones, {t_sec['verificacion']} s de verificación, {t_sec['clasificacion']} s de clasificación)" if verificacion else f" ({t_sec['generacion']} s de generación)"))
 
         riesgos_todos.extend(riesgos)
         informe_secciones.append(SeccionInforme(
@@ -343,7 +350,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             candidatos=[FuenteNorma(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", ""))) for d in candidatos] if usar_rag else None,
             fragmentos=[FragmentoRecuperado(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", "")), score=d.metadata.get("relevance_score")) for d in docs]))
         por_seccion.append(t_sec)
-    for etapa in ("recuperacion", "crag", "generacion", "verificacion", "redaccion", "validacion"):
+    for etapa in ("recuperacion", "crag", "generacion", "verificacion", "clasificacion", "validacion"):
         tiempos[etapa] = round(sum(t.get(etapa, 0) for t in por_seccion), 2)
     tiempos["por_seccion"] = por_seccion
     tokens_prompt = {t["id"]: t["tokens_prompt"] for t in por_seccion if t.get("tokens_prompt") is not None}
@@ -353,12 +360,19 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     tiempos["union"] = _segundos(t0)
     logger.info(f"Unión: {len(riesgos_todos)} riesgos -> {len(riesgos_unidos)} tras deduplicar.")
 
+    # Modo verificación: agrupamiento, solicitudes y resumen ejecutivo los arma el código (Art. 6, 8.3 y 8.4); sin llamada al LLM
     t0 = time.perf_counter()
-    resumen = None
-    try:
-        resumen = _generar_resumen_general(llm_resumen, riesgos_unidos, [s.clasificacion_crag for s in informe_secciones], usar_rag)
-    except Exception as e_resumen:
-        logger.warning(f"No se pudo generar el resumen general (el informe se guarda sin él): {e_resumen}")
+    riesgos_agrupados, solicitudes, resumen_ejecutivo = [], [], None
+    if verificacion:
+        riesgos_agrupados = motor_riesgos.agrupar(brechas_todas, lin["criterios"])
+        for i, r in enumerate(riesgos_agrupados, 1):
+            r["id"] = f"R{i}"
+        solicitudes = motor_riesgos.solicitudes(riesgos_agrupados, brechas_todas, lin["criterios"])
+        for i, s in enumerate(solicitudes, 1):
+            s["numero"] = i
+        resumen_ejecutivo = motor_riesgos.resumen_ejecutivo(riesgos_agrupados, lin["criterios"])
+        logger.info(f"Clasificación: {len(brechas_todas)} brechas -> {len(riesgos_agrupados)} riesgos, {len(solicitudes)} solicitudes, "
+                    f"{len(alertas_todas)} alertas; decisión: {resumen_ejecutivo['decision']}.")
     tiempos["resumen_final"] = _segundos(t0)
     tiempos["total"] = _segundos(t_total)
 
@@ -366,9 +380,9 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         riesgos_identificados=riesgos_unidos,
         fragmentos_fuente=list(fragmentos_unicos.values()),
         respuesta_cruda_llm=LLMResponse(riesgos_identificados=riesgos_unidos).model_dump_json(indent=2),
-        suficiencia_evidencia=resumen.suficiencia_evidencia if resumen else None,
-        comentarios_generales=resumen.comentarios_generales if resumen else None,
-        acciones_generales=resumen.acciones_generales if resumen else [],
+        registro_brechas=brechas_todas, riesgos=riesgos_agrupados, solicitudes=solicitudes, alertas=alertas_todas,
+        resumen_ejecutivo=resumen_ejecutivo,
+        lineamientos={"huella": lin["huella"], "caracteres_criterios": len(lin["texto_para_el_modelo"]), "documentos": lin["documentos"]} if lin else None,
         secciones=informe_secciones,
         registro_tecnico=registro_tecnico,
         configuracion_analisis={

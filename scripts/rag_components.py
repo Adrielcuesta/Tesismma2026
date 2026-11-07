@@ -195,9 +195,6 @@ Sos un analista experto en riesgos normativos de ofertas técnicas. Tu tarea es 
 FRAGMENTOS NORMATIVOS (únicos que podés citar en "fuentes"):
 {fragmentos}
 
-NORMA COMPLETA PARA ASIGNAR RESPONSABLES (usala solo para completar "responsabilidad_mitigacion" y "responsable_accidente"; no la cites en "fuentes"):
-{norma_completa}
-
 SECCIÓN DE LA OFERTA:
 {seccion}
 """ + _INSTRUCCIONES_CAMPOS.replace("{instruccion_fuentes}", _INSTRUCCION_FUENTES_RAG) \
@@ -214,22 +211,7 @@ SECCIÓN DE LA OFERTA:
     .replace("{instruccion_comentario}", _INSTRUCCION_COMENTARIO_SIN_RAG) \
     .replace("{ejemplo_fuentes}", "[]")
 
-PROMPT_RESUMEN_STR = """
-Sos un revisor de riesgos normativos. A partir de la lista de riesgos identificados en una oferta técnica y de la clasificación de la evidencia normativa recuperada para cada sección, redactá el cierre del informe.
-
-RIESGOS IDENTIFICADOS (con sus fuentes normativas y marcas):
-{riesgos}
-
-CLASIFICACIÓN DE LA EVIDENCIA POR SECCIÓN (cantidad de secciones por categoría):
-{conteo_crag}
-
-Respondé ÚNICAMENTE con un objeto JSON con estas claves:
-- "suficiencia_evidencia": "Suficiente", "Parcial" o "Insuficiente" (cuánto respaldo normativo tienen los riesgos del conjunto).
-- "comentarios_generales": un comentario global breve sobre la oferta y la evidencia disponible.
-- "acciones_generales": lista de hasta 5 acciones concretas y no repetidas.
-"""
-
-# --- Verificación por artículo y redacción ---
+# --- Verificación por artículo y clasificación ---
 # La sección con sus oraciones numeradas va PRIMERO y es idéntica en todas las llamadas de la sección (prefijo reutilizable
 # por Ollama); el artículo va AL FINAL. El ejemplo usa solo marcadores neutros: ningún dominio concreto ni texto de evaluación.
 PROMPT_VERIFICACION_STR = """
@@ -268,38 +250,52 @@ ARTÍCULO A VERIFICAR:
 {articulo}
 """
 
-PROMPT_REDACCION_STR = """
-Sos un analista experto en riesgos normativos de ofertas técnicas. Una verificación ya determinó que la oferta tiene un punto de incumplimiento ("Incumple") o a revisar ("Revisar") frente a un artículo. Redactá los campos de gestión del riesgo.
+# Clasificación según los lineamientos de la empresa. {criterios} = capítulos y artículos que declara criterios_empresa.json
+# (texto_para_el_modelo); el resto de las variables es lo mismo que recibía la redacción. Sin ejemplos propios: se citan los artículos.
+PROMPT_CLASIFICACION_STR = """
+Sos evaluador técnico de ofertas de la empresa. Aplicás los criterios de riesgo de la empresa a UN par: una declaración de la oferta y un artículo de la normativa técnica. Todo lo que escribas tiene que surgir de la sección o del artículo. No inventes datos.
 
-SECCIÓN DE LA OFERTA (oraciones numeradas):
-{seccion_numerada}
+=== CRITERIOS DE LA EMPRESA ===
+{criterios}
 
-ARTÍCULO VERIFICADO:
+=== ARTÍCULO DE LA NORMATIVA ===
 {articulo}
 
-VERIFICACIÓN:
+=== SECCIÓN DE LA OFERTA (oraciones numeradas) ===
+{seccion_numerada}
+
+=== VERIFICACIÓN PREVIA ===
 {verificacion}
+Un verificador automático marcó este par como Incumple o Revisar. Puede estar equivocado: decidí vos aplicando los criterios.
 
-NORMA COMPLETA PARA ASIGNAR RESPONSABLES (usala solo para completar "responsabilidad_mitigacion" y "responsable_accidente"):
-{norma_completa}
+=== TAREA ===
+1. Aplicá el orden de decisión del Art. 2.2 y elegí UN veredicto: NO_APLICA, DESVIO, EXCEPCION_NO_ACREDITADA, INFORMACION_FALTANTE, CUMPLE o ALERTA.
+   - Que la oferta no mencione algo no es un desvío: aplicá los Art. 2.5, 2.6 y 2.7.
+   - Superar el requisito es CUMPLE (Art. 2.8).
+   - Distinguí desvío de excepción no acreditada con los Art. 2.3 y 2.4.
+   - Usá ALERTA solo en el caso del Art. 2.9.
+2. Si el veredicto es DESVIO, EXCEPCION_NO_ACREDITADA o INFORMACION_FALTANTE, completá:
+   a) condicion_critico: la letra del inciso del Art. 3.2 que se cumple (a, b, c o d), o null si no se cumple ninguno. Si la protección existe aunque sea insuficiente, no es "a". Para INFORMACION_FALTANTE, "a" indica que el dato faltante corresponde a una materia del Art. 3.2.a. Tené en cuenta el Art. 3.6.2.
+   b) objeto_requisito, uno de:
+      DOCUMENTAL_PROCEDIMIENTO: requisito del tipo descrito en el Art. 3.4.c.
+      RESERVA_ERGONOMIA_EFICIENCIA: requisito del tipo descrito en el Art. 3.4.d.
+      VERIFICACION_RUTINA: requisito del tipo descrito en el Art. 3.4.b.
+      ENSAYO_ACEPTACION: ensayo o verificación de aceptación omitido o sustituido, como en el Art. 3.3.b.
+      ORDINAL: requisito en una escala por escalones, como en el Art. 3.3.d.
+      CUANTITATIVO_TECNICO: requisito técnico expresado con un valor numérico.
+      OTRO_TECNICO: cualquier otro requisito técnico.
+   c) Si es CUANTITATIVO_TECNICO: valor_ofertado y valor_exigido copiados tal cual de la oferta y del artículo, la unidad y tipo_limite (MINIMO, MAXIMO, TOLERANCIA, CANTIDAD o FRECUENCIA). No conviertas unidades ni calcules diferencias.
+   d) dimension_impacto: la dimensión del Art. 4.3 más afectada, e impacto de 1 a 5 según sus anclas.
+   e) titulo, enunciado, accion y solicitud_oferente, según los Art. 4.1, 7.4 y 8.2:
+      titulo: hasta 12 palabras.
+      enunciado: hasta 40 palabras, con la fórmula del Art. 4.1.
+      accion: hasta 30 palabras.
+      solicitud_oferente: hasta 40 palabras; el pedido formal al oferente, con el valor o el documento exigido por el artículo.
+   No decidas la clase, la probabilidad, el nivel, la estrategia, el responsable ni el plazo: los calcula el sistema.
+3. Con CUMPLE, NO_APLICA o ALERTA completá solo motivo y veredicto; el resto va en null.
 
-INSTRUCCIONES:
-1. Respondé ÚNICAMENTE con un objeto JSON con estos campos: "accion_mitigacion", "umbral_alerta", "impacto_estimado" ("Bajo", "Medio" o "Alto"), "probabilidad_estimada" ("Baja", "Media" o "Alta"), "responsabilidad_mitigacion", "responsable_accidente" y "comentario" (máximo 2 frases).
-2. "accion_mitigacion": una acción concreta y accionable (no un rol). Si el veredicto es "Revisar", la acción es verificar o aclarar el punto con el oferente.
-3. "umbral_alerta": una condición medible que dispararía una alerta o escalamiento.
-4. La severidad (impacto y probabilidad) debe reflejar la fuerza del texto del artículo: si prohíbe u obliga, es más alta que si solo dice "se indicará" o "se documentará".
-5. No agregues riesgos ni artículos que no estén en la verificación.
-
-FORMATO (los textos entre <> son marcadores, reemplazalos por contenido real):
-{{
-  "accion_mitigacion": "<acción concreta>",
-  "umbral_alerta": "<condición medible>",
-  "impacto_estimado": "Medio",
-  "probabilidad_estimada": "Media",
-  "responsabilidad_mitigacion": "<rol>",
-  "responsable_accidente": "<rol>",
-  "comentario": "<máximo 2 frases>"
-}}
+Respondé SOLO con este JSON, en este orden:
+{{"motivo": "...", "veredicto": "...", "condicion_critico": null, "objeto_requisito": null, "valor_ofertado": null, "valor_exigido": null, "unidad": null, "tipo_limite": null, "dimension_impacto": null, "impacto": null, "titulo": null, "enunciado": null, "accion": null, "solicitud_oferente": null}}
 """
 
 # --- Evaluador de evidencia (CRAG-lite) ---
@@ -585,19 +581,13 @@ def claves_fragmentos(docs: List[Document]) -> List[dict]:
 
 
 def crear_cadena_seccion(llm, usar_rag: bool = True):
-    """Prompt de una sección de la oferta -> mensaje del LLM (su .content es el texto JSON). Con RAG recibe fragmentos, norma completa y sección;
+    """Prompt de una sección de la oferta -> mensaje del LLM (su .content es el texto JSON). Con RAG recibe fragmentos y sección;
     sin RAG solo la sección (misma estructura de salida, sin ninguna referencia a contexto)."""
     if usar_rag:
-        prompt = PromptTemplate(template=PROMPT_SECCION_RAG_STR, input_variables=["fragmentos", "norma_completa", "seccion"])
+        prompt = PromptTemplate(template=PROMPT_SECCION_RAG_STR, input_variables=["fragmentos", "seccion"])
     else:
         prompt = PromptTemplate(template=PROMPT_SECCION_SIN_RAG_STR, input_variables=["seccion"])
     return prompt | llm   # devuelve el mensaje (no solo el texto) para leer prompt_eval_count de Ollama
-
-
-def crear_cadena_resumen(llm):
-    """Llamada final: suficiencia, comentarios generales y acciones a partir de los riesgos unidos y el conteo CRAG."""
-    prompt = PromptTemplate(template=PROMPT_RESUMEN_STR, input_variables=["riesgos", "conteo_crag"])
-    return prompt | llm | StrOutputParser()
 
 
 def crear_cadena_verificacion(llm):
@@ -607,9 +597,9 @@ def crear_cadena_verificacion(llm):
     return prompt | llm
 
 
-def crear_cadena_redaccion(llm):
-    """Redacción de un Incumple o Revisar -> mensaje del LLM (su .content es el JSON de Redaccion)."""
-    return PromptTemplate(template=PROMPT_REDACCION_STR, input_variables=["seccion_numerada", "articulo", "verificacion", "norma_completa"]) | llm
+def crear_cadena_clasificacion(llm):
+    """Clasificación de un Incumple o Revisar según los lineamientos -> mensaje del LLM (su .content es el JSON de ClasificacionRiesgo)."""
+    return PromptTemplate(template=PROMPT_CLASIFICACION_STR, input_variables=["criterios", "articulo", "seccion_numerada", "verificacion"]) | llm
 
 
 def formatear_oraciones(oraciones: List[tuple]) -> str:
