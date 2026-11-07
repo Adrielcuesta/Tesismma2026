@@ -1,0 +1,218 @@
+{
+  "descripcion": "Traducción operativa de los criterios de riesgo de la empresa (NORM_07) y de su matriz de responsables (NORM_06). Cada bloque indica el artículo que lo define. Cambiar de empresa = cambiar esta carpeta.",
+  "documento_criterios": "NORM_07",
+  "texto_para_el_modelo": {
+    "articulo_origen": "NORM_07 Cap. 2 y 3, Art. 4.3",
+    "capitulos": [
+      2,
+      3
+    ],
+    "articulos": [
+      "4.3"
+    ]
+  },
+  "probabilidad_por_fuente": {
+    "articulo_origen": "NORM_07 Art. 4.2",
+    "valores": {
+      "DESVIO": 4,
+      "EXCEPCION_NO_ACREDITADA": 3,
+      "INFORMACION_FALTANTE": 2
+    }
+  },
+  "umbral_brecha_relativa": {
+    "articulo_origen": "NORM_07 Art. 3.3.a y 3.4.a",
+    "valor": 0.25
+  },
+  "rango_impacto_por_clase": {
+    "articulo_origen": "NORM_07 Art. 4.4",
+    "valores": {
+      "Crítico": [
+        4,
+        5
+      ],
+      "Mayor": [
+        3,
+        4
+      ],
+      "Menor": [
+        1,
+        2
+      ]
+    }
+  },
+  "matriz_nivel": {
+    "articulo_origen": "NORM_07 Art. 5.1 (filas: probabilidad; columnas: impacto 1 a 5)",
+    "valores": {
+      "5": [
+        "Bajo",
+        "Medio",
+        "Medio",
+        "Alto",
+        "Alto"
+      ],
+      "4": [
+        "Bajo",
+        "Bajo",
+        "Medio",
+        "Alto",
+        "Alto"
+      ],
+      "3": [
+        "Bajo",
+        "Bajo",
+        "Medio",
+        "Alto",
+        "Alto"
+      ],
+      "2": [
+        "Bajo",
+        "Bajo",
+        "Bajo",
+        "Medio",
+        "Alto"
+      ],
+      "1": [
+        "Bajo",
+        "Bajo",
+        "Bajo",
+        "Medio",
+        "Medio"
+      ]
+    }
+  },
+  "consistencia": {
+    "articulo_origen": "NORM_07 Art. 5.3",
+    "nivel_minimo": {
+      "Crítico": "Alto"
+    },
+    "nivel_maximo": {
+      "Menor": "Bajo"
+    }
+  },
+  "estrategia_por_nivel": {
+    "articulo_origen": "NORM_07 Art. 7.3",
+    "valores": {
+      "Alto": "Evitar",
+      "Medio": "Mitigar",
+      "Bajo": "Aceptar"
+    }
+  },
+  "decision_aceptabilidad": {
+    "articulo_origen": "NORM_07 Art. 5.4",
+    "reglas": [
+      {
+        "decision": "No aceptable",
+        "clases": [
+          "Crítico"
+        ],
+        "niveles": [
+          "Alto"
+        ]
+      },
+      {
+        "decision": "Aceptable con condiciones",
+        "niveles": [
+          "Alto",
+          "Medio"
+        ]
+      }
+    ],
+    "por_defecto": "Aceptable"
+  },
+  "responsables": {
+    "articulo_origen": "NORM_06 Cap. 2 y NORM_07 Art. 7.4",
+    "reglas": [
+      {
+        "norma": "NORM_01",
+        "gerencia": "Gerencia de Infraestructura y Vías"
+      },
+      {
+        "norma": "NORM_02",
+        "gerencia": "Gerencia de Energía e Instalaciones Electromecánicas"
+      },
+      {
+        "norma": "NORM_03",
+        "gerencia": "Gerencia de Seguridad Operacional y Salud Ocupacional"
+      },
+      {
+        "norma": "NORM_04",
+        "capitulos": [
+          3
+        ],
+        "gerencia": "Gerencia de Material Rodante y Equipamiento de Talleres"
+      },
+      {
+        "norma": "NORM_04",
+        "gerencia": "Gerencia de Infraestructura y Vías"
+      },
+      {
+        "norma": "NORM_05",
+        "gerencia": "Gerencia de Material Rodante y Equipamiento de Talleres"
+      }
+    ]
+  },
+  "categorias_rbs": {
+    "articulo_origen": "NORM_07 Art. 6.3",
+    "reglas": [
+      {
+        "norma": "NORM_01",
+        "rbs": "RBS-1 Obra civil y fundaciones"
+      },
+      {
+        "norma": "NORM_02",
+        "rbs": "RBS-2 Instalación eléctrica y puesta a tierra"
+      },
+      {
+        "norma": "NORM_03",
+        "rbs": "RBS-3 Izaje y manipulación"
+      },
+      {
+        "norma": "NORM_04",
+        "capitulos": [
+          3
+        ],
+        "rbs": "RBS-6 Pruebas y recepción"
+      },
+      {
+        "norma": "NORM_04",
+        "rbs": "RBS-4 Vía, trocha y gálibos"
+      },
+      {
+        "norma": "NORM_05",
+        "rbs": "RBS-5 Montaje mecánico, hidráulico y tolerancias"
+      }
+    ]
+  },
+  "solicitudes_al_oferente": {
+    "articulo_origen": "NORM_07 Art. 8.4",
+    "reglas": [
+      {
+        "fuente": "DESVIO",
+        "clases": [
+          "Crítico",
+          "Mayor"
+        ],
+        "tipo": "Solicitud de modificación de la oferta",
+        "plazo": "Antes de la adjudicación"
+      },
+      {
+        "fuente": "EXCEPCION_NO_ACREDITADA",
+        "tipo": "Pedido de evidencia que acredite la excepción",
+        "plazo": "Antes de la adjudicación"
+      },
+      {
+        "fuente": "DESVIO",
+        "clases": [
+          "Menor"
+        ],
+        "tipo": "Nota aclaratoria o ajuste",
+        "plazo": "Antes de la firma del contrato"
+      },
+      {
+        "fuente": "INFORMACION_FALTANTE",
+        "tipo": "Consulta técnica",
+        "plazo": "Antes de la firma del contrato"
+      }
+    ]
+  }
+}

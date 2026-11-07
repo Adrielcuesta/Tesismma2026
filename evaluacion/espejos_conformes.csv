@@ -1,0 +1,121 @@
+proyecto;seccion;cita_conforme;norma;articulo;espejo_de_trampa
+Proyecto 1;3.3 Hormigón estructural de fosa y bancada;hormigón H-35 elaborado en planta, con contenido de cemento Portland de 340 kg/m³, relación agua/cemento 0,45;NORM_01;"3.1; 3.2";"P4-01-A; P2-01-M"
+Proyecto 1;3.3 Hormigón estructural de fosa y bancada;El recubrimiento de armaduras principales será de 40 mm;NORM_01;3.5;P4-01-M
+Proyecto 1;3.2 Excavación y contención;se ejecutará contención lateral mediante tablestacado metálico calculado;NORM_01;6.1;P3-01-A
+Proyecto 1;3.4 Bancada de inercia y aislamiento;relación masa de fundación / masa de máquina de 2,5;NORM_01;7.3;P3-01-M
+Proyecto 1;3.3 Hormigón estructural de fosa y bancada;con registro diario de temperatura ambiente y del hormigón, inicio y fin de cada método de curado;NORM_01;4.1;P4-01-B
+Proyecto 1;3.8 Puntos de espera y registro documental;se liberarán mediante acta firmada por la Inspección y el Jefe de Obra;NORM_01;8.2;P3-01-B
+Proyecto 1;4.1 Instalación eléctrica de potencia;Poder de corte del interruptor de cabecera ofertado (Icu a 400 V) | 36 kA;NORM_02;3.13;P2-02-A
+Proyecto 1;4.1 Instalación eléctrica de potencia;Caída de tensión en el tramo terminal | 2,1 %;NORM_02;2.16;P2-02-M
+Proyecto 1;4.1 Instalación eléctrica de potencia;Conductor de protección PE de la máquina | 25 mm² Cu;NORM_02;5.5;P3-02-M
+Proyecto 1;4.1 Instalación eléctrica de potencia;conserva una reserva de potencia del 38 %;NORM_02;1.10;P4-02-M
+Proyecto 1;4.1 Instalación eléctrica de potencia;cos φ ≥ 0,96 mediante el banco automático escalonado existente;NORM_02;1.11;P3-02-B
+Proyecto 1;4.2 Tableros seccionales;40 % de reserva física en rieles y barras;NORM_02;4.7;P2-02-B
+Proyecto 1;4.2 Tableros seccionales;Los mandos de uso habitual se ubican entre 0,90 m y 1,45 m sobre el NPT;NORM_02;4.10;P4-02-B
+Proyecto 1;4.2 Tableros seccionales;Las tomas de servicio de la fosa estarán protegidas por interruptores diferenciales de 30 mA;NORM_02;4.15;P4-02-A
+Proyecto 1;5.3 Apoyo de la grúa y área de maniobra;planchones metálicos certificados de 2,0 × 2,0 m;NORM_03;4.7;P3-03-A
+Proyecto 1;5.4 Supervisión y documentación;Durante toda la maniobra estarán presentes en forma continua el Responsable de Higiene y Seguridad;NORM_03;5.5;P3-03-M
+Proyecto 1;5.4 Supervisión y documentación;Se gestionará ante la ART del Consorcio la conformidad escrita del plan;NORM_03;5.2;P3-03-B
+Proyecto 1;4.7 Niveles sonoros;no superior a 82 dB(A), medido a 1,00 m de la envolvente y a 1,50 m sobre el piso;NORM_03;6.2;P2-03-B
+Proyecto 1;5.2 Eslingado y accesorios;Los ramales se tomarán exclusivamente de los cuatro puntos de izaje indicados por el fabricante;NORM_05;1.8;P2-05-A
+Proyecto 1;6.3 Control geométrico de la vía de aproximación;El desnivel longitudinal de cada carril no superará 1,0 mm/m;NORM_04;2.6;P2-04-M
+Proyecto 1;6.3 Control geométrico de la vía de aproximación;El levantamiento completo de trocha y nivelación se repetirá después del endurecimiento del hormigón;NORM_04;2.13;P2-04-B
+Proyecto 1;6.4 Gálibos;Las pasarelas de acceso al pupitre tienen una altura libre de 2,20 m;NORM_04;1.6;P3-04-M
+Proyecto 1;7.1 Etapas de prueba;La recepción provisoria se otorgará únicamente después de aprobado el SAT bajo carga;NORM_04;3.2;P2-04-A
+Proyecto 1;7.2 SAT bajo carga;con 3 pares montados reales provistos por el Comitente;NORM_04;3.6;P3-04-A
+Proyecto 1;7.3 Mediciones;"Ra ≤ 6,3 μm; 3 trazas por rueda distribuidas a 120°";NORM_04;3.10;P3-04-B
+Proyecto 1;7.3 Mediciones;Registro automático con muestreo cada 30 s;NORM_04;3.12;P4-04-B
+Proyecto 1;7.4 Supervisión y actas;quien firmará el acta SAT como receptor técnico;NORM_04;3.20;P4-04-M
+Proyecto 1;4.5 Bulonería, anclajes y grout;aplicado en tres pasadas (30 %, 60 % y 100 %) en secuencia cruzada;NORM_05;4.5;P4-05-B
+Proyecto 1;4.5 Bulonería, anclajes y grout;El torque de referencia será de 1.136 N·m;NORM_05;4.3;P3-05-A
+Proyecto 1;4.5 Bulonería, anclajes y grout;grout epóxico sin contracción de 95 MPa;NORM_05;2.9;P3-05-M
+Proyecto 1;6.1 Nivelación de la bancada;portones cerrados y registro de temperatura al inicio y al cierre de cada serie, con variación inferior a 1,0 °C;NORM_05;2.3;P3-05-B
+Proyecto 1;4.3 Puesta a tierra y compatibilidad electromagnética;separación mínima de 250 mm en recorridos paralelos;NORM_05;4.8;P4-05-M
+Proyecto 2;3.2 Hormigón de bloques de anclaje y losa de vía;hormigón H-35 con contenido de cemento de 330 kg/m³;NORM_01;3.1;P4-01-A
+Proyecto 2;3.2 Hormigón de bloques de anclaje y losa de vía;El recubrimiento de armaduras será de 40 mm en todas las caras expuestas a derrames de aceite hidráulico;NORM_01;3.5;P4-01-M
+Proyecto 2;3.2 Hormigón de bloques de anclaje y losa de vía;durante 28 días corridos antes de posicionar la prensa y aplicar el torque definitivo de anclajes;NORM_01;4.2;P1-01-A
+Proyecto 2;3.2 Hormigón de bloques de anclaje y losa de vía;Se llevará registro de temperatura ambiente y del hormigón, inicio y fin de cada método de curado e interrupciones;NORM_01;4.1;P4-01-B
+Proyecto 2;3.4 Vía de alimentación de pares montados;se ubican a 1,80 m del eje de vía;NORM_04;1.5;—
+Proyecto 2;3.4 Vía de alimentación de pares montados;con tolerancia de ± 1,5 mm (1.433,5 a 1.436,5 mm);NORM_04;2.3;P1-04-A
+Proyecto 2;3.4 Vía de alimentación de pares montados;en secciones cada 0,50 m (11 secciones) con tres lecturas independientes por sección;NORM_04;2.5;P1-04-B
+Proyecto 2;4.1 Instalación eléctrica;mantiene una reserva de potencia del 41 %;NORM_02;1.10;P4-02-M
+Proyecto 2;4.1 Instalación eléctrica;la tensión en bornes durante el arranque es de 0,88·Un;NORM_02;2.19;—
+Proyecto 2;4.2 Tablero de la prensa;con grado de protección IP55;NORM_02;4.5;P1-02-M
+Proyecto 2;4.2 Tablero de la prensa;mandos de uso habitual entre 1,10 m y 1,50 m sobre el NPT;NORM_02;4.10;P4-02-B
+Proyecto 2;4.2 Tablero de la prensa;Las tomas de mantenimiento estarán protegidas con diferencial de 30 mA;NORM_02;4.15;P4-02-A
+Proyecto 2;4.3 Puesta a tierra;conductor PE de cobre de 16 mm²;NORM_02;5.5;P3-02-M
+Proyecto 2;4.3 Puesta a tierra;con el protocolo de la Resolución SRT 900/2015;NORM_02;5.16;P1-02-B
+Proyecto 2;4.4 Sistema oleohidráulico;serán sometidas a flushing por circulación forzada antes de conectar el bloque de válvulas proporcionales;NORM_05;3.4;P1-05-A
+Proyecto 2;4.4 Sistema oleohidráulico;filtro de relación β5(c) ≥ 200;NORM_05;3.6;—
+Proyecto 2;4.4 Sistema oleohidráulico;con un límite de 200 mg/kg y saturación relativa ≤ 60 %;NORM_05;3.9;P4-05-A
+Proyecto 2;4.5 Bulonería y anclajes;calibradas según ISO 6789-2 en los últimos 12 meses;NORM_05;4.4;P1-05-B
+Proyecto 2;4.5 Bulonería y anclajes;torque de referencia de 661 N·m aplicado en tres pasadas (30 %, 60 % y 100 %);NORM_05;"4.3; 4.5";"P3-05-A; P4-05-B"
+Proyecto 2;4.5 Bulonería y anclajes;grout epóxico sin contracción de 85 MPa;NORM_05;2.9;P3-05-M
+Proyecto 2;4.6 Compatibilidad electromagnética;se tenderán en bandejas separadas 200 mm;NORM_05;4.8;P4-05-M
+Proyecto 2;6. Montaje y nivelación;hasta una desviación máxima de 0,02 mm/m;NORM_05;2.1;P1-05-M
+Proyecto 2;6. Montaje y nivelación;variación de temperatura inferior a 1,0 °C durante cada serie;NORM_05;2.3;P3-05-B
+Proyecto 2;5.2 Eslingado;con ángulo de 30° respecto de la vertical;NORM_03;2.6;P1-03-M
+Proyecto 2;5.3 Documentación y supervisión;presentado con 7 días hábiles de anticipación;NORM_03;5.1;P1-03-B
+Proyecto 2;5.3 Documentación y supervisión;Se solicitará a la ART la conformidad escrita del plan;NORM_03;5.2;P3-03-B
+Proyecto 2;5.3 Documentación y supervisión;estarán presentes de manera continua el Responsable de Higiene y Seguridad y el Supervisor de Montaje;NORM_03;5.5;P3-03-M
+Proyecto 2;5.1 Maniobra del bastidor;apoyarán sus estabilizadores sobre planchones metálicos certificados;NORM_03;4.7;P3-03-A
+Proyecto 3;3.3 Fundación;El hormigón será H-35 con 350 kg/m³ de cemento Portland, relación agua/cemento 0,44;NORM_01;"3.1; 3.2";"P4-01-A; P2-01-M"
+Proyecto 3;3.3 Fundación;El recubrimiento de armaduras será de 40 mm en caras expuestas a refrigerante;NORM_01;3.5;P4-01-M
+Proyecto 3;3.3 Fundación;El curado se extenderá 28 días corridos antes de posicionar la máquina;NORM_01;4.2;P1-01-A
+Proyecto 3;3.3 Fundación;La resistencia se acreditará con probetas ensayadas a 28 días;NORM_01;3.7;P2-01-B
+Proyecto 3;3.3 Fundación;no superará 2,5 mm/s RMS;NORM_01;7.7;—
+Proyecto 3;3.6 Vía de abastecimiento y pasarela;con tolerancia de ± 1,5 mm (998,5 a 1.001,5 mm);NORM_04;2.3;P1-04-A
+Proyecto 3;3.6 Vía de abastecimiento y pasarela;El levantamiento completo se repetirá tras el endurecimiento de la losa;NORM_04;2.13;P2-04-B
+Proyecto 3;3.6 Vía de abastecimiento y pasarela;El paso de hombre junto a la vía conserva 2,30 m libres;NORM_04;1.2;—
+Proyecto 3;4.1 Alimentación eléctrica;interruptor de cabecera con Icu de 36 kA a 400 V;NORM_02;3.13;P2-02-A
+Proyecto 3;4.1 Alimentación eléctrica;La caída de tensión es de 2,4 % en el tramo terminal;NORM_02;2.16;P2-02-M
+Proyecto 3;4.1 Alimentación eléctrica;reserva de potencia del 37 %;NORM_02;1.10;P4-02-M
+Proyecto 3;4.2 Tablero del torno;Tablero según IEC 61439, IP55;NORM_02;4.5;P1-02-M
+Proyecto 3;4.2 Tablero del torno;45 % de reserva física;NORM_02;4.7;P2-02-B
+Proyecto 3;4.2 Tablero del torno;tomas de mantenimiento con diferencial de 30 mA;NORM_02;4.15;P4-02-A
+Proyecto 3;4.4 Compatibilidad electromagnética;separadas 220 mm;NORM_05;4.8;P4-05-M
+Proyecto 3;4.5 Circuito hidráulico del plato;régimen turbulento Re ≥ 4.000 en cada ramal;NORM_05;3.5;P2-05-M
+Proyecto 3;4.5 Circuito hidráulico del plato;tres muestras consecutivas conformes a ISO 4406 17/15/12, separadas 15 minutos;NORM_05;3.8;P2-05-B
+Proyecto 3;4.5 Circuito hidráulico del plato;con humedad ≤ 200 mg/kg (Karl Fischer);NORM_05;3.9;P4-05-A
+Proyecto 3;5.1 Maniobras;Las masas indicadas son masas brutas de izaje;NORM_03;2.4;P2-03-M
+Proyecto 3;5.2 Plan de Izaje Crítico;ángulo de 40° respecto de la vertical;NORM_03;2.6;P1-03-M
+Proyecto 3;5.2 Plan de Izaje Crítico;El plan se presentará con 6 días hábiles de anticipación;NORM_03;5.1;P1-03-B
+Proyecto 3;5.5 Puntos de toma;Todos los subconjuntos se izarán exclusivamente desde los puntos de izaje indicados por el fabricante;NORM_05;1.8;P2-05-A
+Proyecto 3;6. Montaje y nivelación;con tolerancia final de 0,02 mm/m;NORM_05;2.1;P1-05-M
+Proyecto 3;7.2 Ensayos bajo carga;Al menos una de las unidades se mecanizará en el punto de máxima carga de corte;NORM_04;3.8;P1-04-M
+Proyecto 3;7.3 Mediciones;Registro automático con muestreo de 30 s;NORM_04;3.12;P4-04-B
+Proyecto 3;7.4 Supervisión, actas y recepción;el acta será firmada por el responsable de Material Rodante como receptor técnico;NORM_04;3.20;P4-04-M
+Proyecto 3;7.4 Supervisión, actas y recepción;La recepción provisoria se otorgará una vez aprobado el SAT bajo carga;NORM_04;3.2;P2-04-A
+Proyecto 3;4.7 Ruido;no superará 83 dB(A) medido a 1,00 m de la envolvente;NORM_03;6.2;P2-03-B
+Proyecto 4;3.1 Estudio geotécnico y excavación;se ejecutará con blindaje metálico calculado y aprobado antes de abrir la excavación;NORM_01;6.1;P3-01-A
+Proyecto 4;3.2 Hormigón;relación agua/cemento 0,46;NORM_01;3.2;P2-01-M
+Proyecto 4;3.3 Curado;durante 28 días corridos antes del posicionamiento del torno;NORM_01;4.2;P1-01-A
+Proyecto 4;3.4 Bancada y control de vibraciones;relación masa de fundación / masa de máquina de 2,3;NORM_01;7.3;P3-01-M
+Proyecto 4;3.5 Fosa del transportador de viruta;ensayo de penetración de agua según IRAM 1554 sobre probetas, con criterio de aceptación ≤ 30 mm;NORM_01;6.5;P1-01-B
+Proyecto 4;3.6 Puntos de espera;se liberarán mediante acta firmada por la Inspección del Comitente;NORM_01;8.2;P3-01-B
+Proyecto 4;3.7 Vía 4;con tolerancia de ± 1,5 mm (1.674,5 a 1.677,5 mm), medida en 11 secciones cada 0,50 m, con tres lecturas por sección;NORM_04;"2.3; 2.5";"P1-04-A; P1-04-B"
+Proyecto 4;3.7 Vía 4;Se repetirá el levantamiento completo tras el endurecimiento del hormigón;NORM_04;2.13;P2-04-B
+Proyecto 4;3.7 Vía 4;la altura libre de los pasos peatonales es de 2,15 m;NORM_04;1.6;P3-04-M
+Proyecto 4;4.1 Alimentación y capacidad del sistema;interruptor de cabecera con Icu de 36 kA a 400 V;NORM_02;3.13;P2-02-A
+Proyecto 4;4.2 Tablero seccional;grado de protección IP55;NORM_02;4.5;P1-02-M
+Proyecto 4;4.2 Tablero seccional;40 % de reserva física y de capacidad de barras;NORM_02;4.7;P2-02-B
+Proyecto 4;4.3 Puesta a tierra;el PE del torno será de cobre de 16 mm²;NORM_02;5.5;P3-02-M
+Proyecto 4;4.3 Puesta a tierra;tras el montaje se emitirá un nuevo protocolo según la Resolución SRT 900/2015;NORM_02;5.16;P1-02-B
+Proyecto 4;4.1 Alimentación y capacidad del sistema;cos φ ≥ 0,95 con el banco automático escalonado existente;NORM_02;1.11;P3-02-B
+Proyecto 4;5.1 Características;polipasto de cable con factor de seguridad 6;NORM_03;1.8;—
+Proyecto 4;5.1 Características;frenos dimensionados para retener 150 % de la carga máxima admisible;NORM_03;3.3;—
+Proyecto 4;6.1 Maniobras;firmado por Ingeniero Mecánico matriculado y presentado con 5 días hábiles de anticipación, con conformidad escrita de la ART;NORM_03;"5.1; 5.2";"P1-03-B; P3-03-B"
+Proyecto 4;6.1 Maniobras;ángulo de 35° respecto de la vertical;NORM_03;2.6;P1-03-M
+Proyecto 4;6.1 Maniobras;Los estabilizadores apoyarán sobre planchones metálicos certificados;NORM_03;4.7;P3-03-A
+Proyecto 4;6.1 Maniobras;Estarán presentes de forma continua el Responsable de Higiene y Seguridad y el Supervisor de Montaje;NORM_03;5.5;P3-03-M
+Proyecto 4;4.5 Hidráulica;se lavarán por circulación forzada antes de conectar las válvulas proporcionales, con Re ≥ 4.000 en cada ramal;NORM_05;"3.4; 3.5";"P1-05-A; P2-05-M"
+Proyecto 4;4.5 Hidráulica;aceptación con tres muestras consecutivas ISO 4406 17/15/12 separadas 10 minutos;NORM_05;3.8;P2-05-B
+Proyecto 4;4.6 Bulonería y grout;con llave dinamométrica calibrada en los últimos 12 meses;NORM_05;4.4;P1-05-B
+Proyecto 4;4.6 Bulonería y grout;El grout bajo placas base será epóxico sin contracción de 90 MPa;NORM_05;2.9;P3-05-M
+Proyecto 4;7. Montaje y nivelación;La nivelación final del torno será ≤ 0,02 mm/m;NORM_05;2.1;P1-05-M
+Proyecto 4;7. Montaje y nivelación;portones cerrados y variación de temperatura ≤ 1,0 °C;NORM_05;2.3;P3-05-B
+Proyecto 4;8.1 SAT bajo carga;El SAT se ejecutará con tres ejes montados reales de la flota;NORM_04;3.6;P3-04-A
+Proyecto 4;8.1 SAT bajo carga;Al menos uno se mecanizará en la condición de máxima carga de corte;NORM_04;3.8;P1-04-M
+Proyecto 4;8.1 SAT bajo carga;La rugosidad se medirá con tres trazas por pieza distribuidas a 120°;NORM_04;3.10;P3-04-B
+Proyecto 4;8.2 Actas y recepción;La recepción provisoria se otorgará una vez aprobado el SAT bajo carga;NORM_04;3.2;P2-04-A
+Proyecto 4;4.7 Ruido;no superará 84 dB(A) a 1,00 m de la envolvente;NORM_03;6.2;P2-03-B
