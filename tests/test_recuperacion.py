@@ -196,4 +196,4 @@ def test_main_pide_la_union_solo_en_modo_verificacion():
     import inspect
     from scripts import main
     codigo = inspect.getsource(main._analizar_por_secciones)
-    assert '"con_union": True} if verificacion else {}' in codigo
+    assert '"con_union": True, "con_oraciones": True} if verificacion else {}' in codigo

@@ -78,11 +78,16 @@ def test_configuraciones_definidas():
         ("actual", 10, 5, 15, "reranker"), ("media", 20, 8, 25, "reranker"), ("amplia", 30, 10, 40, "reranker"),
         ("densa_sin_reranker", 10, 5, 15, "densa"), ("union", 10, 5, 25, "union")]
     assert (CFG["union_k20"].k, CFG["union_k20"].top, CFG["union_k20"].top_rr, CFG["union_k20"].tope) == (20, 5, 8, 30)
-    assert [c.nombre for c in dr.CONFIGURACIONES[5:]] == [
+    assert [c.nombre for c in dr.CONFIGURACIONES[5:12]] == [
         "union_k20", "union_oraciones_cifras_N2", "union_oraciones_cifras_N3", "union_oraciones_todas_N2",
         "union_k20_oraciones_cifras_N2", "union_k20_oraciones_cifras_N3", "union_k20_oraciones_todas_N2"]
-    assert all(c.cupo_oraciones == 10 for c in dr.CONFIGURACIONES if c.oraciones) and dr.CUPO_ORACIONES == 10
-    assert [c.tope + c.cupo_oraciones for c in dr.CONFIGURACIONES if c.oraciones] == [35] * 3 + [40] * 3     # tope total: base + cupo propio
+    completas = [c for c in dr.CONFIGURACIONES if c.oraciones and "cupo" not in c.nombre]
+    assert all(c.cupo_oraciones == 10 for c in completas) and dr.CUPO_ORACIONES == 10
+    assert [c.tope + c.cupo_oraciones for c in completas] == [35] * 3 + [40] * 3     # tope total: base + cupo propio
+    # variantes de union_oraciones_cifras_N2 con cupo 8, 6 y 4: la base union sigue igual (K=10, 5+5, tope 25)
+    assert [c.nombre for c in dr.CONFIGURACIONES[12:]] == ["union_oraciones_cifras_N2_cupo8", "union_oraciones_cifras_N2_cupo6", "union_oraciones_cifras_N2_cupo4"]
+    for c, cupo in zip(dr.CONFIGURACIONES[12:], (8, 6, 4)):
+        assert (c.k, c.top, c.top_rr, c.tope, c.modo, c.oraciones, c.cupo_oraciones) == (10, 5, None, 25, "union", (True, 2), cupo)
     assert CFG["union_oraciones_cifras_N3"].oraciones == (True, 3) and CFG["union_k20_oraciones_todas_N2"].oraciones == (False, 2)
     assert (CFG["union_oraciones_todas_N2"].k, CFG["union_oraciones_todas_N2"].tope) == (10, 25) and CFG["union_k20_oraciones_todas_N2"].tope == 30
 
@@ -424,3 +429,124 @@ def test_el_cache_del_diagnostico_esta_ignorado_por_git():
     raiz = os.path.join(os.path.dirname(__file__), os.pardir)
     with open(os.path.join(raiz, ".gitignore"), encoding="utf-8") as f:
         assert "diagnostico_cache.json" in [l.strip() for l in f]
+
+
+def test_variantes_con_cupo_reducido_suman_solo_su_cupo():
+    def consulta(j):
+        return _cands(*[(("N", f"q{j}-{i}"), -i, i / 10) for i in range(10)])
+    tres = [consulta(0), consulta(1), consulta(2)]
+    nuevas = [_oracion(True, *[f"s{j}-{i}" for i in range(2)]) for j in range(6)]       # 12 artículos nuevos, todas con cifras
+    base = dr.seleccion_final(tres, CFG["union"])
+    assert len(base) == 25
+    for cupo in (8, 6, 4):
+        final = dr.seleccion_final(tres, CFG[f"union_oraciones_cifras_N2_cupo{cupo}"], nuevas)
+        assert len(final) == 25 + cupo and final[:25] == base
+    # los cupos chicos son prefijos de los grandes: se queda con los mejores por puesto
+    c8 = arts(dr.seleccion_final(tres, CFG["union_oraciones_cifras_N2_cupo8"], nuevas))
+    c4 = arts(dr.seleccion_final(tres, CFG["union_oraciones_cifras_N2_cupo4"], nuevas))
+    assert c8[:29] == c4
+
+
+# --- El pipeline y el diagnóstico usan la MISMA selección ---
+
+import hashlib
+
+from scripts import config as cfg_pipeline
+from scripts import rag_components as rc
+
+
+class DbSintetica:
+    """Base vectorial falsa y determinista: 60 fragmentos a0..a59; el orden de la densa depende del texto de la consulta."""
+    def __init__(self, n=60):
+        self.docs = [Document(page_content=f"frag {i}", metadata={"norma": "N", "articulo": f"a{i}", "parte": 1}) for i in range(n)]
+        self.busquedas_por_oracion = 0
+
+    def _orden(self, consulta):
+        valor = lambda i: int(hashlib.sha1(f"{consulta}|{i}".encode()).hexdigest(), 16) % 10007
+        return sorted(range(len(self.docs)), key=lambda i: (valor(i), i)), valor
+
+    def get(self, include=None):
+        return {"ids": [str(i) for i in range(len(self.docs))]}
+
+    def as_retriever(self, search_kwargs):
+        k = search_kwargs["k"]
+        return type("R", (), {"invoke": lambda s, q: [self.docs[i] for i in self._orden(q)[0][:k]]})()
+
+    def similarity_search_with_score(self, consulta, k):
+        self.busquedas_por_oracion += 1
+        orden, valor = self._orden(consulta)
+        return [(self.docs[i], valor(i) / 10007) for i in orden[:k]]
+
+
+def _preparar_pipeline(monkeypatch, oraciones=True, cupo=10):
+    from langchain_community.cross_encoders.base import BaseCrossEncoder
+
+    class Modelo(BaseCrossEncoder):
+        def score(self, text_pairs):
+            return [(int(texto.split()[-1]) * 7 % 101) / 100 for _, texto in text_pairs]     # distinto para cada fragmento
+    monkeypatch.setattr(rc, "_get_reranker_model", lambda nombre: Modelo())
+    for nombre, valor in (("USE_RERANKER", True), ("RECUPERACION", "densa"), ("ORACIONES_CIFRAS", oraciones), ("ORACIONES_N", 2), ("ORACIONES_CUPO", cupo)):
+        monkeypatch.setattr(cfg_pipeline, nombre, valor)
+    return Modelo()
+
+
+SECCION_SINTETICA = {"id": "7", "texto": "completo", "subsecciones": [
+    ("7.1 Montaje", " ".join(f"La medida {i} del tramo {chr(97 + i)} debe verificarse con calibre digital en obra durante el montaje. "
+                             f"El responsable de la zona {chr(97 + i)} firma el parte diario de trabajos." for i in range(3))),
+    ("7.2 Pruebas", "Se realizará una prueba de carga con 12 toneladas durante 24 horas. El informe de la prueba se entrega firmado por el responsable "
+                    "del taller. Los registros se conservan en el archivo de la obra por varios años.")]}
+
+
+def _claves(docs):
+    return [(d.metadata["norma"], d.metadata["articulo"]) for d in docs]
+
+
+def test_pipeline_y_diagnostico_eligen_los_mismos_articulos_en_el_mismo_orden(monkeypatch):
+    modelo = _preparar_pipeline(monkeypatch)
+    db = DbSintetica()
+    _, docs_pipeline = rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True, con_oraciones=True)
+
+    puntuar = lambda consulta, docs: [rc._normalizar_score(s) for s in modelo.score([(consulta, d.page_content) for d in docs])]
+    datos = dr.datos_de_consultas(db, dr.consultas_de_seccion(SECCION_SINTETICA), puntuar, total=60)
+    oraciones = dr.datos_de_oraciones(db, dr.oraciones_de_seccion(SECCION_SINTETICA))
+    por_consulta = [q["candidatos"] for q in datos]
+    cfg = CFG["union_oraciones_cifras_N2"]
+    assert (cfg.k, cfg.top, cfg.tope, cfg.oraciones, cfg.cupo_oraciones) == (cfg_pipeline.K_SUBSECCION, cfg_pipeline.TOP_N_SUBSECCION, 25, (True, cfg_pipeline.ORACIONES_N), cfg_pipeline.ORACIONES_CUPO)
+    docs_diagnostico = dr.seleccion_final(por_consulta, cfg, oraciones)
+
+    assert _claves(docs_pipeline) == _claves(docs_diagnostico)
+    base = dr.seleccion_final(por_consulta, CFG["union"])
+    assert len(docs_diagnostico) > len(base)                                  # el caso es significativo: las oraciones aportan artículos
+    assert _claves(docs_diagnostico)[:len(base)] == _claves(base)
+
+
+def test_pipeline_extras_son_fragmentos_reales_sin_repetir_la_base_y_con_su_cupo(monkeypatch):
+    _preparar_pipeline(monkeypatch, cupo=3)
+    db = DbSintetica()
+    _, base = rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True)
+    _, con = rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True, con_oraciones=True)
+    extras = con[len(base):]
+    assert _claves(con[:len(base)]) == _claves(base) and 0 < len(extras) <= 3
+    assert all(d.page_content.startswith("frag") for d in extras)                 # el fragmento recuperado, con su texto, para verificarlo
+    assert not set(_claves(extras)) & set(_claves(base)) and len(set(_claves(con))) == len(con)
+
+
+def test_pipeline_oraciones_apagadas_por_defecto_no_buscan_ni_cambian_nada(monkeypatch):
+    assert (cfg_pipeline.ORACIONES_CIFRAS, cfg_pipeline.ORACIONES_N, cfg_pipeline.ORACIONES_CUPO) == (False, 2, 10)
+    _preparar_pipeline(monkeypatch, oraciones=False)
+    db = DbSintetica()
+    _, sin = rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True)
+    _, apagado = rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True, con_oraciones=True)
+    assert _claves(apagado) == _claves(sin) and db.busquedas_por_oracion == 0
+
+
+def test_solo_las_oraciones_con_cifras_se_buscan_en_el_pipeline(monkeypatch):
+    _preparar_pipeline(monkeypatch)
+    db = DbSintetica()
+    rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True, con_oraciones=True)
+    todas = rc.oraciones_de_seccion(SECCION_SINTETICA)
+    con_digitos = [o for o in todas if any(c.isdigit() for c in o)]
+    assert 0 < len(con_digitos) < len(todas) and db.busquedas_por_oracion == len(con_digitos)    # las oraciones sin dígitos ni se buscan
+    datos = rc.consultar_oraciones(db, todas)
+    assert [d["con_cifras"] for d in datos] == [any(c.isdigit() for c in o) for o in todas] and not all(d["con_cifras"] for d in datos)
+    assert rc.articulos_de_oraciones(datos, True, 2) != rc.articulos_de_oraciones(datos, False, 2)

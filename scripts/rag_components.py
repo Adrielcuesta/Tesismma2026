@@ -15,7 +15,7 @@ import re
 import unicodedata
 
 from .schemas import LLMResponse, FuenteNorma, RiskItem, VerificacionArticulo, Redaccion, _sin_tildes
-from . import config
+from . import config, document_utils
 
 logger = logging.getLogger(__name__)
 
@@ -487,17 +487,87 @@ def _sin_preambulo(docs: List[Document]) -> List[Document]:
     return [d for d in docs if d.metadata.get("articulo") != "preambulo"]
 
 
-def recuperar_seccion(vector_db_instance, seccion: dict, tope: Optional[int] = None, sin_preambulo: bool = False, con_union: bool = False):
+# --- Consultas por oración (modo verificación; apagadas por defecto: config.ORACIONES_CIFRAS) ---
+# Las usan el pipeline (recuperar_seccion) y el diagnóstico (scripts.diagnostico_recuperacion): lo que mide el diagnóstico es lo que corre el pipeline.
+
+K_ORACION = 10               # fragmentos que se piden a la densa por oración
+MAX_ARTICULOS_ORACION = 5    # artículos distintos que se conservan por oración (el pipeline usa config.ORACIONES_N)
+_RE_PARTE = re.compile(r"\s*\(parte \d+\)\s*$")
+
+
+def articulo_base(articulo) -> str:
+    """Artículo sin sufijo '(parte n)' ni punto final: '4.2.' -> '4.2'."""
+    return _RE_PARTE.sub("", str(articulo)).strip().rstrip(".")
+
+
+def unidades_de_seccion(seccion: dict) -> list:
+    """Textos de las subsecciones (o la sección entera si no tiene): de cada una salen las oraciones."""
+    return [x for _, x in seccion["subsecciones"] if x.strip()] or [seccion["texto"]]
+
+
+def oraciones_de_seccion(seccion: dict) -> list:
+    """Las oraciones de la sección, segmentadas con numerar_oraciones (la del pipeline) en cada subsección. Solo texto de la oferta."""
+    return [texto for unidad in unidades_de_seccion(seccion) for _, texto in document_utils.numerar_oraciones(unidad)]
+
+
+def consultar_oraciones(vector_db_instance, oraciones: list, k: int = K_ORACION, max_articulos: int = MAX_ARTICULOS_ORACION, solo_cifras: bool = False) -> list:
+    """Por oración, buscada sola en la densa (sin reranker): {'con_cifras' (tiene algún dígito), 'articulos': [{norma, articulo, densa, doc}]} con los
+    max_articulos primeros artículos distintos (sin preámbulos), en su orden; doc es el primer fragmento recuperado de cada artículo.
+    Con solo_cifras no se busca (articulos vacío) en las oraciones sin dígitos."""
+    resultado = []
+    for oracion in oraciones:
+        vistos = {}
+        if solo_cifras and not any(c.isdigit() for c in oracion):
+            resultado.append({"con_cifras": False, "articulos": []})
+            continue
+        for d, distancia in vector_db_instance.similarity_search_with_score(oracion[:config.SUBSECTION_QUERY_MAX_CHARS], k=k):
+            articulo = d.metadata.get("articulo", "")
+            if articulo == "preambulo":
+                continue
+            vistos.setdefault((d.metadata.get("norma"), articulo_base(articulo)), (-float(distancia), d))
+        resultado.append({"con_cifras": any(c.isdigit() for c in oracion),
+                          "articulos": [{"norma": n, "articulo": a, "densa": s, "doc": d} for (n, a), (s, d) in list(vistos.items())[:max_articulos]]})
+    return resultado
+
+
+def articulos_de_oraciones(oraciones: list, solo_cifras: bool, n: int) -> list:
+    """[(norma, artículo, doc o None)] de las consultas por oración, sin repetir y por puesto (primero los primeros de cada oración; a igual puesto,
+    el orden de las oraciones). Con solo_cifras cuentan únicamente las oraciones que tienen algún dígito."""
+    mejor = {}
+    for orden, o in enumerate(oraciones):
+        if solo_cifras and not o["con_cifras"]:
+            continue
+        for puesto, a in enumerate(o["articulos"][:n], 1):
+            clave = (a["norma"], a["articulo"])
+            if clave not in mejor or (puesto, orden) < mejor[clave][0]:
+                mejor[clave] = ((puesto, orden), a.get("doc"))
+    return [(norma, art, doc) for (norma, art), (_, doc) in sorted(mejor.items(), key=lambda x: x[1][0])]
+
+
+def agregar_articulos_de_oraciones(base: List[Document], oraciones: list, solo_cifras: bool, n: int, cupo: int) -> List[Document]:
+    """La base (que conserva su tope) más, detrás, hasta `cupo` artículos de las consultas por oración que no estén ya en la base. Sin documento recuperado
+    (datos de la caché del diagnóstico) el fragmento agregado es un Document vacío con su norma y artículo."""
+    presentes = {(d.metadata.get("norma"), articulo_base(d.metadata.get("articulo", ""))) for d in base}
+    extra = [doc if doc is not None else Document(page_content="", metadata={"norma": norma, "articulo": art})
+             for norma, art, doc in articulos_de_oraciones(oraciones, solo_cifras, n) if (norma, art) not in presentes]
+    return list(base) + extra[:cupo]
+
+
+def recuperar_seccion(vector_db_instance, seccion: dict, tope: Optional[int] = None, sin_preambulo: bool = False, con_union: bool = False, con_oraciones: bool = False):
     """(candidatos, docs) de una sección. Por defecto una sola consulta con el texto de la sección;
     con RECUPERACION_POR_SUBSECCION una consulta por subsección y unión de los resultados.
     tope: máximo de fragmentos finales (por defecto TOPE_FRAGMENTOS_SECCION); sin_preambulo: los chunks 'preambulo' no cuentan;
-    con_union: por subsección se agregan los TOP_DENSA_SUBSECCION primeros de la densa a los del reranker (modo verificación)."""
+    con_union: por subsección se agregan los TOP_DENSA_SUBSECCION primeros de la densa a los del reranker (modo verificación);
+    con_oraciones: si además config.ORACIONES_CIFRAS está activa, se suman detrás los artículos de las consultas por oración."""
     tope = tope or config.TOPE_FRAGMENTOS_SECCION
     quitar = _sin_preambulo if sin_preambulo else (lambda docs: docs)
     subsecciones = [x for _, x in seccion["subsecciones"] if len(x) >= config.MIN_CHARS_SUBSECCION]
+    con_oraciones = con_oraciones and config.ORACIONES_CIFRAS
+    sumar = (lambda docs: agregar_articulos_de_oraciones(docs, consultar_oraciones(vector_db_instance, oraciones_de_seccion(seccion), solo_cifras=True),
+                                                         True, config.ORACIONES_N, config.ORACIONES_CUPO)) if con_oraciones else (lambda docs: docs)
     if not config.RECUPERACION_POR_SUBSECCION or not subsecciones:
         candidatos, docs = recuperar_con_candidatos(vector_db_instance, seccion["texto"][:config.SECTION_QUERY_MAX_CHARS], config.K_RECUPERACION, config.TOP_N_POR_SECCION)
-        return candidatos, quitar(docs)
+        return candidatos, sumar(quitar(docs))
     top_densa = config.TOP_DENSA_SUBSECCION if con_union else 0
     resultados = [recuperar_con_candidatos(vector_db_instance, x[:config.SUBSECTION_QUERY_MAX_CHARS], config.K_SUBSECCION, config.TOP_N_SUBSECCION, top_densa) for x in subsecciones]
     candidatos, vistos = [], set()
@@ -506,7 +576,7 @@ def recuperar_seccion(vector_db_instance, seccion: dict, tope: Optional[int] = N
             if _clave_documento(d) not in vistos:
                 vistos.add(_clave_documento(d))
                 candidatos.append(d)
-    return candidatos, unir_fragmentos([quitar(docs) for _, docs in resultados], tope)
+    return candidatos, sumar(unir_fragmentos([quitar(docs) for _, docs in resultados], tope))
 
 
 def crear_evaluador_evidencia(llm):

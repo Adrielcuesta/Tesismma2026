@@ -38,9 +38,7 @@ RE_PAR = re.compile(r'(NORM_\d+)\s*,\s*Art\.\s*(\S+)')
 RE_PARTE = re.compile(r'\s*\(parte \d+\)\s*$')
 
 
-def _base(articulo) -> str:
-    """Artículo sin sufijo '(parte n)' ni punto final: '4.2.' -> '4.2'."""
-    return RE_PARTE.sub("", str(articulo)).strip().rstrip(".")
+_base = rag_components.articulo_base   # la misma función que usa el pipeline
 
 
 def pares_ground_truth(ruta_gt: str, proyecto: int) -> list:
@@ -160,9 +158,11 @@ CONFIGURACIONES = (Config("actual", 10, 5, 15, "reranker"), Config("media", 20, 
                    Config("densa_sin_reranker", 10, 5, 15, "densa")) + _BASES_UNION + tuple(
     base._replace(nombre=f"{base.nombre}_{variante}", oraciones=(solo_cifras, n), cupo_oraciones=CUPO_ORACIONES)
     for base in _BASES_UNION for variante, solo_cifras, n in _VARIANTES_ORACIONES)
+CUPOS_REDUCIDOS = (8, 6, 4)
+CONFIGURACIONES += tuple(_BASES_UNION[0]._replace(nombre=f"union_oraciones_cifras_N2_cupo{c}", oraciones=(True, 2), cupo_oraciones=c) for c in CUPOS_REDUCIDOS)
 K_MAXIMO = 30
-K_ORACION = 10          # fragmentos que se piden a la densa por oración
-N_MAXIMO_ORACION = 5    # artículos distintos que se guardan por oración (las variantes usan N = 2 o 3)
+K_ORACION = rag_components.K_ORACION                      # fragmentos que se piden a la densa por oración
+N_MAXIMO_ORACION = rag_components.MAX_ARTICULOS_ORACION   # artículos distintos que se guardan por oración (las variantes usan N = 2 o 3)
 FACTOR_MAXIMO_PARES = 2   # tope de la regla de adopción: el doble de los pares a verificar de la configuración actual
 Cand = namedtuple("Cand", "doc densa reranker")   # densa: -distancia (más alto, mejor); reranker: puntaje normalizado
 # Encabezado de artículo al comienzo de una línea: 'Art. 4.7. Reserva física...' o 'Art. 3.7. CONTROL DE CALIDAD'. El título puede estar en
@@ -213,27 +213,9 @@ def _elegidos(candidatos: list, cfg) -> list:
         return [(c.doc, c.reranker) for c in por_reranker]
     if cfg.modo == "densa":
         return [(c.doc, c.densa) for c in primeros[:cfg.top]]
-    vistos, resultado = set(), []
-    for c in primeros[:cfg.top] + por_reranker:
-        if id(c) not in vistos:
-            vistos.add(id(c))
-            resultado.append((c.doc, c.reranker))
-    return resultado
-
-
-def _articulos_de_oraciones(oraciones: list, cfg) -> list:
-    """[(norma, artículo)] de las consultas por oración, sin repetir y por puesto (primero los primeros de cada oración; a igual puesto, el orden de las
-    oraciones). Con cfg.oraciones[0] solo cuentan las oraciones que tienen algún dígito."""
-    solo_cifras, n = cfg.oraciones
-    mejor = {}
-    for orden, o in enumerate(oraciones):
-        if solo_cifras and not o["con_cifras"]:
-            continue
-        for puesto, a in enumerate(o["articulos"][:n], 1):
-            clave = (a["norma"], a["articulo"])
-            if clave not in mejor or (puesto, orden) < mejor[clave]:
-                mejor[clave] = (puesto, orden)
-    return [clave for clave, _ in sorted(mejor.items(), key=lambda x: x[1])]
+    elegidos = {id(c) for c in primeros[:cfg.top] + por_reranker}
+    # en el orden del reranker, igual que recuperar_con_candidatos(top_densa=...) del pipeline
+    return [(c.doc, c.reranker) for c in sorted(primeros, key=lambda c: c.reranker, reverse=True) if id(c) in elegidos]
 
 
 def seleccion_final(por_consulta: list, cfg, oraciones: list = ()) -> list:
@@ -244,9 +226,8 @@ def seleccion_final(por_consulta: list, cfg, oraciones: list = ()) -> list:
     base = _seleccion_base(por_consulta, cfg)
     if not cfg.oraciones:
         return base
-    presentes = {(d.metadata.get("norma"), _base(d.metadata.get("articulo", ""))) for d in base}
-    extra = [Document(page_content="", metadata={"norma": n, "articulo": a}) for n, a in _articulos_de_oraciones(oraciones, cfg) if (n, a) not in presentes]
-    return base + extra[:cfg.cupo_oraciones]
+    solo_cifras, n = cfg.oraciones
+    return rag_components.agregar_articulos_de_oraciones(base, oraciones, solo_cifras, n, cfg.cupo_oraciones)   # la misma función que usa el pipeline
 
 
 def _seleccion_base(por_consulta: list, cfg) -> list:
@@ -310,30 +291,15 @@ def decision_recorte(filas: list, pares_por_oferta: dict) -> dict:
 
 # --- Caché: los 30 candidatos densos con sus puntajes, por consulta, para derivar las configuraciones sin recalcular ---
 
-def unidades_de_seccion(seccion: dict) -> list:
-    """Textos de las subsecciones (o la sección entera si no tiene): de cada una salen las oraciones."""
-    return [x for _, x in seccion["subsecciones"] if x.strip()] or [seccion["texto"]]
-
-
-def oraciones_de_seccion(seccion: dict) -> list:
-    """Las oraciones de la sección, segmentadas con numerar_oraciones (la del pipeline) en cada subsección. Solo texto de la oferta."""
-    return [texto for unidad in unidades_de_seccion(seccion) for _, texto in document_utils.numerar_oraciones(unidad)]
+unidades_de_seccion = rag_components.unidades_de_seccion   # las mismas funciones que usa el pipeline
+oraciones_de_seccion = rag_components.oraciones_de_seccion
 
 
 def datos_de_oraciones(vector_db, oraciones: list, k: int = K_ORACION) -> list:
-    """Por oración, buscada en la densa sola (sin reranker): {'hash', 'con_cifras' (tiene algún dígito), 'articulos': [{norma, articulo, densa}]} con los
-    N_MAXIMO_ORACION primeros artículos distintos (sin preámbulos), en su orden."""
-    resultado = []
-    for oracion in oraciones:
-        vistos = {}
-        for d, distancia in vector_db.similarity_search_with_score(oracion[:config.SUBSECTION_QUERY_MAX_CHARS], k=k):
-            articulo = d.metadata.get("articulo", "")
-            if articulo == "preambulo":
-                continue
-            vistos.setdefault((d.metadata.get("norma"), _base(articulo)), -float(distancia))
-        resultado.append({"hash": _hash(oracion), "con_cifras": any(c.isdigit() for c in oracion),
-                          "articulos": [{"norma": n, "articulo": a, "densa": p} for (n, a), p in list(vistos.items())[:N_MAXIMO_ORACION]]})
-    return resultado
+    """Por oración, buscada en la densa sola (sin reranker, con rag_components.consultar_oraciones): {'hash', 'con_cifras' (tiene algún dígito),
+    'articulos': [{norma, articulo, densa}]} con los N_MAXIMO_ORACION primeros artículos distintos (sin preámbulos), en su orden. Es lo que se guarda en la caché."""
+    return [{"hash": _hash(o), "con_cifras": e["con_cifras"], "articulos": [{k_: v for k_, v in a.items() if k_ != "doc"} for a in e["articulos"]]}
+            for o, e in zip(oraciones, rag_components.consultar_oraciones(vector_db, oraciones, k, N_MAXIMO_ORACION))]
 
 
 def a_cache(secciones_por_oferta: dict, datos_por_oferta: dict, fragmentos: dict, oraciones_por_oferta: dict = None) -> dict:
@@ -425,7 +391,7 @@ def informe_recorte(filas: list, pares_por_oferta: dict, fragmentos: dict = None
     L += [f"  límite de pares: {d['limite']} (el doble de la actual)",
           "  Notas: union_k20 usa el puntaje del reranker de los candidatos con puesto denso <= 20 (el puntaje de cada candidato no depende de los demás: es equivalente a reranquear solo esos 20).",
           "  Las variantes *_oraciones_* suman, a la base, los N primeros artículos de la densa para cada oración de la subsección (sin reranker; solo texto de la oferta),",
-          f"  con un cupo propio de {CUPO_ORACIONES} artículos por sección, detrás de la base (que conserva su tope); «cifras» = oraciones con algún dígito.", "",
+          f"  con un cupo propio de {CUPO_ORACIONES} artículos por sección (_cupo8, _cupo6 y _cupo4: ese cupo), detrás de la base (que conserva su tope); «cifras» = oraciones con algún dígito.", "",
           "Decisión: " + (f"ADOPTAR «{d['adopta']}» (mayor Recall@artículo dentro del límite de pares; a igual recall, la de menos pares)."
                           if d["adopta"] else "MANTENER la actual; ninguna configuración dentro del límite de pares la supera y el techo se reporta como limitación.")]
     fuera = [f for f in filas if f["puesto_densa"] is None]
