@@ -224,7 +224,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         "modo": "brechas" if brechas_modo else "lista", "oferta": oferta, "n_trampas": len(trampas), "trampas": trampas,
         "encontradas": len(encontradas), "otro_articulo": sum(t["estado"] == "otro artículo" for t in trampas),
         "por_frase": sum(t["por_frase"] for t in trampas), "por_frase_validada": None, "coincidencias": coincidencias,
-        "hay_registro": bool(verificados), "recall_articulo": sum(t["verificado"] for t in trampas), "perezosas": sum(t["perezosa"] for t in trampas),
+        "costo": (resultado.get("configuracion_analisis") or {}).get("costo_computacional"), "hay_registro": bool(verificados), "recall_articulo": sum(t["verificado"] for t in trampas), "perezosas": sum(t["perezosa"] for t in trampas),
         "perezosas_clasificacion": sum(t["perezosa_clasificacion"] for t in trampas),
         "marcas_no_verificadas": sum(any(norm(m).startswith(MARCA_NO_VERIFICADO) for m in (i["brecha"].get("marcas") or [])) for i in items) if brechas_modo else 0,
         "clase_ok": sum(t["clase_obtenida"] == t["clase_esperada"] for t in encontradas),
@@ -288,7 +288,7 @@ def combinar(evs):
             volumen[k] = volumen.get(k, 0) + v
     ev = {k: suma(k) for k in ("n_trampas", "encontradas", "otro_articulo", "por_frase", "recall_articulo", "perezosas", "perezosas_clasificacion", "marcas_no_verificadas",
                                "clase_ok", "responsable_ok", "nivel_ok", "n_espejos", "falsas_alarmas", "n_riesgo")}
-    ev.update(modo=evs[0]["modo"], oferta="+".join(e["oferta"] for e in evs), confusion=confusion, volumen=volumen,
+    ev.update(modo=evs[0]["modo"], oferta="+".join(e["oferta"] for e in evs), costos=[(e["oferta"], e["costo"]) for e in evs], confusion=confusion, volumen=volumen,
               trampas=[t for e in evs for t in e["trampas"]], espejos=[x for e in evs for x in e["espejos"]], extras=[x for e in evs for x in e["extras"]],
               coincidencias=[x for e in evs for x in e["coincidencias"]], hay_registro=all(e["hay_registro"] for e in evs),
               por_frase_validada=todo("por_frase_validada"), precision_k=todo("precision_k"), precision_n=todo("precision_n"))
@@ -367,6 +367,29 @@ def _bloque_perdidas(ev):
     return L + [""]
 
 
+def _segundos_texto(s) -> str:
+    return "n/d" if s is None else f"{s:,.1f} s ({int(s) // 3600}:{int(s) % 3600 // 60:02d}:{int(s) % 60:02d})".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _bloque_costo(ev):
+    """Costo computacional por oferta, tal como lo midió el análisis (configuracion_analisis.costo_computacional)."""
+    L = ["## Costo computacional", ""]
+    for oferta, c in ev.get("costos") or [(ev["oferta"], ev.get("costo"))]:
+        if not c:
+            L += [f"**{oferta}**: n/d (el resultado no trae la medición)", ""]
+            continue
+        hw, pp = c.get("hardware") or {}, c.get("segundos_por_par") or {}
+        n = lambda v: "n/d" if v is None else f"{v:,.0f}".replace(",", ".")
+        L += [f"**{oferta}**", "", "| Concepto | Valor |", "|---|---|", f"| Modelo | {c.get('modelo', 'n/d')} |",
+              f"| Hardware | {hw.get('gpu') or 'n/d'}" + (f", {hw['vram']}" if hw.get("vram") else "") + " |",
+              f"| Pares verificados | {c.get('pares_verificados', 'n/d')} |", f"| Llamadas totales (con comentario y reintentos) | {c.get('llamadas_totales', 'n/d')} |",
+              f"| Tiempo total | {_segundos_texto(c.get('tiempo_total_s'))} |",
+              f"| Segundos por par (mediana / p90) | {_sin_valor(pp.get('mediana'), '{:.1f}')} / {_sin_valor(pp.get('p90'), '{:.1f}')} |",
+              f"| Tokens de entrada (total / por par) | {n(c.get('tokens_entrada_total'))} / {n(c.get('tokens_entrada_por_par'))} |",
+              f"| Tokens de salida (total / por par) | {n(c.get('tokens_salida_total'))} / {n(c.get('tokens_salida_por_par'))} |", ""]
+    return L
+
+
 def informe_md(ev, comparacion=None) -> str:
     lista = ev["modo"] == "lista"
     n, e = ev["n_trampas"], ev["encontradas"]
@@ -404,6 +427,7 @@ def informe_md(ev, comparacion=None) -> str:
         L += ["## Fidelidad", "", "| Métrica | Valor |", "|---|---|", f"| Brechas con alguna marca «{MARCA_NO_VERIFICADO}» | {_pct(ev['marcas_no_verificadas'], nb)} |", "",
               NOTA_FIDELIDAD, ""]
         L += _bloque_falsas_y_volumen(ev) + _bloque_perdidas(ev)
+    L += _bloque_costo(ev)
     L += ["## Detalle por trampa", "",
           "| Trampa | Encontrada | Artículo citado | Artículo verificado | Clase esperada | Clase obtenida | Responsable esperado | Responsable obtenido | Nivel esperado | Nivel obtenido |",
           "|---|---|---|---|---|---|---|---|---|---|"]

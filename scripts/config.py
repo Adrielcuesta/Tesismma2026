@@ -101,12 +101,12 @@ TOP_N_SUBSECCION = 5
 # Modo verificación: además del top TOP_N_SUBSECCION del reranker, cada subsección conserva los TOP_DENSA_SUBSECCION primeros de la densa
 # (el reranker baja de puesto artículos que la densa tenía entre los primeros). Unión medida con scripts.diagnostico_recuperacion recorte.
 TOP_DENSA_SUBSECCION = 5
-# Consultas por oración (modo verificación), APAGADAS por defecto: cada oración con algún dígito de la subsección (segmentada con numerar_oraciones) se busca
+# Consultas por oración (modo verificación), ENCENDIDAS para la prueba B5: cada oración con algún dígito de la subsección (segmentada con numerar_oraciones) se busca
 # sola en la densa, sin reranker, y sus ORACIONES_N primeros artículos se suman detrás de los de la base, por puesto y sin repetir los de la base, con un
 # cupo propio de ORACIONES_CUPO artículos por sección. Solo texto de la oferta. Misma función que usa scripts.diagnostico_recuperacion recorte.
-ORACIONES_CIFRAS = False
+ORACIONES_CIFRAS = True
 ORACIONES_N = 2
-ORACIONES_CUPO = 10
+ORACIONES_CUPO = 8
 TOPE_FRAGMENTOS_SECCION = 12
 MIN_CHARS_SUBSECCION = 150
 # Evaluador de evidencia CRAG por sección (solo informa): apagado por defecto, el código se conserva

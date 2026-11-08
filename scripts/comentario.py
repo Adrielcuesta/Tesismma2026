@@ -57,16 +57,17 @@ def generar_comentario(resumen: dict, riesgos: list, cadena=None) -> dict:
     cadena: crear_cadena_comentario(llm); sin cadena o sin riesgos se usa la plantilla."""
     if not riesgos or cadena is None:
         return {"texto": plantilla(resumen, riesgos), "origen": "plantilla", "motivo": "sin riesgos" if not riesgos else "sin modelo", "llamo": False}
-    eval_count = None
+    eval_count = prompt_eval_count = None
     try:
         mensaje = cadena.invoke({"decision": resumen.get("decision", "N/D"), "conteo_nivel": conteo_texto(resumen.get("por_nivel", {})),
                                  "conteo_clase": conteo_texto(resumen.get("por_clase", {})), "registro": registro_texto(riesgos)})
-        eval_count = (getattr(mensaje, "response_metadata", None) or {}).get("eval_count")
+        metadatos = getattr(mensaje, "response_metadata", None) or {}
+        eval_count, prompt_eval_count = metadatos.get("eval_count"), metadatos.get("prompt_eval_count")
         texto = RE_THINK.sub("", str(getattr(mensaje, "content", mensaje))).strip()
         valido, motivo = validar_comentario(texto, riesgos)
     except Exception as e:
         texto, valido, motivo = "", False, f"falló la llamada: {e}"
     if valido:
-        return {"texto": texto, "origen": "modelo", "motivo": "", "llamo": True, "eval_count": eval_count}
+        return {"texto": texto, "origen": "modelo", "motivo": "", "llamo": True, "eval_count": eval_count, "prompt_eval_count": prompt_eval_count}
     logger.warning(f"Comentario general del modelo descartado ({motivo}); se usa la plantilla.")
-    return {"texto": plantilla(resumen, riesgos), "origen": "plantilla", "motivo": motivo, "llamo": True, "eval_count": eval_count}
+    return {"texto": plantilla(resumen, riesgos), "origen": "plantilla", "motivo": motivo, "llamo": True, "eval_count": eval_count, "prompt_eval_count": prompt_eval_count}

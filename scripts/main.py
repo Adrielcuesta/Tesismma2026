@@ -10,7 +10,7 @@ import httpx
 from pydantic import ValidationError
 from typing import Optional
 
-from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator, lineamientos, motor_riesgos, clasificacion, comentario
+from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator, lineamientos, motor_riesgos, clasificacion, comentario, costo
 from .schemas import RiskReport, SourceChunk, LLMResponse, RiskItem, SeccionInforme, FragmentoRecuperado, FuenteNorma, VerificacionArticulo, ClasificacionRiesgo
 from .report_utils import calcular_exposicion
 
@@ -160,6 +160,13 @@ def _estadisticas_tokens(llamadas):
     return {tipo: {"n": len(v), "max": max(v), "promedio": round(sum(v) / len(v), 1)} for tipo, v in llamadas.get("eval_count", {}).items() if v}
 
 
+class Llamadas(dict):
+    """Contadores de llamadas al modelo. `detalle` guarda un registro por llamada (duración, tokens de entrada y de salida); no entra en la comparación del dict."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.detalle = []
+
+
 class LlamadaFallida(Exception):
     """El modelo no respondió en el tiempo límite o la respuesta se cortó por num_predict, también tras el reintento."""
 
@@ -168,10 +175,21 @@ _FALLOS_DE_TIEMPO = (LlamadaFallida, httpx.TimeoutException, TimeoutError)
 MOTIVO_TIEMPO_AGOTADO = "el modelo no respondió en el tiempo límite"
 
 
-def _invocar(cadena, entrada, etiqueta, llamadas, clave):
+def _registrar_llamada(llamadas, clave, par, etiqueta, t0, tokens_entrada, tokens_salida, intentos, exitosa):
+    """Un registro por llamada al modelo (si `llamadas` lleva detalle): duracion_s es reloj de pared e incluye los reintentos; los tokens suman todos los intentos."""
+    detalle = getattr(llamadas, "detalle", None)
+    if detalle is not None:
+        detalle.append({"tipo": clave, "par": par, "etiqueta": etiqueta, "duracion_s": round(time.perf_counter() - t0, 3), "prompt_eval_count": tokens_entrada,
+                        "eval_count": tokens_salida, "intentos": intentos, "exitosa": exitosa})
+
+
+def _invocar(cadena, entrada, etiqueta, llamadas, clave, par=None):
     """Una llamada al modelo con UN reintento si se agota el tiempo o la respuesta se corta por num_predict (done_reason 'length').
-    Cuenta cada intento en llamadas[clave], cada fallo en llamadas['fallidas'] y guarda eval_count en llamadas['eval_count'][clave]. Si el segundo intento también falla, levanta LlamadaFallida."""
+    Cuenta cada intento en llamadas[clave], cada fallo en llamadas['fallidas'] y guarda eval_count en llamadas['eval_count'][clave]; si `llamadas` es una
+    Llamadas, registra además la duración y los tokens de la llamada en llamadas.detalle (par identifica el par sección-artículo). Si el segundo intento
+    también falla, levanta LlamadaFallida."""
     causa = ""
+    t0, tokens_entrada, tokens_salida = time.perf_counter(), 0, 0
     for intento in (1, 2):
         llamadas[clave] += 1
         try:
@@ -179,14 +197,19 @@ def _invocar(cadena, entrada, etiqueta, llamadas, clave):
         except (httpx.TimeoutException, TimeoutError) as e:
             causa = f"tiempo agotado ({type(e).__name__})"
         else:
+            metadatos = getattr(mensaje, "response_metadata", None) or {}
+            tokens_entrada += metadatos.get("prompt_eval_count") or 0
+            tokens_salida += metadatos.get("eval_count") or 0
             if _eval_count(mensaje) is not None:
                 llamadas.setdefault("eval_count", {}).setdefault(clave, []).append(_eval_count(mensaje))
-            if (getattr(mensaje, "response_metadata", None) or {}).get("done_reason") == "length":
+            if metadatos.get("done_reason") == "length":
                 causa = "respuesta cortada por num_predict"
             else:
+                _registrar_llamada(llamadas, clave, par, etiqueta, t0, tokens_entrada, tokens_salida, intento, True)
                 return mensaje
         llamadas["fallidas"] = llamadas.get("fallidas", 0) + 1
         logger.warning(f"{etiqueta}: {causa}; " + ("se reintenta una vez." if intento == 1 else "se descarta el par."))
+    _registrar_llamada(llamadas, clave, par, etiqueta, t0, tokens_entrada, tokens_salida, 2, False)
     raise LlamadaFallida(causa)
 
 
@@ -231,7 +254,8 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
         meta = {"seccion": id_sec, "norma": d.metadata.get("norma", ""), "articulo": str(d.metadata.get("articulo", ""))}
         try:
             mensaje = _invocar(cadena_verif, {"seccion_numerada": seccion_numerada, "articulo": rag_components.formatear_articulo(d)},
-                               f"{id_sec} {meta['norma']} Art. {meta['articulo']} (verificación)", llamadas, "verificacion")
+                               f"{id_sec} {meta['norma']} Art. {meta['articulo']} (verificación)", llamadas, "verificacion",
+                               par=f"{id_sec}|{meta['norma']}|{meta['articulo']}")
             razon = {"razonamiento": _razonamiento(mensaje)} if config.THINKING_VERIFICACION else {}
             original = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_verif, VerificacionArticulo)
         except _FALLOS_DE_TIEMPO:
@@ -260,7 +284,8 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
             mensaje = _invocar(cadena_clasif, {"criterios": lin["texto_para_el_modelo"], "items_contenido_minimo": items_2_6,
                                                "articulo": rag_components.formatear_articulo(d), "seccion_numerada": seccion_numerada,
                                                "verificacion": v.model_dump_json(exclude_none=True)},
-                               f"{id_sec} {norma} Art. {articulo} (clasificación)", llamadas, "clasificacion")
+                               f"{id_sec} {norma} Art. {articulo} (clasificación)", llamadas, "clasificacion",
+                               par=f"{id_sec}|{norma}|{articulo}")
             c = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_clasif, ClasificacionRiesgo)
         except _FALLOS_DE_TIEMPO:
             registro.append({**meta, "veredicto": v.veredicto, "oraciones": v.oraciones, "estado": "tiempo_agotado", "motivo": MOTIVO_TIEMPO_AGOTADO})
@@ -303,7 +328,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     modo = config.MODO_GENERACION if usar_rag else "lista"
     verificacion = modo == "verificacion"
     usar_crag = usar_rag and config.USAR_CRAG
-    llamadas = {"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0}
+    llamadas = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0})
     logger.info(f"--- ANÁLISIS POR SECCIÓN (Modelo: {selected_llm_model_id}, condición: {condicion}, modo: {modo}) ---")
 
     pdf_path = document_utils.obtener_ruta_pdf_proyecto(directorio_proyecto or config.DIRECTORIO_PROYECTO_ANALIZAR)
@@ -460,6 +485,10 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         com = comentario.generar_comentario(resumen_ejecutivo, riesgos_agrupados, cadena_comentario)
         tiempos["comentario"] = _segundos(t_com)
         llamadas["comentario"] += int(com["llamo"])
+        if com["llamo"]:
+            llamadas.detalle.append({"tipo": "comentario", "par": None, "etiqueta": "comentario general", "duracion_s": tiempos["comentario"],
+                                     "prompt_eval_count": com.get("prompt_eval_count") or 0, "eval_count": com.get("eval_count") or 0, "intentos": 1,
+                                     "exitosa": com["origen"] == "modelo"})
         if com.get("eval_count") is not None:
             llamadas.setdefault("eval_count", {}).setdefault("comentario", []).append(com["eval_count"])
         resumen_ejecutivo.update(comentario_general=com["texto"], origen_comentario=com["origen"])
@@ -468,6 +497,8 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
                     f"{len(alertas_todas)} alertas; decisión: {resumen_ejecutivo['decision']}.")
     tiempos["resumen_final"] = _segundos(t0)
     tiempos["total"] = _segundos(t_total)
+    hardware = costo.detectar_hardware()
+    costo_computacional = costo.resumen_costo(llamadas.detalle, tiempos["total"], selected_llm_model_id, hardware)
 
     reporte = RiskReport(
         riesgos_identificados=riesgos_unidos,
@@ -498,6 +529,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             "verif_top_k": config.VERIF_TOP_K if verificacion and config.THINKING_VERIFICACION else "N/A",
             "llamadas_llm": {k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario")} if verificacion else {"lista": llamadas["lista"]},
             "llamadas_fallidas": llamadas.get("fallidas", 0),
+            "costo_computacional": costo_computacional, "hardware": hardware, "llamadas_detalle": llamadas.detalle,
             "tokens_generados_por_tipo": _estadisticas_tokens(llamadas),
             "excluir_introduccion": config.EXCLUIR_INTRODUCCION, "calcular_respaldo": config.CALCULAR_RESPALDO, "tiempos_s": tiempos,
             "tokens_prompt_por_seccion": tokens_prompt,

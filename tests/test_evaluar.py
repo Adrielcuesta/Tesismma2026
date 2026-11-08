@@ -233,7 +233,7 @@ def test_otro_articulo_no_esta_en_el_resumen_pero_si_en_el_detalle():
     # el .md solo trae las secciones pedidas
     assert [l for l in md.splitlines() if l.startswith("## ")] == ["## Recuperación", "## Detección", "## Clasificación (de las trampas encontradas)",
                                                                    "## Fidelidad", "## Falsas alarmas", "## Volumen", "## Dónde se pierde cada trampa",
-                                                                   "## Detalle por trampa"]
+                                                                   "## Costo computacional", "## Detalle por trampa"]
     assert "100 % por diseño" in md
 
 
@@ -399,3 +399,32 @@ def test_combinar_suma_confusion_y_conteos():
     assert (t["n_trampas"], t["encontradas"], t["n_espejos"], t["falsas_alarmas"]) == (8, 4, 4, 2)
     assert t["confusion"] == {("Mayor", "Mayor"): 2, ("Crítico", "Menor"): 2} and t["volumen"]["brechas"] == 10
     assert t["precision"] is None and len(t["trampas"]) == 8
+
+
+# --- Costo computacional ---
+
+COSTO = {"modelo": "qwen3:8b", "hardware": {"gpu": "NVIDIA GeForce RTX 4060", "vram": "8188 MiB"}, "pares_verificados": 120, "llamadas_totales": 190,
+         "llamadas_fallidas": 1, "tiempo_total_s": 5025.5, "segundos_por_par": {"mediana": 14.2, "p90": 31.75},
+         "tokens_entrada_total": 612345, "tokens_salida_total": 23456, "tokens_entrada_por_par": 4980.5, "tokens_salida_por_par": 170.2}
+
+
+def test_informe_incluye_el_costo_computacional_de_la_oferta():
+    gt, esp = _datos()
+    resultado = {**RESULTADO, "configuracion_analisis": {"costo_computacional": COSTO}}
+    md = ev.informe_md(ev.evaluar(resultado, gt, esp, "P9"))
+    seccion = md.split("## Costo computacional")[1].split("## Detalle")[0]
+    for esperado in ("qwen3:8b", "NVIDIA GeForce RTX 4060, 8188 MiB", "| Pares verificados | 120 |", "| Llamadas totales (con comentario y reintentos) | 190 |",
+                     "5.025,5 s (1:23:45)", "14.2 / 31.8", "612.345 / 4.980", "23.456 / 170"):
+        assert esperado in seccion, esperado
+    sin = ev.informe_md(ev.evaluar(RESULTADO, gt, esp, "P9"))
+    assert "n/d (el resultado no trae la medición)" in sin
+    assert "## Costo computacional" in ev.informe_md(ev.evaluar(LISTA, gt, esp, "P9"))        # también en modo lista
+
+
+def test_costo_computacional_por_oferta_en_el_agregado():
+    gt, esp = _datos()
+    a = ev.evaluar({**RESULTADO, "configuracion_analisis": {"costo_computacional": COSTO}}, gt, esp, "P9")
+    b = ev.evaluar(RESULTADO, gt, esp, "P8")
+    md = ev.informe_md(ev.combinar([a, b]))
+    seccion = md.split("## Costo computacional")[1].split("## Detalle")[0]
+    assert "**P9**" in seccion and "**P8**: n/d" in seccion and seccion.index("**P9**") < seccion.index("**P8**")

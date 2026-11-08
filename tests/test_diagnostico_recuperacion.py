@@ -502,7 +502,7 @@ def _claves(docs):
 
 
 def test_pipeline_y_diagnostico_eligen_los_mismos_articulos_en_el_mismo_orden(monkeypatch):
-    modelo = _preparar_pipeline(monkeypatch)
+    modelo = _preparar_pipeline(monkeypatch, cupo=10)       # el diagnóstico mide la variante de cupo 10; las de 8, 6 y 4 están abajo
     db = DbSintetica()
     _, docs_pipeline = rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True, con_oraciones=True)
 
@@ -511,13 +511,25 @@ def test_pipeline_y_diagnostico_eligen_los_mismos_articulos_en_el_mismo_orden(mo
     oraciones = dr.datos_de_oraciones(db, dr.oraciones_de_seccion(SECCION_SINTETICA))
     por_consulta = [q["candidatos"] for q in datos]
     cfg = CFG["union_oraciones_cifras_N2"]
-    assert (cfg.k, cfg.top, cfg.tope, cfg.oraciones, cfg.cupo_oraciones) == (cfg_pipeline.K_SUBSECCION, cfg_pipeline.TOP_N_SUBSECCION, 25, (True, cfg_pipeline.ORACIONES_N), cfg_pipeline.ORACIONES_CUPO)
+    assert (cfg.k, cfg.top, cfg.tope, cfg.oraciones, cfg.cupo_oraciones) == (cfg_pipeline.K_SUBSECCION, cfg_pipeline.TOP_N_SUBSECCION, 25, (True, cfg_pipeline.ORACIONES_N), 10)
     docs_diagnostico = dr.seleccion_final(por_consulta, cfg, oraciones)
 
     assert _claves(docs_pipeline) == _claves(docs_diagnostico)
     base = dr.seleccion_final(por_consulta, CFG["union"])
     assert len(docs_diagnostico) > len(base)                                  # el caso es significativo: las oraciones aportan artículos
     assert _claves(docs_diagnostico)[:len(base)] == _claves(base)
+
+
+def test_pipeline_con_el_cupo_configurado_coincide_con_la_variante_del_diagnostico(monkeypatch):
+    from scripts import config
+    modelo = _preparar_pipeline(monkeypatch, cupo=config.ORACIONES_CUPO)
+    db = DbSintetica()
+    _, docs_pipeline = rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True, con_oraciones=True)
+    puntuar = lambda consulta, docs: [rc._normalizar_score(s) for s in modelo.score([(consulta, d.page_content) for d in docs])]
+    datos = dr.datos_de_consultas(db, dr.consultas_de_seccion(SECCION_SINTETICA), puntuar, total=60)
+    oraciones = dr.datos_de_oraciones(db, dr.oraciones_de_seccion(SECCION_SINTETICA))
+    variante = CFG[f"union_oraciones_cifras_N2_cupo{config.ORACIONES_CUPO}"]
+    assert _claves(dr.seleccion_final([q["candidatos"] for q in datos], variante, oraciones)) == _claves(docs_pipeline)
 
 
 def test_pipeline_extras_son_fragmentos_reales_sin_repetir_la_base_y_con_su_cupo(monkeypatch):
@@ -531,8 +543,11 @@ def test_pipeline_extras_son_fragmentos_reales_sin_repetir_la_base_y_con_su_cupo
     assert not set(_claves(extras)) & set(_claves(base)) and len(set(_claves(con))) == len(con)
 
 
-def test_pipeline_oraciones_apagadas_por_defecto_no_buscan_ni_cambian_nada(monkeypatch):
-    assert (cfg_pipeline.ORACIONES_CIFRAS, cfg_pipeline.ORACIONES_N, cfg_pipeline.ORACIONES_CUPO) == (False, 2, 10)
+def test_pipeline_oraciones_encendidas_por_defecto_con_n2_y_cupo8():
+    assert (cfg_pipeline.ORACIONES_CIFRAS, cfg_pipeline.ORACIONES_N, cfg_pipeline.ORACIONES_CUPO) == (True, 2, 8)
+
+
+def test_pipeline_con_oraciones_apagadas_no_busca_ni_cambia_nada(monkeypatch):
     _preparar_pipeline(monkeypatch, oraciones=False)
     db = DbSintetica()
     _, sin = rc.recuperar_seccion(db, SECCION_SINTETICA, tope=25, sin_preambulo=True, con_union=True)
