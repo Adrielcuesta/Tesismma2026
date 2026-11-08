@@ -10,6 +10,7 @@ para calcular hit@K (antes del reranker) y hit@top_n (después). Los argumentos 
 Recuperación densa contra híbrida (BM25 + densa con RRF), trampa por trampa, sobre el ground truth v3 de P1 y P2:
 
     python -m scripts.diagnostico_recuperacion hibrida --oferta P1=<oferta_P1.pdf|docx> --oferta P2=<oferta_P2.pdf|docx> [--csv ruta]
+(los CSV de hibrida y recorte se guardan por defecto en evaluacion/diagnosticos/)
 
 Dónde se pierde el artículo (K de la densa, top por subsección y tope por sección), también sobre P1 y P2 y sin LLM:
 
@@ -150,14 +151,14 @@ def informe_hibrida(densa: list, hibrida: list) -> str:
 # El puntaje del reranker de un candidato no depende de los demás: usar el de los 30 candidatos restringido a los k primeros de la densa
 # equivale a reranquear solo esos k.
 # top_rr: cuántos toma el reranker en el modo "union" (si no, `top`). oraciones: (solo_con_cifras, N) agrega, por cada oración de la subsección, sus N primeros
-# artículos de la densa (sin reranker), hasta tope_total por sección y con prioridad para los de la base.
-Config = namedtuple("Config", "nombre k top tope modo top_rr oraciones tope_total", defaults=(None, None, None))
-TOPE_CON_ORACIONES = 30
+# artículos de la densa (sin reranker), con un cupo propio de `cupo_oraciones` artículos por sección, detrás de la base (que conserva su tope).
+Config = namedtuple("Config", "nombre k top tope modo top_rr oraciones cupo_oraciones", defaults=(None, None, None))
+CUPO_ORACIONES = 10   # tope total con oraciones: 35 en union (25 + 10) y 40 en union_k20 (30 + 10)
 _VARIANTES_ORACIONES = (("oraciones_cifras_N2", True, 2), ("oraciones_cifras_N3", True, 3), ("oraciones_todas_N2", False, 2))
 _BASES_UNION = (Config("union", 10, 5, 25, "union"), Config("union_k20", 20, 5, 30, "union", top_rr=8))
 CONFIGURACIONES = (Config("actual", 10, 5, 15, "reranker"), Config("media", 20, 8, 25, "reranker"), Config("amplia", 30, 10, 40, "reranker"),
                    Config("densa_sin_reranker", 10, 5, 15, "densa")) + _BASES_UNION + tuple(
-    base._replace(nombre=f"{base.nombre}_{variante}", oraciones=(solo_cifras, n), tope_total=TOPE_CON_ORACIONES)
+    base._replace(nombre=f"{base.nombre}_{variante}", oraciones=(solo_cifras, n), cupo_oraciones=CUPO_ORACIONES)
     for base in _BASES_UNION for variante, solo_cifras, n in _VARIANTES_ORACIONES)
 K_MAXIMO = 30
 K_ORACION = 10          # fragmentos que se piden a la densa por oración
@@ -167,7 +168,13 @@ Cand = namedtuple("Cand", "doc densa reranker")   # densa: -distancia (más alto
 # Encabezado de artículo al comienzo de una línea: 'Art. 4.7. Reserva física...' o 'Art. 3.7. CONTROL DE CALIDAD'. El título puede estar en
 # mayúsculas o en minúsculas (la versión anterior exigía dos mayúsculas y no reconocía los títulos en minúsculas).
 RE_ENCABEZADO = re.compile(r"(?m)^\s*Art\.\s+(\d+\.\d+)\.\s+[A-Za-zÁÉÍÓÚÑáéíóúñ]")
-ARCHIVO_CACHE = "diagnostico_cache.json"
+ARCHIVO_CACHE = "diagnostico_cache.json"   # en el directorio de trabajo; está en .gitignore
+DIR_DIAGNOSTICOS = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "evaluacion", "diagnosticos"))
+
+
+def csv_por_defecto(nombre: str) -> str:
+    """Los CSV del diagnóstico se guardan por defecto en evaluacion/diagnosticos/."""
+    return os.path.join(DIR_DIAGNOSTICOS, nombre)
 
 
 def consultas_de_seccion(seccion: dict) -> list:
@@ -233,13 +240,13 @@ def seleccion_final(por_consulta: list, cfg, oraciones: list = ()) -> list:
     """Documentos que se verificarían en la sección con la configuración cfg, igual que recuperar_seccion(sin_preambulo=True): por consulta los
     elegidos sin preámbulos; unión por (norma, artículo) con el mayor puntaje y los `cfg.tope` mejores. por_consulta: [[Cand]].
     Con cfg.oraciones se agregan, detrás de los de la base, los artículos de las consultas por oración (`oraciones`: datos_de_oraciones) que no estén ya,
-    hasta cfg.tope_total por sección."""
+    hasta un cupo propio de cfg.cupo_oraciones artículos por sección (la base conserva su tope)."""
     base = _seleccion_base(por_consulta, cfg)
     if not cfg.oraciones:
         return base
     presentes = {(d.metadata.get("norma"), _base(d.metadata.get("articulo", ""))) for d in base}
     extra = [Document(page_content="", metadata={"norma": n, "articulo": a}) for n, a in _articulos_de_oraciones(oraciones, cfg) if (n, a) not in presentes]
-    return base + extra[:max(0, cfg.tope_total - len(base))]
+    return base + extra[:cfg.cupo_oraciones]
 
 
 def _seleccion_base(por_consulta: list, cfg) -> list:
@@ -418,7 +425,7 @@ def informe_recorte(filas: list, pares_por_oferta: dict, fragmentos: dict = None
     L += [f"  límite de pares: {d['limite']} (el doble de la actual)",
           "  Notas: union_k20 usa el puntaje del reranker de los candidatos con puesto denso <= 20 (el puntaje de cada candidato no depende de los demás: es equivalente a reranquear solo esos 20).",
           "  Las variantes *_oraciones_* suman, a la base, los N primeros artículos de la densa para cada oración de la subsección (sin reranker; solo texto de la oferta),",
-          f"  con tope {TOPE_CON_ORACIONES} por sección y prioridad para los de la base; «cifras» = oraciones con algún dígito.", "",
+          f"  con un cupo propio de {CUPO_ORACIONES} artículos por sección, detrás de la base (que conserva su tope); «cifras» = oraciones con algún dígito.", "",
           "Decisión: " + (f"ADOPTAR «{d['adopta']}» (mayor Recall@artículo dentro del límite de pares; a igual recall, la de menos pares)."
                           if d["adopta"] else "MANTENER la actual; ninguna configuración dentro del límite de pares la supera y el techo se reporta como limitación.")]
     fuera = [f for f in filas if f["puesto_densa"] is None]
@@ -453,7 +460,7 @@ def main_recorte(argv=None) -> int:
     from evaluacion.evaluar import cargar_gt, pares_trampa
     p = argparse.ArgumentParser(prog="diagnostico_recuperacion recorte", description="Dónde se pierde el artículo: K, top y tope (sin LLM).")
     p.add_argument("--oferta", action="append", required=True, metavar="P1=ruta", help="oferta y su archivo (P1 y P2); repetible")
-    p.add_argument("--csv", help="Ruta donde guardar el detalle por trampa")
+    p.add_argument("--csv", default=csv_por_defecto("diagnostico_recorte.csv"), help="Ruta del CSV con el detalle por trampa (por defecto en evaluacion/diagnosticos/)")
     p.add_argument("--cache", default=ARCHIVO_CACHE, help=f"Archivo de caché (por defecto {ARCHIVO_CACHE})")
     p.add_argument("--usar-cache", action="store_true", help="Deriva las configuraciones de la caché; solo abre el índice (sin reranker) si le falta algo")
     args = p.parse_args(argv)
@@ -521,6 +528,7 @@ def main_recorte(argv=None) -> int:
     print(informe_recorte(filas, pares_por_oferta, fragmentos))
     if args.csv:
         nombres = [c.nombre for c in CONFIGURACIONES]
+        os.makedirs(os.path.dirname(os.path.abspath(args.csv)), exist_ok=True)
         with open(args.csv, "w", newline="", encoding="utf-8-sig") as f:
             w = csv.writer(f, delimiter=";")
             w.writerow(["trampa", "oferta", "seccion", "articulo", "puesto_densa", "puesto_reranker", "puesto_indice_completo"] + nombres)
@@ -534,7 +542,7 @@ def main_hibrida(argv=None) -> int:
     from evaluacion.evaluar import cargar_gt
     p = argparse.ArgumentParser(prog="diagnostico_recuperacion hibrida", description="Recall@artículo con recuperación densa e híbrida (sin LLM).")
     p.add_argument("--oferta", action="append", required=True, metavar="P1=ruta", help="oferta y su archivo (P1 y P2); repetible")
-    p.add_argument("--csv", help="Ruta donde guardar el detalle por trampa")
+    p.add_argument("--csv", default=csv_por_defecto("diagnostico_hibrida.csv"), help="Ruta del CSV con el detalle por trampa (por defecto en evaluacion/diagnosticos/)")
     args = p.parse_args(argv)
     rutas = dict(x.split("=", 1) for x in args.oferta)
     if set(rutas) != set(OFERTAS_DIAGNOSTICO) or not all(os.path.isfile(r) for r in rutas.values()):
@@ -561,6 +569,7 @@ def main_hibrida(argv=None) -> int:
     print(informe_hibrida(densa, hibrida))
     if args.csv:
         por_id = {f["id"]: f for f in hibrida}
+        os.makedirs(os.path.dirname(os.path.abspath(args.csv)), exist_ok=True)
         with open(args.csv, "w", newline="", encoding="utf-8-sig") as f:
             w = csv.writer(f, delimiter=";")
             w.writerow(["trampa", "oferta", "seccion", "articulo", "densa", "hibrida"])

@@ -61,3 +61,6 @@ temp_files/
 # *.doc
 # Salida de tests (dashboard de ejemplo)
 tests/salida/
+
+# Caché del diagnóstico de recuperación (se regenera)
+diagnostico_cache.json

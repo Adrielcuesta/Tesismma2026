@@ -81,7 +81,8 @@ def test_configuraciones_definidas():
     assert [c.nombre for c in dr.CONFIGURACIONES[5:]] == [
         "union_k20", "union_oraciones_cifras_N2", "union_oraciones_cifras_N3", "union_oraciones_todas_N2",
         "union_k20_oraciones_cifras_N2", "union_k20_oraciones_cifras_N3", "union_k20_oraciones_todas_N2"]
-    assert all(c.tope_total == 30 for c in dr.CONFIGURACIONES if c.oraciones)
+    assert all(c.cupo_oraciones == 10 for c in dr.CONFIGURACIONES if c.oraciones) and dr.CUPO_ORACIONES == 10
+    assert [c.tope + c.cupo_oraciones for c in dr.CONFIGURACIONES if c.oraciones] == [35] * 3 + [40] * 3     # tope total: base + cupo propio
     assert CFG["union_oraciones_cifras_N3"].oraciones == (True, 3) and CFG["union_k20_oraciones_todas_N2"].oraciones == (False, 2)
     assert (CFG["union_oraciones_todas_N2"].k, CFG["union_oraciones_todas_N2"].tope) == (10, 25) and CFG["union_k20_oraciones_todas_N2"].tope == 30
 
@@ -323,20 +324,25 @@ def test_oraciones_sin_datos_dejan_la_base():
     assert dr.seleccion_final(BASE_ABC, CFG["union"], ORACIONES) == dr.seleccion_final(BASE_ABC, CFG["union"])    # la base sola no usa las oraciones
 
 
-def test_tope_de_30_por_seccion_con_prioridad_para_la_base():
-    def consulta(j):
-        return _cands(*[(("N", f"q{j}-{i}"), -i, i / 10) for i in range(10)])           # 10 distintos: top 5 denso + top 5 del reranker
+def test_cupo_propio_de_10_articulos_de_oraciones_detras_de_la_base():
+    def consulta(j, n=10, escala=10):
+        return _cands(*[(("N", f"q{j}-{i}"), -i, i / escala) for i in range(n)])           # n distintos: top 5 denso + top 5 del reranker
     tres = [consulta(0), consulta(1), consulta(2)]
     base = dr.seleccion_final(tres, CFG["union"])
-    assert len(base) == 25                                                                  # tope de la unión
-    nuevas = [_oracion(False, *[f"s{j}-{i}" for i in range(2)]) for j in range(4)]       # 8 artículos nuevos con N=2
+    assert len(base) == 25                                                                  # la base conserva su tope
+    nuevas = [_oracion(False, *[f"s{j}-{i}" for i in range(2)]) for j in range(6)]       # 12 artículos nuevos con N=2
     final = dr.seleccion_final(tres, CFG["union_oraciones_todas_N2"], nuevas)
-    assert len(final) == 30 and final[:25] == base                                          # la base primero; de las oraciones entran 5
-    assert arts(final[25:]) == ["s0-0", "s1-0", "s2-0", "s3-0", "s0-1"]                    # por puesto y, a igual puesto, por orden de oración
-    # union_k20 ya llena los 30 con la base: las oraciones no agregan nada
+    assert len(final) == 35 and final[:25] == base                                          # 25 de la base + cupo de 10 de las oraciones
+    assert arts(final[25:]) == [f"s{j}-0" for j in range(6)] + [f"s{j}-1" for j in range(4)]   # por puesto y, a igual puesto, por orden de oración
+    # con menos de 10 artículos nuevos entran todos
+    assert len(dr.seleccion_final(tres, CFG["union_oraciones_todas_N2"], nuevas[:3])) == 25 + 6
+    # union_k20: la base llega a 30 y las oraciones suman hasta 10 más (tope total 40)
     treinta = [_cands(*[(("N", f"k{j}-{i}"), -i, i / 20) for i in range(20)]) for j in range(3)]
     assert len(dr.seleccion_final(treinta, CFG["union_k20"])) == 30
-    assert len(dr.seleccion_final(treinta, CFG["union_k20_oraciones_todas_N2"], nuevas)) == 30
+    assert len(dr.seleccion_final(treinta, CFG["union_k20_oraciones_todas_N2"], nuevas)) == 40
+    # el cupo no se llena con artículos que la base ya trae
+    repetidas = [_oracion(False, "q0-9", "q1-9")]
+    assert len(dr.seleccion_final(tres, CFG["union_oraciones_todas_N2"], repetidas)) == 25
 
 
 def test_oraciones_de_seccion_usa_numerar_oraciones_en_cada_subseccion():
@@ -399,5 +405,22 @@ def test_informe_incluye_las_columnas_nuevas_y_las_notas():
     texto = dr.informe_recorte([f], _pares())
     for nombre in ("union_k20", "union_oraciones_cifras_N2", "union_oraciones_cifras_N3", "union_oraciones_todas_N2", "union_k20_oraciones_todas_N2"):
         assert nombre in texto
-    assert "equivalente a reranquear solo esos 20" in texto and "solo texto de la oferta" in texto and "tope 30 por sección" in texto
+    assert "equivalente a reranquear solo esos 20" in texto and "solo texto de la oferta" in texto and "cupo propio de 10 artículos por sección" in texto
     assert "límite de pares: 200" in texto
+
+
+# --- CSV en evaluacion/diagnosticos/ ---
+
+def test_los_csv_del_diagnostico_van_por_defecto_a_evaluacion_diagnosticos():
+    import os
+    ruta = dr.csv_por_defecto("diagnostico_recorte.csv")
+    assert os.path.normpath(ruta).endswith(os.path.join("evaluacion", "diagnosticos", "diagnostico_recorte.csv"))
+    assert os.path.isdir(dr.DIR_DIAGNOSTICOS)
+    assert os.path.isfile(os.path.join(dr.DIR_DIAGNOSTICOS, ".gitkeep"))
+
+
+def test_el_cache_del_diagnostico_esta_ignorado_por_git():
+    import os
+    raiz = os.path.join(os.path.dirname(__file__), os.pardir)
+    with open(os.path.join(raiz, ".gitignore"), encoding="utf-8") as f:
+        assert "diagnostico_cache.json" in [l.strip() for l in f]
