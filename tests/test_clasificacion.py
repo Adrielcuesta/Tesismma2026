@@ -123,9 +123,9 @@ def test_longitudes_solo_agregan_marca():
     assert {"longitud excedida: titulo", "longitud excedida: accion"} <= set(brechas[0]["marcas"])
 
 
-def test_brecha_nula_se_marca_y_se_clasifica_igual():
-    brechas, *_ = _correr([_clasif(tipo_limite="MAXIMO")])   # 1 <= 2: cumple el máximo, brecha 0
-    assert m.MARCA_BRECHA_NULA in brechas[0]["marcas"] and brechas[0]["clase"] == "Menor"
+def test_brecha_nula_ya_no_se_clasifica_pasa_a_alerta():
+    brechas, alertas, *_ = _correr([_clasif(tipo_limite="MAXIMO")])   # 1 <= 2: cumple el máximo, brecha 0, misma unidad
+    assert brechas[0]["estado"] == "descartada por cálculo" and brechas[0].get("clase") is None and len(alertas) == 1
 
 
 def test_dos_articulos_sobre_las_mismas_oraciones_se_agrupan_con_clase_maxima():
@@ -307,7 +307,7 @@ def test_regla_3_2_d_para_maximo_compara_al_reves():
     brechas, _ = _correr_b5(dict(valor_ofertado="8", valor_exigido="10", tipo_limite="MAXIMO", valor_demanda_oferta="5"))
     assert brechas[0]["regla"] == "3.2.d"
     brechas, _ = _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MAXIMO", valor_demanda_oferta="8"))
-    assert brechas[0]["condicion_critico"] is None
+    assert brechas[0].get("condicion_critico") is None and brechas[0]["estado"] == "descartada por cálculo"   # cumple el máximo: brecha nula, sin 3.2.d
 
 
 def test_regla_3_2_b_practica_peligrosa_con_medida_citada():
@@ -419,3 +419,40 @@ def test_motor_comparaciones_y_texto_de_items():
     assert m.no_cubre_demanda("9", "8", "MAXIMO") and not m.no_cubre_demanda("5", "8", "FRECUENCIA") and not m.no_cubre_demanda("a", "8", "MINIMO")
     lineas = m.items_contenido_minimo_texto(C).split("\n")
     assert len(lineas) == len(C["contenido_minimo_oferta"]["items"]) and all(l.startswith("- ") and ": " in l for l in lineas)
+
+
+# --- Brecha nula (cifras que cumplen) y 3.2.c con límite igual al exigido ---
+
+def _correr_con_alertas(clasif, texto_articulo):
+    cv, cc = Cadena(VERIF), Cadena(_clasif(**clasif))
+    return _verificar_seccion(SECCION_B5, [_doc(texto=texto_articulo)], cv, cc, cc, cc, LIN, {}, {"verificacion": 0, "clasificacion": 0})[:2]
+
+
+def test_brecha_nula_con_misma_unidad_no_genera_riesgo_y_pasa_a_alerta():
+    texto = "Art. 4.2. APOYOS\nSe exigen como mínimo 3 apoyos."
+    brechas, alertas = _correr_con_alertas(dict(valor_ofertado="5 apoyos", valor_exigido="3 apoyos", tipo_limite="MINIMO"), texto)
+    assert len(brechas) == 1 and brechas[0]["estado"] == "descartada por cálculo" and brechas[0]["brecha_relativa"] == 0.0 and brechas[0].get("clase") is None
+    assert len(alertas) == 1 and alertas[0]["motivo"] == "contradicción entre el veredicto del modelo y las cifras extraídas: revisar"
+    assert (alertas[0]["norma"], alertas[0]["articulo"]) == ("NORM_01", "4.2") and alertas[0]["cita"] and alertas[0]["oraciones"] == ["O1"]
+    assert clasificacion.armar_salidas(brechas, C)[0] == []     # no entra al agrupamiento ni a las solicitudes
+
+
+def test_brecha_nula_con_unidades_distintas_sigue_el_camino_de_siempre():
+    texto = "Art. 4.2. APOYOS\nSe exigen como mínimo 3 mm."
+    brechas, alertas = _correr_con_alertas(dict(valor_ofertado="5 apoyos", valor_exigido="3 mm", tipo_limite="MINIMO"), texto)
+    b = brechas[0]
+    assert alertas == [] and "estado" not in b and (b["clase"], b["regla"]) == ("Menor", "3.4.a") and m.MARCA_BRECHA_NULA in b["marcas"]
+
+
+def test_brecha_nula_no_oculta_una_condicion_critica():
+    brechas, alertas = _correr_con_alertas(dict(valor_ofertado="5", valor_exigido="3", tipo_limite="MINIMO", valor_demanda_oferta="8"),
+                                           "Art. 4.2. APOYOS\nSe exigen como mínimo 3 apoyos.")
+    assert alertas == [] and brechas[0]["regla"] == "3.2.d"
+
+
+def test_3_2_c_se_ignora_si_el_limite_de_excepcion_es_igual_al_exigido():
+    texto = "Art. 4.2. APOYOS\nSe exigen 10 apoyos."
+    b = _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", valor_limite_excepcion="10"), texto)[0][0]
+    assert b["condicion_critico"] is None and (b["clase"], b["regla"]) == ("Mayor", "3.3.a")
+    assert m.limite_excepcion_propio("6", "10") and m.limite_excepcion_propio("6", None) and not m.limite_excepcion_propio("10 apoyos", "10")
+    assert not m.limite_excepcion_propio("hasta algo", "10")

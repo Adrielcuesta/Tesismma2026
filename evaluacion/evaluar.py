@@ -22,6 +22,9 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 GROUND_TRUTH = os.path.join(AQUI, "ground_truth_v3.csv")
 ESPEJOS = os.path.join(AQUI, "espejos_conformes.csv")
 CLASES = ("Crítico", "Mayor", "Menor")   # de mayor a menor, para el kappa ponderado
+NIVELES = ("Alto", "Medio", "Bajo")
+ESTADO_DESCARTADA_CALCULO = "descartada por cálculo"
+ESTADO_ALERTA_SIN_RESPUESTA = "tiempo_agotado"   # no es una alerta de contradicción: el modelo no respondió
 NO_EVALUABLE = "no evaluable (sin lineamientos)"
 MARCA_NO_VERIFICADO = "valor no verificado"
 RE_PAR = re.compile(r"(NORM_\d{2})\s+(\d+\.\d+)")
@@ -89,6 +92,24 @@ def _id_seccion(texto) -> str:
     return m.group(1) if m else norm(texto)
 
 
+def _numero_subseccion(texto):
+    m = re.match(r"\s*(\d+(?:\.\d+)*)", str(texto or ""))
+    return m.group(1) if m else None
+
+
+def _ids_secciones_de(subseccion, secciones) -> set:
+    """IDs de las secciones de la oferta ('S10') cuyos títulos contienen la subsección de la trampa ('5.1 Plazo'), según resultado['secciones'].
+    Coincide por número de subsección (o uno de sus descendientes) o por el título sin '(parte n)'."""
+    n, t = _numero_subseccion(subseccion), norm(subseccion).split(" (parte ")[0]
+    ids = set()
+    for s in secciones or []:
+        for titulo in s.get("titulos") or []:
+            m = _numero_subseccion(titulo)
+            if (n and m and (m == n or m.startswith(n + "."))) or norm(titulo).split(" (parte ")[0] == t:
+                ids.add(str(s.get("id")))
+    return ids
+
+
 # --- Estadística sin dependencias ---
 
 def wilson(k, n, z=1.96):
@@ -139,8 +160,9 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
     """Métricas de un resultado. Con brechas (modo verificación) exige la frase y el artículo; sin brechas (modo lista) solo la frase."""
     brechas_modo = es_modo_brechas(resultado)
     if brechas_modo:
+        # las brechas descartadas por cálculo (contradicción con las cifras) no generan riesgo: no cuentan como riesgos
         items = [{"cita": norm(b.get("cita")), "norma": b.get("norma"), "articulo": _articulo(b.get("articulo")), "brecha": b}
-                 for b in resultado.get("registro_brechas") or []]
+                 for b in resultado.get("registro_brechas") or [] if b.get("estado") != ESTADO_DESCARTADA_CALCULO]
     else:
         riesgos = resultado.get("riesgos_identificados_estructurados") or resultado.get("riesgos_identificados") or []
         items = [{"cita": norm(r.get("cita_oferta")), "norma": None, "articulo": None, "brecha": r} for r in riesgos]
@@ -148,6 +170,8 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
     verificados = [r for r in (resultado.get("registro_tecnico") or []) if not r.get("etapa") and r.get("veredicto")]
     clasificados = [r for r in (resultado.get("registro_tecnico") or []) if r.get("etapa") == "clasificacion" and r.get("veredicto")]
 
+    alertas = [{"cita": norm(a.get("cita")), "norma": a.get("norma"), "articulo": _articulo(a.get("articulo"))}
+               for a in resultado.get("alertas") or [] if a.get("estado") != ESTADO_ALERTA_SIN_RESPUESTA]
     trampas, confusion, coincidencias = [], {}, []
     for fila in gt:
         frase, pares = norm(fila["fragmento_trampa"]), pares_trampa(fila)
@@ -166,10 +190,12 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         if not brechas_modo:
             coincidencias += [{"trampa": fila["id"], "frase": fila["fragmento_trampa"], "descripcion": i["brecha"].get("descripcion_riesgo") or "",
                                "cita": i["brecha"].get("cita_oferta") or ""} for i in con_frase]
-        revisados = [r for r in verificados if _id_seccion(r.get("seccion")) == _id_seccion(fila["seccion"])
-                     and (r.get("norma"), _articulo(r.get("articulo"))) in pares]
-        reclasificados = [r for r in clasificados if _id_seccion(r.get("seccion")) == _id_seccion(fila["seccion"])
-                          and (r.get("norma"), _articulo(r.get("articulo"))) in pares]
+        # la sección S# que contiene la subsección de la trampa; sin resultado['secciones'] se compara por el número de nivel superior
+        ids_sec = _ids_secciones_de(fila["seccion"], resultado.get("secciones"))
+        en_seccion = (lambda r: str(r.get("seccion")) in ids_sec) if ids_sec else (lambda r: _id_seccion(r.get("seccion")) == _id_seccion(fila["seccion"]))
+        revisados = [r for r in verificados if en_seccion(r) and (r.get("norma"), _articulo(r.get("articulo"))) in pares]
+        reclasificados = [r for r in clasificados if en_seccion(r) and (r.get("norma"), _articulo(r.get("articulo"))) in pares]
+        como_alerta = brechas_modo and any(frase in a["cita"] and (a["norma"], a["articulo"]) in pares for a in alertas)
         veredictos = {norm(r["veredicto"]) for r in revisados}
         # pereza de verificación: el artículo llegó a la sección y la verificación dijo solo Cumple o No aplica
         pereza_v = bool(revisados) and estado != "encontrada" and veredictos <= {"cumple", "no aplica"}
@@ -188,7 +214,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
             perdida = "perdida en clasificación"
         else:
             perdida = "otra causa"   # verificada como Incumple o Revisar y clasificada como riesgo, pero ninguna brecha cita la trampa (o se descartó)
-        t = {"id": fila["id"], "estado": estado, "por_frase": bool(con_frase), "norma": fila["norma"], "articulo": fila["articulo"],
+        t = {"id": fila["id"], "estado": estado, "como_alerta": bool(como_alerta), "por_frase": bool(con_frase), "norma": fila["norma"], "articulo": fila["articulo"],
              "articulo_citado": citado, "verificado": bool(revisados), "perezosa": pereza_v, "perezosa_clasificacion": pereza_c, "perdida": perdida,
              "veredicto_verificacion": ", ".join(sorted({r["veredicto"] for r in revisados})) or "—",
              "veredicto_clasificacion": ", ".join(sorted({r["veredicto"] for r in reclasificados})) or "—",
@@ -222,7 +248,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
                 "alertas": len(resultado.get("alertas") or [])} if brechas_modo else {"riesgos": len(items)})
     return {
         "modo": "brechas" if brechas_modo else "lista", "oferta": oferta, "n_trampas": len(trampas), "trampas": trampas,
-        "encontradas": len(encontradas), "otro_articulo": sum(t["estado"] == "otro artículo" for t in trampas),
+        "encontradas": len(encontradas), "solo_alerta": sum(t["estado"] != "encontrada" and t["como_alerta"] for t in trampas), "otro_articulo": sum(t["estado"] == "otro artículo" for t in trampas),
         "por_frase": sum(t["por_frase"] for t in trampas), "por_frase_validada": None, "coincidencias": coincidencias,
         "costo": (resultado.get("configuracion_analisis") or {}).get("costo_computacional"), "hay_registro": bool(verificados), "recall_articulo": sum(t["verificado"] for t in trampas), "perezosas": sum(t["perezosa"] for t in trampas),
         "perezosas_clasificacion": sum(t["perezosa_clasificacion"] for t in trampas),
@@ -286,7 +312,7 @@ def combinar(evs):
             confusion[k] = confusion.get(k, 0) + v
         for k, v in e["volumen"].items():
             volumen[k] = volumen.get(k, 0) + v
-    ev = {k: suma(k) for k in ("n_trampas", "encontradas", "otro_articulo", "por_frase", "recall_articulo", "perezosas", "perezosas_clasificacion", "marcas_no_verificadas",
+    ev = {k: suma(k) for k in ("n_trampas", "encontradas", "solo_alerta", "otro_articulo", "por_frase", "recall_articulo", "perezosas", "perezosas_clasificacion", "marcas_no_verificadas",
                                "clase_ok", "responsable_ok", "nivel_ok", "n_espejos", "falsas_alarmas", "n_riesgo")}
     ev.update(modo=evs[0]["modo"], oferta="+".join(e["oferta"] for e in evs), costos=[(e["oferta"], e["costo"]) for e in evs], confusion=confusion, volumen=volumen,
               trampas=[t for e in evs for t in e["trampas"]], espejos=[x for e in evs for x in e["espejos"]], extras=[x for e in evs for x in e["extras"]],
@@ -355,6 +381,26 @@ def _bloque_falsas_y_volumen(ev):
     return L + [f"| {k.capitalize()} | {v} |" for k, v in ev["volumen"].items()] + [""]
 
 
+def recall_por(trampas, campo, orden) -> list:
+    """[(valor esperado, n, encontradas como riesgo, encontradas como riesgo o alerta)] por el valor esperado de `campo`; primero `orden`, después el resto."""
+    valores = list(orden) + sorted({t[campo] for t in trampas} - set(orden))
+    filas = []
+    for v in valores:
+        grupo = [t for t in trampas if t[campo] == v]
+        if grupo:
+            riesgo = sum(t["estado"] == "encontrada" for t in grupo)
+            filas.append((v, len(grupo), riesgo, riesgo + sum(t["estado"] != "encontrada" and t["como_alerta"] for t in grupo)))
+    return filas
+
+
+def _bloque_recall_por_categoria(ev):
+    L = []
+    for titulo, campo, orden in (("Recall por clase esperada", "clase_esperada", CLASES), ("Recall por nivel esperado", "nivel_esperado", NIVELES)):
+        L += [f"## {titulo}", "", "| Esperada | Trampas | Solo riesgos | Riesgos + alertas |", "|---|---|---|---|"]
+        L += [f"| {v} | {n} | {_pct(r, n)} | {_pct(ra, n)} |" for v, n, r, ra in recall_por(ev["trampas"], campo, orden)] + [""]
+    return L
+
+
 def _bloque_perdidas(ev):
     """Dónde se pierde cada trampa: no recuperada / perdida en verificación / perdida en clasificación / encontrada (y otra causa)."""
     if not ev["hay_registro"]:
@@ -407,7 +453,8 @@ def informe_md(ev, comparacion=None) -> str:
         L += ["## Recuperación", "", "| Métrica | Valor |", "|---|---|",
               "| Recall@artículo (el artículo de la trampa o un equivalente se verificó en su sección) | "
               + (_con_ic(ev["recall_articulo"], n) if ev["hay_registro"] else "n/d (el resultado no trae registro técnico)") + " |", ""]
-        L += ["## Detección", "", "| Métrica | Valor |", "|---|---|", f"| Recall (frase y artículo) | {_con_ic(e, n)} |"]
+        L += ["## Detección", "", "| Métrica | Valor |", "|---|---|", f"| Recall solo riesgos (frase y artículo) | {_con_ic(e, n)} |",
+              f"| Recall riesgos + alertas (la alerta de contradicción cita la frase y el artículo) | {_con_ic(e + ev['solo_alerta'], n)} |"]
         if ev["precision_n"]:
             L.append(f"| Precisión | {_con_ic(ev['precision_k'], ev['precision_n'])} |")
         else:
@@ -426,7 +473,7 @@ def informe_md(ev, comparacion=None) -> str:
         nb = ev["volumen"].get("brechas", 0)
         L += ["## Fidelidad", "", "| Métrica | Valor |", "|---|---|", f"| Brechas con alguna marca «{MARCA_NO_VERIFICADO}» | {_pct(ev['marcas_no_verificadas'], nb)} |", "",
               NOTA_FIDELIDAD, ""]
-        L += _bloque_falsas_y_volumen(ev) + _bloque_perdidas(ev)
+        L += _bloque_recall_por_categoria(ev) + _bloque_falsas_y_volumen(ev) + _bloque_perdidas(ev)
     L += _bloque_costo(ev)
     L += ["## Detalle por trampa", "",
           "| Trampa | Encontrada | Artículo citado | Artículo verificado | Clase esperada | Clase obtenida | Responsable esperado | Responsable obtenido | Nivel esperado | Nivel obtenido |",
@@ -447,10 +494,10 @@ def guardar_detalle_csv(ev, ruta):
     with open(ruta, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f, delimiter=";")
         w.writerow(["trampa", "encontrada", "norma", "articulo", "articulo_citado", "articulo_verificado", "perezosa", "perezosa_clasificacion", "perdida", "clase_esperada", "clase_obtenida",
-                    "responsable_esperado", "responsable_obtenido", "nivel_esperado", "nivel_obtenido"])
+                    "responsable_esperado", "responsable_obtenido", "nivel_esperado", "nivel_obtenido", "como_alerta"])
         for t in ev["trampas"]:
             w.writerow([t["id"], t["estado"], t["norma"], t["articulo"], t["articulo_citado"], int(t["verificado"]), int(t["perezosa"]), int(t["perezosa_clasificacion"]), t["perdida"], t["clase_esperada"],
-                        t["clase_obtenida"] or "", t["responsable_esperado"], t["responsable_obtenido"] or "", t["nivel_esperado"], t["nivel_obtenido"] or ""])
+                        t["clase_obtenida"] or "", t["responsable_esperado"], t["responsable_obtenido"] or "", t["nivel_esperado"], t["nivel_obtenido"] or "", int(t["como_alerta"])])
 
 
 def guardar_extras_csv(ev, ruta):

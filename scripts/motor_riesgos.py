@@ -54,6 +54,22 @@ def brecha_relativa(ofertado, exigido, tipo_limite):
     return None
 
 
+def _unidad(valor) -> str:
+    """Texto que queda al quitar el primer número, sin espacios ni mayúsculas ('5 mm' -> 'mm')."""
+    return re.sub(r'\s+', '', re.sub(r'\d[\d.,]*', '', str(valor), count=1)).casefold()
+
+
+def misma_unidad_numerica(a, b) -> bool:
+    """True si ambos valores son numéricos y están en la misma unidad (la sobrante tras el número)."""
+    return _numero(a) is not None and _numero(b) is not None and _unidad(a) == _unidad(b)
+
+
+def limite_excepcion_propio(limite, exigido) -> bool:
+    """Art. 3.2.c: el límite de la excepción es numérico y no es el mismo número que el exigido (si coincide, el modelo copió el límite normal)."""
+    x, y = _numero(limite), _numero(exigido)
+    return x is not None and x != y
+
+
 def fuera_de_limite(ofertado, limite, tipo_limite):
     """Art. 3.2.c. True si el valor ofertado queda fuera del límite: MINIMO y CANTIDAD por debajo, MAXIMO y FRECUENCIA por encima,
     TOLERANCIA con mayor amplitud. False si algún valor no es un número o el tipo no se conoce."""

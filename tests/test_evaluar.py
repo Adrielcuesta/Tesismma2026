@@ -232,7 +232,7 @@ def test_otro_articulo_no_esta_en_el_resumen_pero_si_en_el_detalle():
     assert "otro artículo" in fila and "NORM_02 Art. 9.9" in fila
     # el .md solo trae las secciones pedidas
     assert [l for l in md.splitlines() if l.startswith("## ")] == ["## Recuperación", "## Detección", "## Clasificación (de las trampas encontradas)",
-                                                                   "## Fidelidad", "## Falsas alarmas", "## Volumen", "## Dónde se pierde cada trampa",
+                                                                   "## Fidelidad", "## Recall por clase esperada", "## Recall por nivel esperado", "## Falsas alarmas", "## Volumen", "## Dónde se pierde cada trampa",
                                                                    "## Costo computacional", "## Detalle por trampa"]
     assert "100 % por diseño" in md
 
@@ -428,3 +428,34 @@ def test_costo_computacional_por_oferta_en_el_agregado():
     md = ev.informe_md(ev.combinar([a, b]))
     seccion = md.split("## Costo computacional")[1].split("## Detalle")[0]
     assert "**P9**" in seccion and "**P8**: n/d" in seccion and seccion.index("**P9**") < seccion.index("**P8**")
+
+
+# --- Recall@artículo por la sección S# que contiene la subsección; alertas; recall por clase y nivel ---
+
+def test_recall_articulo_usa_los_titulos_de_las_secciones_y_no_el_numero_de_S():
+    gt, esp = _datos()
+    gt[0]["seccion"] = "3.1 Apoyos"
+    secciones = [{"id": "S7", "titulos": ["3.1 Apoyos", "3.2 Otro"]}, {"id": "S8", "titulos": ["4.1 Plazo"]}]
+    verificado_en = lambda sec: ev.evaluar({**RESULTADO, "secciones": secciones, "registro_tecnico": [
+        {"seccion": sec, "norma": "NORM_01", "articulo": "4.2", "veredicto": "Incumple"}]}, gt, esp, "P9")["trampas"][0]["verificado"]
+    assert verificado_en("S7") is True       # la S7 contiene la subsección 3.1 (el 7 no tiene nada que ver con la sección 3 del GT)
+    assert verificado_en("S8") is False
+    assert ev._ids_secciones_de("3", secciones) == {"S7"} and ev._ids_secciones_de("9.9 Nada", secciones) == set()
+
+
+def test_encontrada_como_alerta_recall_separado_y_tablas_por_clase_y_nivel():
+    gt, esp = _datos()
+    descartada = dict(_brecha("texto que nadie cita", "NORM_04", "3.1"), estado="descartada por cálculo")
+    resultado = {**RESULTADO, "registro_brechas": RESULTADO["registro_brechas"] + [descartada], "alertas": [
+        {"cita": "Se aclara que el registro se entrega al final de la obra.", "norma": "NORM_05", "articulo": "1.6", "motivo": "contradicción"},
+        {"cita": "texto que nadie cita", "norma": "NORM_04", "articulo": "3.1", "estado": "tiempo_agotado"}]}
+    r = ev.evaluar(resultado, gt, esp, "P9")
+    assert [t["como_alerta"] for t in r["trampas"]] == [False, False, True, False]
+    assert (r["encontradas"], r["solo_alerta"], r["n_riesgo"]) == (2, 1, 5)      # la descartada por cálculo no es riesgo ni extra
+    assert r["trampas"][3]["estado"] == "no" and len(r["extras"]) == 2   # los mismos extras que sin la descartada
+    assert ev.recall_por(r["trampas"], "clase_esperada", ev.CLASES) == [("Crítico", 1, 1, 1), ("Mayor", 2, 1, 1), ("Menor", 1, 0, 1)]
+    assert ev.recall_por(r["trampas"], "nivel_esperado", ev.NIVELES) == [("Alto", 2, 2, 2), ("Medio", 1, 0, 0), ("Bajo", 1, 0, 1)]
+    md = ev.informe_md(r)
+    assert "| Recall solo riesgos (frase y artículo) | 2/4 (50%)" in md and "| Recall riesgos + alertas" in md and "3/4 (75%)" in md
+    assert "## Recall por clase esperada" in md and "| Menor | 1 | 0/1 (0%) | 1/1 (100%) |" in md and "## Recall por nivel esperado" in md
+    assert ev.combinar([r, r])["solo_alerta"] == 2

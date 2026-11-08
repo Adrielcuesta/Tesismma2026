@@ -9,7 +9,9 @@ from .schemas import ClasificacionRiesgo, _sin_tildes
 
 MAX_PALABRAS = {"titulo": 12, "enunciado": 40, "accion": 30, "solicitud_oferente": 40}
 MARCA_VALOR_NO_VERIFICADO = "valor no verificado"
-CAMPOS_OBLIGATORIOS = ("objeto_requisito", "dimension_impacto", "impacto", "titulo")
+MOTIVO_BRECHA_NULA = "contradicción entre el veredicto del modelo y las cifras extraídas: revisar"
+ESTADO_DESCARTADA_CALCULO = "descartada por cálculo"
+CAMPOS_OBLIGATORIOS =("objeto_requisito", "dimension_impacto", "impacto", "titulo")
 
 
 def _normalizar_valor(texto) -> str:
@@ -56,7 +58,9 @@ def condicion_critico(c: ClasificacionRiesgo, cita: str, texto_articulo: str):
     if c.medida_ofrecida and not medida_ok:
         marcas.append(f"{MARCA_VALOR_NO_VERIFICADO}: medida_ofrecida")
 
-    if verificado("valor_limite_excepcion", texto_articulo) and ofertado_ok             and motor_riesgos.fuera_de_limite(c.valor_ofertado, c.valor_limite_excepcion, c.tipo_limite):
+    # 3.2.c solo si el límite de la excepción es numérico y distinto del exigido (si es igual, el modelo copió el límite normal)
+    if motor_riesgos.limite_excepcion_propio(c.valor_limite_excepcion, c.valor_exigido) and verificado("valor_limite_excepcion", texto_articulo) and ofertado_ok \
+            and motor_riesgos.fuera_de_limite(c.valor_ofertado, c.valor_limite_excepcion, c.tipo_limite):
         return "c", marcas + [f"3.2.c: {c.valor_ofertado} queda fuera del límite {c.valor_limite_excepcion} que admite el artículo"]
     if verificado("valor_demanda_oferta", cita) and ofertado_ok             and motor_riesgos.no_cubre_demanda(c.valor_ofertado, c.valor_demanda_oferta, c.tipo_limite):
         return "d", marcas + [f"3.2.d: {c.valor_ofertado} no cubre la demanda {c.valor_demanda_oferta} que declara la oferta"]
@@ -67,9 +71,21 @@ def condicion_critico(c: ClasificacionRiesgo, cita: str, texto_articulo: str):
     return None, marcas
 
 
+def armar_salidas(brechas: list, criterios: dict):
+    """(riesgos agrupados con id, solicitudes con número, resumen ejecutivo) a partir del registro de brechas; las descartadas por cálculo no cuentan."""
+    activas = [b for b in brechas if b.get("estado") != ESTADO_DESCARTADA_CALCULO]
+    riesgos = motor_riesgos.agrupar(activas, criterios)
+    for i, r in enumerate(riesgos, 1):
+        r["id"] = f"R{i}"
+    solicitudes = motor_riesgos.solicitudes(riesgos, activas, criterios)
+    for i, s in enumerate(solicitudes, 1):
+        s["numero"] = i
+    return riesgos, solicitudes, motor_riesgos.resumen_ejecutivo(riesgos, criterios)
+
+
 def procesar_clasificacion(c: ClasificacionRiesgo, *, id_sec: str, seccion_oferta: str, norma: str, articulo: str, texto_articulo: str,
                            oraciones: list, textos: dict, verificacion: dict, criterios: dict, parte: int = 1) -> dict:
-    """Pasos 2 a 7 de la validación. Devuelve {'tipo': 'no_riesgo' | 'alerta' | 'descartada' | 'brecha', ...}.
+    """Pasos 2 a 7 de la validación. Devuelve {'tipo': 'no_riesgo' | 'alerta' | 'descartada' | 'descartada_por_calculo' | 'brecha', ...}.
     oraciones: IDs citados por la verificación; textos: {id: texto} de la sección."""
     cita = " ".join(textos[i] for i in oraciones)
     if c.veredicto in ("CUMPLE", "NO_APLICA"):
@@ -108,6 +124,14 @@ def procesar_clasificacion(c: ClasificacionRiesgo, *, id_sec: str, seccion_ofert
     else:
         condicion, marcas_condicion = condicion_critico(c, cita, texto_articulo)
         marcas += marcas_condicion
+    if brecha == 0 and condicion is None and item is None and motor_riesgos.misma_unidad_numerica(c.valor_ofertado, c.valor_exigido):
+        # Las reglas 3.3.a, 3.3.e y 3.4.a suponen brecha > 0: con las cifras extraídas la oferta cumple, así que no hay riesgo, hay una contradicción
+        base = {"seccion": id_sec, "seccion_oferta": seccion_oferta, "norma": norma, "articulo": articulo, "oraciones": oraciones, "cita": cita}
+        return {"tipo": "descartada_por_calculo", "motivo": MOTIVO_BRECHA_NULA,
+                "alerta": {**base, "motivo": MOTIVO_BRECHA_NULA, "origen": "brecha_nula"},
+                "brecha": {"id": f"{id_sec}|{norma}|{articulo}" + (f"#{parte}" if parte > 1 else ""), **base, "oraciones_texto": {i: textos[i] for i in oraciones},
+                           "texto_articulo": texto_articulo, "verificacion_previa": verificacion, "clasificacion": c.model_dump(), "fuente": fuente,
+                           "brecha_relativa": brecha, "estado": ESTADO_DESCARTADA_CALCULO, "marcas": marcas, "titulo": c.titulo, "motivo": MOTIVO_BRECHA_NULA}}
     clase, regla, marcas_clase = motor_riesgos.clase(fuente, condicion, c.objeto_requisito, brecha,
                                                      c.dimension_impacto == motor_riesgos.DIMENSION_PERSONAS, criterios)
     marcas += marcas_clase

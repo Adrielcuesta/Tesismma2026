@@ -308,6 +308,10 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
                 r["brecha"]["marcas"].append("verificar calculo")
             r["brecha"]["eval_count"] = _eval_count(mensaje)
             brechas.append(r["brecha"])
+        elif r["tipo"] == "descartada_por_calculo":   # queda en el registro de brechas (sin riesgo) y como alerta
+            r["brecha"]["eval_count"] = _eval_count(mensaje)
+            brechas.append(r["brecha"])
+            alertas.append(r["alerta"])
         elif r["tipo"] == "alerta":
             alertas.append(r["alerta"])
         else:
@@ -468,13 +472,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     t0 = time.perf_counter()
     riesgos_agrupados, solicitudes, resumen_ejecutivo = [], [], None
     if verificacion:
-        riesgos_agrupados = motor_riesgos.agrupar(brechas_todas, lin["criterios"])
-        for i, r in enumerate(riesgos_agrupados, 1):
-            r["id"] = f"R{i}"
-        solicitudes = motor_riesgos.solicitudes(riesgos_agrupados, brechas_todas, lin["criterios"])
-        for i, s in enumerate(solicitudes, 1):
-            s["numero"] = i
-        resumen_ejecutivo = motor_riesgos.resumen_ejecutivo(riesgos_agrupados, lin["criterios"])
+        riesgos_agrupados, solicitudes, resumen_ejecutivo = clasificacion.armar_salidas(brechas_todas, lin["criterios"])
         t_com = time.perf_counter()
         cadena_comentario = None
         if riesgos_agrupados:
