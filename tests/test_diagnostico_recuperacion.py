@@ -74,9 +74,16 @@ arts = lambda docs: [d.metadata["articulo"] for d in docs]
 
 
 def test_configuraciones_definidas():
-    assert [(c.nombre, c.k, c.top, c.tope, c.modo) for c in dr.CONFIGURACIONES] == [
+    assert [(c.nombre, c.k, c.top, c.tope, c.modo) for c in dr.CONFIGURACIONES[:5]] == [
         ("actual", 10, 5, 15, "reranker"), ("media", 20, 8, 25, "reranker"), ("amplia", 30, 10, 40, "reranker"),
         ("densa_sin_reranker", 10, 5, 15, "densa"), ("union", 10, 5, 25, "union")]
+    assert (CFG["union_k20"].k, CFG["union_k20"].top, CFG["union_k20"].top_rr, CFG["union_k20"].tope) == (20, 5, 8, 30)
+    assert [c.nombre for c in dr.CONFIGURACIONES[5:]] == [
+        "union_k20", "union_oraciones_cifras_N2", "union_oraciones_cifras_N3", "union_oraciones_todas_N2",
+        "union_k20_oraciones_cifras_N2", "union_k20_oraciones_cifras_N3", "union_k20_oraciones_todas_N2"]
+    assert all(c.tope_total == 30 for c in dr.CONFIGURACIONES if c.oraciones)
+    assert CFG["union_oraciones_cifras_N3"].oraciones == (True, 3) and CFG["union_k20_oraciones_todas_N2"].oraciones == (False, 2)
+    assert (CFG["union_oraciones_todas_N2"].k, CFG["union_oraciones_todas_N2"].tope) == (10, 25) and CFG["union_k20_oraciones_todas_N2"].tope == 30
 
 
 def test_seleccion_reranker_respeta_k_top_y_tope():
@@ -130,7 +137,7 @@ def test_datos_de_consultas_corre_el_reranker_una_vez_por_consulta_con_los_30():
     assert llamadas == [30, 30] and [len(q["candidatos"]) for q in datos] == [30, 30]
     assert datos[0]["ranking"][:2] == ["N|x0", "N|x1"] and len(datos[0]["ranking"]) == 40      # el ranking cubre todo el índice
     assert datos[0]["candidatos"][0].densa == -0.0 and datos[0]["candidatos"][1].densa == -0.01
-    assert [len(dr.seleccion_final([datos[0]["candidatos"]], c)) for c in dr.CONFIGURACIONES] == [5, 8, 10, 5, 5]   # todo derivado de los mismos 30
+    assert [len(dr.seleccion_final([datos[0]["candidatos"]], c)) for c in dr.CONFIGURACIONES[:6]] == [5, 8, 10, 5, 5, 8]   # todo derivado de los mismos 30
 
 
 def test_consultas_de_seccion_usa_las_subsecciones_largas_o_la_seccion_entera():
@@ -159,10 +166,14 @@ def test_analizar_recorte_puestos_entrada_y_pares_por_oferta():
     assert (f1["puesto_densa"], f1["puesto_reranker"]) == (3, 3)
     assert all(f1["entra"].values())
     assert (f2["puesto_densa"], f2["puesto_reranker"]) == (12, 1)                                  # equivalente NORM_01 4.9
-    assert f2["entra"] == {"actual": False, "media": True, "amplia": True, "densa_sin_reranker": False, "union": False}
+    assert {n: f2["entra"][n] for n in ("actual", "media", "amplia", "densa_sin_reranker", "union")} == {
+        "actual": False, "media": True, "amplia": True, "densa_sin_reranker": False, "union": False}
+    assert f2["entra"]["union_k20"] is True                                                         # K=20 sí llega al puesto 12
     assert f2["puestos_indice"]["NORM_01|4.9"] == 40 and f2["puestos_indice"]["NORM_01|4.2"] is None
     assert (f3["seccion"], f3["puesto_densa"], f3["entra"]["actual"]) == (None, None, False)
-    assert pares == {"actual": 3 + 5, "media": 3 + 8, "amplia": 3 + 10, "densa_sin_reranker": 3 + 5, "union": 3 + 5}   # la unión usa K=10: el 4.9 (puesto 12) no entra
+    assert {n: pares[n] for n in ("actual", "media", "amplia", "densa_sin_reranker", "union")} == {
+        "actual": 3 + 5, "media": 3 + 8, "amplia": 3 + 10, "densa_sin_reranker": 3 + 5, "union": 3 + 5}   # la unión usa K=10: el 4.9 (puesto 12) no entra
+    assert pares["union_k20"] == 3 + 8 and pares["union_k20_oraciones_todas_N2"] == 3 + 8      # K=20: 4.9 + 7 del reranker (los 5 densos ya están)
 
 
 def _fila(id_, **entra):
@@ -172,7 +183,8 @@ def _fila(id_, **entra):
 
 
 def _pares(**p):
-    base = {"actual": 100, "media": 150, "amplia": 200, "densa_sin_reranker": 100, "union": 150}
+    base = {c.nombre: 100 for c in dr.CONFIGURACIONES}
+    base.update({"media": 150, "amplia": 200, "union": 150})
     base.update(p)
     return {"P1": base}
 
@@ -243,3 +255,149 @@ def test_informe_recorte_tabla_recall_pares_decision_y_articulos_fuera():
     assert "NORM_01 4.2 (artículo de la trampa): puesto en toda la densa (artículos distintos) 87; 1 fragmento(s): 2150 caracteres, empieza con Art. 4.1, trae pegado: Art. 4.1" in texto
     assert "NORM_01 4.9 (equivalente): puesto en toda la densa (artículos distintos) no aparece; NO existe un fragmento" in texto
     assert "MANTENER la actual" in dr.informe_recorte([f_fuera], _pares())
+
+
+# --- Chequeo de ingesta: encabezado de artículo con título en minúsculas ---
+
+def test_encabezado_de_articulo_con_titulo_en_minusculas_o_mayusculas():
+    casos = [("Art. 4.7. Reserva física y de capacidad\nTexto del artículo.", "4.7"),    # el formato de analizar_norma_por_articulos
+             ("Art. 2.6. Nivelación longitudinal\nTexto del artículo.", "2.6"),
+             ("Art. 3.7. CONTROL DE CALIDAD\nTexto del artículo.", "3.7"),
+             ("Art. 1.8. Ñandú y otros\nTexto.", "1.8"),
+             ("Art. 2.13. a mano alzada\nTexto.", "2.13")]
+    for texto, articulo in casos:
+        d = dr.describir_fragmento(texto)
+        assert d["empieza_con"] == articulo and d["encabezados"] == [[articulo, 0]] and d["caracteres"] == len(texto)
+
+
+def test_encabezado_ignora_referencias_dentro_del_texto_y_detecta_el_pegado_en_minusculas():
+    texto = "Art. 2.6. Nivelación longitudinal\nSegún el (Art. 2.7). Ver Art. 2.8. Algo en medio de la línea.\nArt. 2.9. Otro artículo pegado"
+    d = dr.describir_fragmento(texto)
+    assert [e for e, _ in d["encabezados"]] == ["2.6", "2.9"] and d["empieza_con"] == "2.6"
+    info = dr.info_fragmentos({"documents": [texto], "metadatas": [{"norma": "NORM_04", "articulo": "2.6", "parte": 1}]}, {"NORM_04|2.6"})
+    assert "trae pegado: Art. 2.9" in dr._texto_fragmentos(info["NORM_04|2.6"], "NORM_04|2.6")
+    sin_encabezado = dr.describir_fragmento("Reserva física y de capacidad sin encabezado")
+    assert sin_encabezado["empieza_con"] is None
+    assert "sin encabezado de artículo" in dr._texto_fragmentos([dict(sin_encabezado)], "NORM_04|2.6")
+
+
+# --- union_k20 y consultas por oración ---
+
+def test_union_k20_restringe_el_reranker_a_los_20_primeros_de_la_densa():
+    # los candidatos 25..29 tienen el mejor puntaje del reranker, pero están fuera de K=20
+    items = [(("N", f"c{i}"), -i, .99 if i >= 25 else (.8 if 10 <= i <= 17 else .1)) for i in range(30)]
+    final = arts(dr.seleccion_final([_cands(*items)], CFG["union_k20"]))
+    assert set(final) == {f"c{i}" for i in range(5)} | {f"c{i}" for i in range(10, 18)} and len(final) == 13      # top 5 denso + top 8 del reranker
+    assert final[:8] == [f"c{i}" for i in range(10, 18)]                                                           # ordenados por puntaje del reranker
+    assert not any(a in final for a in ("c25", "c26", "c29"))
+
+
+def _oracion(cifras, *articulos):
+    return {"hash": "h", "con_cifras": cifras, "articulos": [{"norma": "N", "articulo": a, "densa": -i} for i, a in enumerate(articulos)]}
+
+
+BASE_ABC = [_cands((("N", "A"), -1, .9), (("N", "B"), -2, .8), (("N", "C"), -3, .7))]
+ORACIONES = [_oracion(True, "X", "A", "Y"), _oracion(False, "Z", "W"), _oracion(True, "V")]
+
+
+def _con(nombre, oraciones=ORACIONES, por_consulta=BASE_ABC):
+    return arts(dr.seleccion_final(por_consulta, CFG[nombre], oraciones))
+
+
+def test_oraciones_con_cifras_n2_suman_detras_de_la_base_sin_repetir():
+    # oración 1 (con cifras): X (puesto 1) y A (2, ya está en la base); oración 3 (con cifras): V; la oración 2 no tiene dígitos
+    assert _con("union_oraciones_cifras_N2") == ["A", "B", "C", "X", "V"]
+
+
+def test_oraciones_con_cifras_n3_agrega_el_tercer_articulo_de_cada_oracion():
+    assert _con("union_oraciones_cifras_N3") == ["A", "B", "C", "X", "V", "Y"]
+
+
+def test_oraciones_todas_n2_incluye_las_que_no_tienen_cifras_y_ordena_por_puesto():
+    # puestos 1: X (oración 1), Z (2), V (3); puesto 2: W (oración 2)
+    assert _con("union_oraciones_todas_N2") == ["A", "B", "C", "X", "Z", "V", "W"]
+
+
+def test_oraciones_sin_datos_dejan_la_base():
+    assert _con("union_oraciones_todas_N2", oraciones=[]) == _con("union") == ["A", "B", "C"]
+    assert dr.seleccion_final(BASE_ABC, CFG["union"], ORACIONES) == dr.seleccion_final(BASE_ABC, CFG["union"])    # la base sola no usa las oraciones
+
+
+def test_tope_de_30_por_seccion_con_prioridad_para_la_base():
+    def consulta(j):
+        return _cands(*[(("N", f"q{j}-{i}"), -i, i / 10) for i in range(10)])           # 10 distintos: top 5 denso + top 5 del reranker
+    tres = [consulta(0), consulta(1), consulta(2)]
+    base = dr.seleccion_final(tres, CFG["union"])
+    assert len(base) == 25                                                                  # tope de la unión
+    nuevas = [_oracion(False, *[f"s{j}-{i}" for i in range(2)]) for j in range(4)]       # 8 artículos nuevos con N=2
+    final = dr.seleccion_final(tres, CFG["union_oraciones_todas_N2"], nuevas)
+    assert len(final) == 30 and final[:25] == base                                          # la base primero; de las oraciones entran 5
+    assert arts(final[25:]) == ["s0-0", "s1-0", "s2-0", "s3-0", "s0-1"]                    # por puesto y, a igual puesto, por orden de oración
+    # union_k20 ya llena los 30 con la base: las oraciones no agregan nada
+    treinta = [_cands(*[(("N", f"k{j}-{i}"), -i, i / 20) for i in range(20)]) for j in range(3)]
+    assert len(dr.seleccion_final(treinta, CFG["union_k20"])) == 30
+    assert len(dr.seleccion_final(treinta, CFG["union_k20_oraciones_todas_N2"], nuevas)) == 30
+
+
+def test_oraciones_de_seccion_usa_numerar_oraciones_en_cada_subseccion():
+    seccion = {"id": "3", "texto": "todo",
+               "subsecciones": [("3.1 A", "Primera oración con 3 mm de tolerancia en la vía. Segunda oración sin números en el texto."),
+                                ("3.2 B", "Otra subsección con un texto sin cifras alguna"), ("3.3 vacía", "   ")]}
+    assert dr.oraciones_de_seccion(seccion) == ["Primera oración con 3 mm de tolerancia en la vía.", "Segunda oración sin números en el texto.",
+                                                "Otra subsección con un texto sin cifras alguna"]
+    assert dr.oraciones_de_seccion({"id": "4", "texto": "Texto único de la sección.", "subsecciones": []}) == ["Texto único de la sección."]
+
+
+class DbOraciones:
+    """Densa falsa: por oración devuelve fragmentos según una palabra clave; con duplicados de artículo y un preámbulo."""
+    def similarity_search_with_score(self, consulta, k):
+        base = [(_doc("N", "preambulo"), 0.1), (_doc("N", "a1"), 0.2), (_doc("N", "a1 (parte 2)"), 0.25), (_doc("N", "a2"), 0.3)] + \
+               [(_doc("N", f"b{i}"), 0.4 + i / 10) for i in range(8)]
+        return base[:k]
+
+
+def test_datos_de_oraciones_articulos_distintos_sin_preambulo_y_marca_de_cifras():
+    datos = dr.datos_de_oraciones(DbOraciones(), ["La vía mide 3 mm.", "Sin cifras acá."])
+    assert [d["con_cifras"] for d in datos] == [True, False]
+    arts_ = [a["articulo"] for a in datos[0]["articulos"]]
+    assert arts_ == ["a1", "a2", "b0", "b1", "b2"]                          # preámbulo fuera, '(parte 2)' no repite el artículo, máximo 5
+    assert datos[0]["articulos"][0] == {"norma": "N", "articulo": "a1", "densa": -0.2}
+    assert datos[0]["hash"] == dr._hash("La vía mide 3 mm.") != datos[1]["hash"]
+
+
+def test_cache_con_oraciones_ida_y_vuelta_y_validacion(tmp_path):
+    secciones = [{"id": "3", "texto": "Los tableros exteriores tendrán grado IP44 de protección.", "subsecciones": []}]
+    ors = [dr.datos_de_oraciones(DbOraciones(), dr.oraciones_de_seccion(s)) for s in secciones]
+    datos = {"P1": [_datos_r()[0]]}
+    cache = dr.a_cache({"P1": secciones}, datos, {}, {"P1": ors})
+    ruta = tmp_path / "c.json"
+    ruta.write_text(json.dumps(cache), encoding="utf-8")
+    leida = json.loads(ruta.read_text(encoding="utf-8"))
+    assert leida["version"] == 2 and dr.oraciones_desde_cache(leida, "P1", secciones) == ors
+    assert dr.oraciones_desde_cache(leida, "P2", secciones) is None                                  # faltan
+    cambiada = [dict(secciones[0], texto="Otro texto de la oferta, distinto.")]
+    assert dr.oraciones_desde_cache(leida, "P1", cambiada) is None                                    # el texto cambió: hay que volver a buscar
+    assert dr.oraciones_desde_cache({"version": 1, "ofertas": {}}, "P1", secciones) is None           # caché anterior
+
+
+def test_analizar_recorte_con_oraciones_suma_el_articulo_que_la_base_no_trae():
+    secciones = [SECCIONES_R[0]]
+    trampas = [TRAMPAS[0]]                                                                           # artículo NORM_02 3.1
+    datos = [[{"candidatos": _cands((("NORM_09", "x"), -1, .9)), "ranking": ["NORM_09|x", "NORM_02|3.1"]}]]
+    oraciones = [[{"hash": "h", "con_cifras": True, "articulos": [{"norma": "NORM_02", "articulo": "3.1", "densa": -.1}]}]]
+    filas, pares = dr.analizar_recorte("P1", trampas, secciones, datos, oraciones)
+    assert filas[0]["entra"]["union"] is False and filas[0]["entra"]["union_oraciones_cifras_N2"] is True
+    assert filas[0]["entra"]["union_oraciones_todas_N2"] is True and filas[0]["entra"]["union_k20_oraciones_cifras_N3"] is True
+    assert pares["union"] == 1 and pares["union_oraciones_cifras_N2"] == 2
+    sin = dr.analizar_recorte("P1", trampas, secciones, datos)[0]                                    # sin datos por oración: iguales a la base
+    assert sin[0]["entra"]["union_oraciones_cifras_N2"] is False
+
+
+def test_informe_incluye_las_columnas_nuevas_y_las_notas():
+    f = _fila("P1-01", union_k20=True, union_oraciones_cifras_N2=True)
+    f.update(oferta="P1", seccion="3", articulo="NORM_02 3.1", puesto_densa=2, puesto_reranker=1, clave_principal="NORM_02|3.1", puestos_indice={"NORM_02|3.1": 2})
+    texto = dr.informe_recorte([f], _pares())
+    for nombre in ("union_k20", "union_oraciones_cifras_N2", "union_oraciones_cifras_N3", "union_oraciones_todas_N2", "union_k20_oraciones_todas_N2"):
+        assert nombre in texto
+    assert "equivalente a reranquear solo esos 20" in texto and "solo texto de la oferta" in texto and "tope 30 por sección" in texto
+    assert "límite de pares: 200" in texto

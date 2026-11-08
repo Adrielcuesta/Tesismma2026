@@ -15,8 +15,9 @@ Dónde se pierde el artículo (K de la densa, top por subsección y tope por sec
 
     python -m scripts.diagnostico_recuperacion recorte --oferta P1=<oferta_P1.pdf|docx> --oferta P2=<oferta_P2.pdf|docx> [--csv ruta]
 
-La primera corrida guarda diagnostico_cache.json (30 candidatos densos con sus puntajes y el del reranker, por consulta); con --usar-cache
-las configuraciones se derivan de ahí, sin cargar el índice ni el reranker.
+La primera corrida guarda diagnostico_cache.json (30 candidatos densos con sus puntajes y el del reranker, por consulta, y los resultados de las
+consultas por oración); con --usar-cache las configuraciones se derivan de ahí, sin recalcular el reranker. Si la caché es anterior a la versión 2
+(o le faltan las oraciones), esa corrida abre el índice (sin reranker) para completarla y la vuelve a guardar.
 """
 import argparse
 import csv
@@ -145,14 +146,27 @@ def informe_hibrida(densa: list, hibrida: list) -> str:
 
 # modo "reranker": los k primeros de la densa -> los `top` de mayor puntaje del reranker (como el pipeline).
 # modo "densa": los `top` primeros de la densa por su puntaje denso, sin reranker.
-# modo "union": los `top` primeros de la densa ∪ los `top` del reranker (sobre los k primeros), ordenados por puntaje del reranker.
-Config = namedtuple("Config", "nombre k top tope modo")
+# modo "union": los `top` primeros de la densa ∪ los `top_rr or top` del reranker (sobre los k primeros), ordenados por puntaje del reranker.
+# El puntaje del reranker de un candidato no depende de los demás: usar el de los 30 candidatos restringido a los k primeros de la densa
+# equivale a reranquear solo esos k.
+# top_rr: cuántos toma el reranker en el modo "union" (si no, `top`). oraciones: (solo_con_cifras, N) agrega, por cada oración de la subsección, sus N primeros
+# artículos de la densa (sin reranker), hasta tope_total por sección y con prioridad para los de la base.
+Config = namedtuple("Config", "nombre k top tope modo top_rr oraciones tope_total", defaults=(None, None, None))
+TOPE_CON_ORACIONES = 30
+_VARIANTES_ORACIONES = (("oraciones_cifras_N2", True, 2), ("oraciones_cifras_N3", True, 3), ("oraciones_todas_N2", False, 2))
+_BASES_UNION = (Config("union", 10, 5, 25, "union"), Config("union_k20", 20, 5, 30, "union", top_rr=8))
 CONFIGURACIONES = (Config("actual", 10, 5, 15, "reranker"), Config("media", 20, 8, 25, "reranker"), Config("amplia", 30, 10, 40, "reranker"),
-                   Config("densa_sin_reranker", 10, 5, 15, "densa"), Config("union", 10, 5, 25, "union"))
+                   Config("densa_sin_reranker", 10, 5, 15, "densa")) + _BASES_UNION + tuple(
+    base._replace(nombre=f"{base.nombre}_{variante}", oraciones=(solo_cifras, n), tope_total=TOPE_CON_ORACIONES)
+    for base in _BASES_UNION for variante, solo_cifras, n in _VARIANTES_ORACIONES)
 K_MAXIMO = 30
+K_ORACION = 10          # fragmentos que se piden a la densa por oración
+N_MAXIMO_ORACION = 5    # artículos distintos que se guardan por oración (las variantes usan N = 2 o 3)
 FACTOR_MAXIMO_PARES = 2   # tope de la regla de adopción: el doble de los pares a verificar de la configuración actual
 Cand = namedtuple("Cand", "doc densa reranker")   # densa: -distancia (más alto, mejor); reranker: puntaje normalizado
-RE_ENCABEZADO = re.compile(r"(?m)^\s*Art\.\s+(\d+\.\d+)\.\s+[A-ZÁÉÍÓÚÑ]{2}")
+# Encabezado de artículo al comienzo de una línea: 'Art. 4.7. Reserva física...' o 'Art. 3.7. CONTROL DE CALIDAD'. El título puede estar en
+# mayúsculas o en minúsculas (la versión anterior exigía dos mayúsculas y no reconocía los títulos en minúsculas).
+RE_ENCABEZADO = re.compile(r"(?m)^\s*Art\.\s+(\d+\.\d+)\.\s+[A-Za-zÁÉÍÓÚÑáéíóúñ]")
 ARCHIVO_CACHE = "diagnostico_cache.json"
 
 
@@ -187,7 +201,7 @@ def datos_de_consultas(vector_db, consultas: list, puntuar, total: int, k: int =
 def _elegidos(candidatos: list, cfg) -> list:
     """[(doc, puntaje)] que quedan de UNA consulta con la configuración cfg."""
     primeros = candidatos[:cfg.k]
-    por_reranker = sorted(primeros, key=lambda c: c.reranker, reverse=True)[:cfg.top]
+    por_reranker = sorted(primeros, key=lambda c: c.reranker, reverse=True)[:cfg.top_rr or cfg.top]
     if cfg.modo == "reranker":
         return [(c.doc, c.reranker) for c in por_reranker]
     if cfg.modo == "densa":
@@ -200,9 +214,35 @@ def _elegidos(candidatos: list, cfg) -> list:
     return resultado
 
 
-def seleccion_final(por_consulta: list, cfg) -> list:
+def _articulos_de_oraciones(oraciones: list, cfg) -> list:
+    """[(norma, artículo)] de las consultas por oración, sin repetir y por puesto (primero los primeros de cada oración; a igual puesto, el orden de las
+    oraciones). Con cfg.oraciones[0] solo cuentan las oraciones que tienen algún dígito."""
+    solo_cifras, n = cfg.oraciones
+    mejor = {}
+    for orden, o in enumerate(oraciones):
+        if solo_cifras and not o["con_cifras"]:
+            continue
+        for puesto, a in enumerate(o["articulos"][:n], 1):
+            clave = (a["norma"], a["articulo"])
+            if clave not in mejor or (puesto, orden) < mejor[clave]:
+                mejor[clave] = (puesto, orden)
+    return [clave for clave, _ in sorted(mejor.items(), key=lambda x: x[1])]
+
+
+def seleccion_final(por_consulta: list, cfg, oraciones: list = ()) -> list:
     """Documentos que se verificarían en la sección con la configuración cfg, igual que recuperar_seccion(sin_preambulo=True): por consulta los
-    elegidos sin preámbulos; unión por (norma, artículo) con el mayor puntaje y los `cfg.tope` mejores. por_consulta: [[Cand]]."""
+    elegidos sin preámbulos; unión por (norma, artículo) con el mayor puntaje y los `cfg.tope` mejores. por_consulta: [[Cand]].
+    Con cfg.oraciones se agregan, detrás de los de la base, los artículos de las consultas por oración (`oraciones`: datos_de_oraciones) que no estén ya,
+    hasta cfg.tope_total por sección."""
+    base = _seleccion_base(por_consulta, cfg)
+    if not cfg.oraciones:
+        return base
+    presentes = {(d.metadata.get("norma"), _base(d.metadata.get("articulo", ""))) for d in base}
+    extra = [Document(page_content="", metadata={"norma": n, "articulo": a}) for n, a in _articulos_de_oraciones(oraciones, cfg) if (n, a) not in presentes]
+    return base + extra[:max(0, cfg.tope_total - len(base))]
+
+
+def _seleccion_base(por_consulta: list, cfg) -> list:
     mejores = {}
     for candidatos in por_consulta:
         for d, puntaje in _elegidos(candidatos, cfg):
@@ -220,10 +260,12 @@ def _mejor_puesto(listas: list, pares: set):
     return min(puestos) if puestos else None
 
 
-def analizar_recorte(oferta: str, trampas: list, secciones: list, datos_por_seccion: list) -> tuple:
+def analizar_recorte(oferta: str, trampas: list, secciones: list, datos_por_seccion: list, oraciones_por_seccion: list = None) -> tuple:
     """(filas, pares): una fila por trampa con el mejor puesto de su artículo (o equivalente) en la densa (k máximo), tras el reranker y en todo el índice,
-    y si entra con cada configuración; pares = {configuración: total de artículos a verificar en la oferta}. datos_por_seccion: salida de datos_de_consultas."""
+    y si entra con cada configuración; pares = {configuración: total de artículos a verificar en la oferta}. datos_por_seccion: salida de datos_de_consultas;
+    oraciones_por_seccion: salida de datos_de_oraciones por sección (sin ellos, las configuraciones con oraciones quedan iguales a su base)."""
     from evaluacion.evaluar import pares_trampa
+    oraciones_por_seccion = oraciones_por_seccion or [[] for _ in secciones]
     filas = []
     for t in trampas:
         i = seccion_de_trampa(t, secciones)
@@ -237,12 +279,13 @@ def analizar_recorte(oferta: str, trampas: list, secciones: list, datos_por_secc
             fila["puesto_densa"] = _mejor_puesto([[c.doc for c in cs] for cs in por_consulta], pares_t)
             fila["puesto_reranker"] = _mejor_puesto([[c.doc for c in sorted(cs, key=lambda c: c.reranker, reverse=True)] for cs in por_consulta], pares_t)
             for cfg in CONFIGURACIONES:
-                fila["entra"][cfg.nombre] = _mejor_puesto([seleccion_final(por_consulta, cfg)], pares_t) is not None
+                fila["entra"][cfg.nombre] = _mejor_puesto([seleccion_final(por_consulta, cfg, oraciones_por_seccion[i])], pares_t) is not None
             for clave in fila["puestos_indice"]:
                 puestos = [q["ranking"].index(clave) + 1 for q in consultas if clave in q["ranking"]]
                 fila["puestos_indice"][clave] = min(puestos) if puestos else None
         filas.append(fila)
-    pares = {c.nombre: sum(len(seleccion_final([q["candidatos"] for q in qs], c)) for qs in datos_por_seccion) for c in CONFIGURACIONES}
+    pares = {c.nombre: sum(len(seleccion_final([q["candidatos"] for q in qs], c, oraciones_por_seccion[i])) for i, qs in enumerate(datos_por_seccion))
+             for c in CONFIGURACIONES}
     return filas, pares
 
 
@@ -260,8 +303,35 @@ def decision_recorte(filas: list, pares_por_oferta: dict) -> dict:
 
 # --- Caché: los 30 candidatos densos con sus puntajes, por consulta, para derivar las configuraciones sin recalcular ---
 
-def a_cache(secciones_por_oferta: dict, datos_por_oferta: dict, fragmentos: dict) -> dict:
-    """Estructura JSON: por oferta y sección, una entrada por consulta con el hash de su texto, los candidatos (norma, artículo, puntajes) y el ranking completo."""
+def unidades_de_seccion(seccion: dict) -> list:
+    """Textos de las subsecciones (o la sección entera si no tiene): de cada una salen las oraciones."""
+    return [x for _, x in seccion["subsecciones"] if x.strip()] or [seccion["texto"]]
+
+
+def oraciones_de_seccion(seccion: dict) -> list:
+    """Las oraciones de la sección, segmentadas con numerar_oraciones (la del pipeline) en cada subsección. Solo texto de la oferta."""
+    return [texto for unidad in unidades_de_seccion(seccion) for _, texto in document_utils.numerar_oraciones(unidad)]
+
+
+def datos_de_oraciones(vector_db, oraciones: list, k: int = K_ORACION) -> list:
+    """Por oración, buscada en la densa sola (sin reranker): {'hash', 'con_cifras' (tiene algún dígito), 'articulos': [{norma, articulo, densa}]} con los
+    N_MAXIMO_ORACION primeros artículos distintos (sin preámbulos), en su orden."""
+    resultado = []
+    for oracion in oraciones:
+        vistos = {}
+        for d, distancia in vector_db.similarity_search_with_score(oracion[:config.SUBSECTION_QUERY_MAX_CHARS], k=k):
+            articulo = d.metadata.get("articulo", "")
+            if articulo == "preambulo":
+                continue
+            vistos.setdefault((d.metadata.get("norma"), _base(articulo)), -float(distancia))
+        resultado.append({"hash": _hash(oracion), "con_cifras": any(c.isdigit() for c in oracion),
+                          "articulos": [{"norma": n, "articulo": a, "densa": p} for (n, a), p in list(vistos.items())[:N_MAXIMO_ORACION]]})
+    return resultado
+
+
+def a_cache(secciones_por_oferta: dict, datos_por_oferta: dict, fragmentos: dict, oraciones_por_oferta: dict = None) -> dict:
+    """Estructura JSON (versión 2): por oferta y sección, una entrada por consulta con el hash de su texto, los candidatos (norma, artículo, puntajes) y el
+    ranking completo; los fragmentos de las trampas; y, por oferta y sección, los resultados de las consultas por oración."""
     ofertas = {}
     for oferta, secciones in secciones_por_oferta.items():
         ofertas[oferta] = {s["id"]: [{"hash": _hash(c), "ranking": q["ranking"],
@@ -269,7 +339,22 @@ def a_cache(secciones_por_oferta: dict, datos_por_oferta: dict, fragmentos: dict
                                                      for x in q["candidatos"]]}
                                      for c, q in zip(consultas_de_seccion(s), datos)]
                            for s, datos in zip(secciones, datos_por_oferta[oferta])}
-    return {"version": 1, "ofertas": ofertas, "fragmentos": fragmentos}
+    oraciones = {o: {s["id"]: entradas for s, entradas in zip(secciones_por_oferta[o], lista)} for o, lista in (oraciones_por_oferta or {}).items() if lista}
+    return {"version": 2, "ofertas": ofertas, "fragmentos": fragmentos, "oraciones": oraciones}
+
+
+def oraciones_desde_cache(cache: dict, oferta: str, secciones: list):
+    """Los resultados por oración guardados de la oferta, por sección; None si faltan o si el texto de la oferta cambió (hay que volver a buscarlos)."""
+    guardadas = (cache.get("oraciones") or {}).get(oferta)
+    if not guardadas:
+        return None
+    resultado = []
+    for s in secciones:
+        entradas, textos = guardadas.get(str(s["id"])), oraciones_de_seccion(s)
+        if entradas is None or len(entradas) != len(textos) or any(e["hash"] != _hash(t) for e, t in zip(entradas, textos)):
+            return None
+        resultado.append(entradas)
+    return resultado
 
 
 def datos_desde_cache(cache: dict, oferta: str, secciones: list) -> list:
@@ -330,7 +415,10 @@ def informe_recorte(filas: list, pares_por_oferta: dict, fragmentos: dict = None
         L.append(f"  {c.nombre:<19} ({c.k}, {c.top}, {c.tope}): {d['recall'][c.nombre]}/{d['n']} ({d['recall'][c.nombre] / d['n']:.0%})  |  pares: "
                  + ", ".join(f"{o} {p[c.nombre]}" for o, p in pares_por_oferta.items()) + f", total {d['pares'][c.nombre]}"
                  + ("" if c.nombre in d["elegibles"] else "  (supera el límite)"))
-    L += [f"  límite de pares: {d['limite']} (el doble de la actual)", "",
+    L += [f"  límite de pares: {d['limite']} (el doble de la actual)",
+          "  Notas: union_k20 usa el puntaje del reranker de los candidatos con puesto denso <= 20 (el puntaje de cada candidato no depende de los demás: es equivalente a reranquear solo esos 20).",
+          "  Las variantes *_oraciones_* suman, a la base, los N primeros artículos de la densa para cada oración de la subsección (sin reranker; solo texto de la oferta),",
+          f"  con tope {TOPE_CON_ORACIONES} por sección y prioridad para los de la base; «cifras» = oraciones con algún dígito.", "",
           "Decisión: " + (f"ADOPTAR «{d['adopta']}» (mayor Recall@artículo dentro del límite de pares; a igual recall, la de menos pares)."
                           if d["adopta"] else "MANTENER la actual; ninguna configuración dentro del límite de pares la supera y el techo se reporta como limitación.")]
     fuera = [f for f in filas if f["puesto_densa"] is None]
@@ -349,13 +437,25 @@ def informe_recorte(filas: list, pares_por_oferta: dict, fragmentos: dict = None
     return "\n".join(L)
 
 
+def _abrir_indice():
+    """Índice vectorial de la KB (carga el modelo de embeddings, no el reranker); None si no se puede."""
+    embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
+    vector_db = vector_db_manager.crear_o_cargar_chroma_db(
+        chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
+        embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP,
+        recrear_db_flag=False, collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True) if embedding_function else None
+    if not vector_db:
+        print("No se pudo cargar el índice de la KB por artículos.", file=sys.stderr)
+    return vector_db
+
+
 def main_recorte(argv=None) -> int:
     from evaluacion.evaluar import cargar_gt, pares_trampa
     p = argparse.ArgumentParser(prog="diagnostico_recuperacion recorte", description="Dónde se pierde el artículo: K, top y tope (sin LLM).")
     p.add_argument("--oferta", action="append", required=True, metavar="P1=ruta", help="oferta y su archivo (P1 y P2); repetible")
     p.add_argument("--csv", help="Ruta donde guardar el detalle por trampa")
     p.add_argument("--cache", default=ARCHIVO_CACHE, help=f"Archivo de caché (por defecto {ARCHIVO_CACHE})")
-    p.add_argument("--usar-cache", action="store_true", help="Deriva las configuraciones de la caché, sin cargar el índice ni el reranker")
+    p.add_argument("--usar-cache", action="store_true", help="Deriva las configuraciones de la caché; solo abre el índice (sin reranker) si le falta algo")
     args = p.parse_args(argv)
     rutas = dict(x.split("=", 1) for x in args.oferta)
     if set(rutas) != set(OFERTAS_DIAGNOSTICO) or not all(os.path.isfile(r) for r in rutas.values()):
@@ -370,6 +470,10 @@ def main_recorte(argv=None) -> int:
         secciones = document_utils.dividir_en_secciones(document_utils.extraer_texto_oferta(rutas[oferta]))
         secciones_por_oferta[oferta] = [s for s in secciones if not (config.EXCLUIR_INTRODUCCION and document_utils.es_introduccion(s))]
     trampas = {o: cargar_gt(o) for o in OFERTAS_DIAGNOSTICO}
+    claves = {_clave(n, a) for o in OFERTAS_DIAGNOSTICO for t in trampas[o] for n, a in pares_trampa(t)}
+
+    def buscar_oraciones(vector_db, ofertas):
+        return {o: [datos_de_oraciones(vector_db, oraciones_de_seccion(s)) for s in secciones_por_oferta[o]] for o in ofertas}
 
     if args.usar_cache:
         with open(args.cache, encoding="utf-8") as f:
@@ -380,29 +484,39 @@ def main_recorte(argv=None) -> int:
             print(e, file=sys.stderr)
             return 1
         fragmentos = cache.get("fragmentos") or {}
+        oraciones = {o: oraciones_desde_cache(cache, o, secciones_por_oferta[o]) for o in OFERTAS_DIAGNOSTICO}
+        refrescar = cache.get("version", 1) < 2          # la descripción de fragmentos de la versión 1 usaba un encabezado de artículo incorrecto
+        faltan = [o for o, v in oraciones.items() if v is None]
+        if refrescar or faltan:
+            print("La caché está incompleta" + (" (fragmentos de una versión anterior)" if refrescar else "") + (f" (sin consultas por oración de {', '.join(faltan)})" if faltan else "")
+                  + ": se abre el índice, sin reranker, para completarla.")
+            vector_db = _abrir_indice()
+            if not vector_db:
+                return 1
+            if refrescar:
+                fragmentos = info_fragmentos(vector_db.get(include=["documents", "metadatas"]), claves)
+            oraciones.update(buscar_oraciones(vector_db, faltan))
+            with open(args.cache, "w", encoding="utf-8") as f:
+                json.dump(a_cache(secciones_por_oferta, datos, fragmentos, oraciones), f, ensure_ascii=False)
+            print(f"Caché actualizada en {args.cache}")
     else:
-        embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
-        vector_db = vector_db_manager.crear_o_cargar_chroma_db(
-            chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
-            embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP,
-            recrear_db_flag=False, collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True) if embedding_function else None
+        vector_db = _abrir_indice()
         if not vector_db:
-            print("No se pudo cargar el índice de la KB por artículos.", file=sys.stderr)
             return 1
         modelo = rag_components._get_reranker_model(rag_components.RERANKER_MODEL_NAME)
         puntuar = lambda consulta, docs: [rag_components._normalizar_score(s) for s in modelo.score([(consulta, d.page_content) for d in docs])]
         en_chroma = vector_db.get(include=["documents", "metadatas"])
         total = len(en_chroma["ids"])
         datos = {o: [datos_de_consultas(vector_db, consultas_de_seccion(s), puntuar, total) for s in secciones_por_oferta[o]] for o in OFERTAS_DIAGNOSTICO}
-        claves = {_clave(n, a) for o in OFERTAS_DIAGNOSTICO for t in trampas[o] for n, a in pares_trampa(t)}
         fragmentos = info_fragmentos(en_chroma, claves)
+        oraciones = buscar_oraciones(vector_db, OFERTAS_DIAGNOSTICO)
         with open(args.cache, "w", encoding="utf-8") as f:
-            json.dump(a_cache(secciones_por_oferta, datos, fragmentos), f, ensure_ascii=False)
+            json.dump(a_cache(secciones_por_oferta, datos, fragmentos, oraciones), f, ensure_ascii=False)
         print(f"Caché guardada en {args.cache}")
 
     filas, pares_por_oferta = [], {}
     for oferta in OFERTAS_DIAGNOSTICO:
-        f, pares_por_oferta[oferta] = analizar_recorte(oferta, trampas[oferta], secciones_por_oferta[oferta], datos[oferta])
+        f, pares_por_oferta[oferta] = analizar_recorte(oferta, trampas[oferta], secciones_por_oferta[oferta], datos[oferta], oraciones[oferta])
         filas += f
     print(informe_recorte(filas, pares_por_oferta, fragmentos))
     if args.csv:
