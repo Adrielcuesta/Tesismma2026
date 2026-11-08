@@ -40,7 +40,7 @@ class Cadena:
 
 
 def _clasif(**campos):
-    base = dict(motivo="m", veredicto="DESVIO", condicion_critico=None, objeto_requisito="CUANTITATIVO_TECNICO",
+    base = dict(motivo="m", veredicto="DESVIO", objeto_requisito="CUANTITATIVO_TECNICO",
                 valor_ofertado="1", valor_exigido="2", unidad="unidades", tipo_limite="CANTIDAD",
                 dimension_impacto="Integridad", impacto=4, titulo="Apoyos insuficientes", enunciado="e", accion="a",
                 solicitud_oferente="s")
@@ -130,8 +130,8 @@ def test_brecha_nula_se_marca_y_se_clasifica_igual():
 
 def test_dos_articulos_sobre_las_mismas_oraciones_se_agrupan_con_clase_maxima():
     docs = [_doc(), _doc("NORM_03", "2.1", "Art. 2.1. IZAJE\nTexto del articulo inventado.")]
-    brechas, *_ = _correr([_clasif(), _clasif(objeto_requisito="OTRO_TECNICO", condicion_critico="b", valor_ofertado=None,
-                                              valor_exigido=None, tipo_limite=None, unidad=None, impacto=5, titulo="Otro")], docs)
+    brechas, *_ = _correr([_clasif(), _clasif(objeto_requisito="OTRO_TECNICO", practica_peligrosa=True, medida_ofrecida="1 unidad de apoyo",
+                                              valor_ofertado=None, valor_exigido=None, tipo_limite=None, unidad=None, impacto=5, titulo="Otro")], docs)
     assert [b["clase"] for b in brechas] == ["Mayor", "Crítico"]
     riesgos = m.agrupar(brechas, C)
     assert len(riesgos) == 1
@@ -174,11 +174,20 @@ def test_valor_en_texto():
 
 
 def test_esquema_normaliza_la_salida_del_modelo():
-    c = ClasificacionRiesgo.model_validate({"motivo": "m", "veredicto": "desvio", "condicion_critico": "B", "objeto_requisito": "otro tecnico",
-                                            "valor_ofertado": 1.5, "valor_exigido": "null", "dimension_impacto": "desempeno", "impacto": 3})
-    assert (c.veredicto, c.condicion_critico, c.objeto_requisito, c.valor_ofertado, c.valor_exigido, c.dimension_impacto) == \
-        ("DESVIO", "b", "OTRO_TECNICO", "1.5", None, "Desempeño o calidad")
+    c = ClasificacionRiesgo.model_validate({"motivo": "m", "veredicto": "desvio", "etapa_requisito": "posterior", "materia_3_2_a": "true",
+                                            "objeto_requisito": "otro tecnico", "valor_ofertado": 1.5, "valor_exigido": "null",
+                                            "valor_limite_excepcion": 2, "medida_ofrecida": "null", "dimension_impacto": "desempeno", "impacto": 3})
+    assert (c.veredicto, c.etapa_requisito, c.materia_3_2_a, c.objeto_requisito, c.valor_ofertado, c.valor_exigido, c.valor_limite_excepcion,
+            c.medida_ofrecida, c.dimension_impacto) == ("DESVIO", "POSTERIOR", True, "OTRO_TECNICO", "1.5", None, "2", None, "Desempeño o calidad")
     assert list(ClasificacionRiesgo.model_fields)[:2] == ["motivo", "veredicto"]   # el motivo va antes del veredicto
+    assert "condicion_critico" not in ClasificacionRiesgo.model_fields   # la calcula el código
+
+
+def test_el_esquema_tiene_los_hechos_entre_veredicto_y_objeto_requisito():
+    campos = list(ClasificacionRiesgo.model_fields)
+    assert campos[campos.index("veredicto") + 1:campos.index("objeto_requisito")] == [
+        "item_contenido_minimo", "etapa_requisito", "materia_3_2_a", "medida_ofrecida", "practica_peligrosa",
+        "valor_limite_excepcion", "valor_demanda_oferta"]
 
 
 def test_solicitud_agrupada_toma_tipo_y_plazo_del_componente_de_mayor_clase():
@@ -233,7 +242,7 @@ def _bloque_del_documento(titulo):
 
 
 @pytest.mark.parametrize("titulo,plantilla,variables", [
-    ("Texto del prompt", "PROMPT_CLASIFICACION_STR", ["criterios", "articulo", "seccion_numerada", "verificacion"]),
+    ("Texto del prompt", "PROMPT_CLASIFICACION_STR", ["criterios", "items_contenido_minimo", "articulo", "seccion_numerada", "verificacion"]),
     ("Prompt del comentario general", "PROMPT_COMENTARIO_GENERAL_STR", ["decision", "conteo_nivel", "conteo_clase", "registro"]),
 ])
 def test_los_prompts_son_identicos_a_los_del_documento(titulo, plantilla, variables):
@@ -247,12 +256,166 @@ def test_el_prompt_no_contiene_ejemplos_de_las_ofertas():
     assert [p for p in prohibidas if p in rag_components.PROMPT_CLASIFICACION_STR] == []
 
 
+def test_el_prompt_no_trae_escritos_los_items_del_art_2_6():
+    """Los ítems llegan por la variable {items_contenido_minimo}, desde el JSON de la empresa; no pueden estar en el texto del prompt."""
+    t = rag_components.PROMPT_CLASIFICACION_STR
+    assert [i["item"] for i in C["contenido_minimo_oferta"]["items"] if i["item"] in t] == []
+
+
 def test_el_prompt_se_renderiza_con_sus_cuatro_variables():
     t = rag_components.PROMPT_CLASIFICACION_STR
-    for v in ("{criterios}", "{articulo}", "{seccion_numerada}", "{verificacion}"):
+    for v in ("{criterios}", "{items_contenido_minimo}", "{articulo}", "{seccion_numerada}", "{verificacion}"):
         assert v in t
     texto = rag_components.crear_cadena_clasificacion.__globals__["PromptTemplate"](
-        template=t, input_variables=["criterios", "articulo", "seccion_numerada", "verificacion"]).format(
-        criterios="CRIT", articulo="ART", seccion_numerada="SEC", verificacion="VER")
-    assert '{"motivo": "...", "veredicto": "...", "condicion_critico": null' in texto and "{{" not in texto
-    assert texto.index("CRIT") < texto.index("ART") < texto.index("SEC") < texto.index("VER")
+        template=t, input_variables=["criterios", "items_contenido_minimo", "articulo", "seccion_numerada", "verificacion"]).format(
+        criterios="CRIT", items_contenido_minimo="ITEMS", articulo="ART", seccion_numerada="SEC", verificacion="VER")
+    assert '{"motivo": "...", "veredicto": "...", "item_contenido_minimo": null, "etapa_requisito": null' in texto and "{{" not in texto
+    assert "condicion_critico" not in texto
+    assert texto.index("CRIT") < texto.index("=== ÍTEMS DEL ART. 2.6 ===\nITEMS") < texto.index("ART") < texto.index("SEC") < texto.index("VER")
+    assert texto.index("=== CRITERIOS DE LA EMPRESA ===\nCRIT\n\n=== ÍTEMS DEL ART. 2.6 ===") >= 0
+
+
+# --- B5: la condición del Art. 3.2 y el filtro de información faltante los decide el código ---
+
+ITEM_CRITICO = next(i["item"] for i in C["contenido_minimo_oferta"]["items"] if i["materia_critica"])
+ITEM_NO_CRITICO = next(i["item"] for i in C["contenido_minimo_oferta"]["items"] if not i["materia_critica"])
+SECCION_B5 = {"id": "3", "titulos": ["3 Alcance"], "subsecciones": [("3.1 Apoyos", "x")],
+              "texto": "La oferta propone 5 apoyos para una carga declarada de 8 apoyos y usa una cuña de madera para nivelar con hasta 3 mm."}
+
+
+def _correr_b5(clasif, texto_articulo="Art. 4.2. APOYOS\nSe exigen 10 apoyos. Se admite apartarse hasta 4 mm."):
+    cv, cc = Cadena(VERIF), Cadena(_clasif(**clasif))
+    brechas, alertas, registro = _verificar_seccion(SECCION_B5, [_doc(texto=texto_articulo)], cv, cc, cc, cc, LIN, {}, {"verificacion": 0, "clasificacion": 0})
+    return brechas, registro
+
+
+# Cada fila: veredicto con los hechos del modelo -> (clase, regla, condición)
+def test_regla_3_2_c_valor_fuera_del_limite_de_la_excepcion():
+    texto = "Art. 4.2. APOYOS\nSe exigen 10 apoyos. Se admite hasta 6 apoyos."
+    brechas, _ = _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", valor_limite_excepcion="6"), texto)
+    b = brechas[0]
+    assert (b["clase"], b["regla"], b["condicion_critico"]) == ("Crítico", "3.2.c", "c") and any(x.startswith("3.2.c") for x in b["marcas"])
+
+
+def test_regla_3_2_d_oferta_que_no_cubre_su_propia_demanda():
+    brechas, _ = _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", valor_demanda_oferta="8"))
+    b = brechas[0]
+    assert (b["clase"], b["regla"], b["condicion_critico"]) == ("Crítico", "3.2.d", "d") and any(x.startswith("3.2.d") for x in b["marcas"])
+
+
+def test_regla_3_2_d_para_maximo_compara_al_reves():
+    brechas, _ = _correr_b5(dict(valor_ofertado="8", valor_exigido="10", tipo_limite="MAXIMO", valor_demanda_oferta="5"))
+    assert brechas[0]["regla"] == "3.2.d"
+    brechas, _ = _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MAXIMO", valor_demanda_oferta="8"))
+    assert brechas[0]["condicion_critico"] is None
+
+
+def test_regla_3_2_b_practica_peligrosa_con_medida_citada():
+    brechas, _ = _correr_b5(dict(objeto_requisito="OTRO_TECNICO", practica_peligrosa=True, medida_ofrecida="usa una cuña de madera para nivelar",
+                                 valor_ofertado=None, valor_exigido=None, tipo_limite=None))
+    b = brechas[0]
+    assert (b["clase"], b["regla"], b["condicion_critico"]) == ("Crítico", "3.2.b", "b") and any(x.startswith("3.2.b") for x in b["marcas"])
+
+
+def test_regla_3_2_a_materia_sin_medida():
+    brechas, _ = _correr_b5(dict(objeto_requisito="OTRO_TECNICO", materia_3_2_a=True, medida_ofrecida=None,
+                                 valor_ofertado=None, valor_exigido=None, tipo_limite=None))
+    b = brechas[0]
+    assert (b["clase"], b["regla"], b["condicion_critico"]) == ("Crítico", "3.2.a", "a") and any(x.startswith("3.2.a") for x in b["marcas"])
+
+
+def test_sin_hechos_que_cumplan_no_hay_condicion_y_siguen_las_reglas_de_clase():
+    brechas, _ = _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", materia_3_2_a=False, practica_peligrosa=False,
+                                 medida_ofrecida="usa una cuña de madera para nivelar"))
+    assert (brechas[0]["clase"], brechas[0]["regla"], brechas[0]["condicion_critico"]) == ("Mayor", "3.3.a", None)
+
+
+def test_orden_c_antes_que_d_antes_que_b_antes_que_a():
+    todo = dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", materia_3_2_a=True, practica_peligrosa=True,
+                medida_ofrecida="usa una cuña de madera para nivelar")
+    texto = "Art. 4.2. APOYOS\nSe exigen 10 apoyos. Se admite hasta 6 apoyos."
+    assert _correr_b5({**todo, "valor_limite_excepcion": "6", "valor_demanda_oferta": "8"}, texto)[0][0]["condicion_critico"] == "c"
+    assert _correr_b5({**todo, "valor_demanda_oferta": "8"})[0][0]["condicion_critico"] == "d"
+    assert _correr_b5(todo)[0][0]["condicion_critico"] == "b"
+    assert _correr_b5({**todo, "practica_peligrosa": False, "medida_ofrecida": None})[0][0]["condicion_critico"] == "a"
+
+
+# Casos negativos: lo que el modelo declara y no está en el texto se ignora y se marca
+
+def test_practica_peligrosa_sin_cita_no_es_3_2_b():
+    brechas, _ = _correr_b5(dict(objeto_requisito="OTRO_TECNICO", practica_peligrosa=True, medida_ofrecida="Se usa un andamio de acero",
+                                 valor_ofertado=None, valor_exigido=None, tipo_limite=None))
+    b = brechas[0]
+    assert b["condicion_critico"] is None and (b["clase"], b["regla"]) == ("Mayor", "3.3.c")
+    assert f"{clasificacion.MARCA_VALOR_NO_VERIFICADO}: medida_ofrecida" in b["marcas"]
+
+
+def test_medida_declarada_pero_no_verificada_no_habilita_3_2_a():
+    brechas, _ = _correr_b5(dict(objeto_requisito="OTRO_TECNICO", materia_3_2_a=True, medida_ofrecida="Se usa un andamio de acero",
+                                 valor_ofertado=None, valor_exigido=None, tipo_limite=None))
+    assert brechas[0]["condicion_critico"] is None
+
+
+def test_limite_de_excepcion_que_no_esta_en_el_articulo_se_ignora():
+    brechas, _ = _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", valor_limite_excepcion="7"))
+    b = brechas[0]
+    assert b["condicion_critico"] is None and f"{clasificacion.MARCA_VALOR_NO_VERIFICADO}: valor_limite_excepcion" in b["marcas"]
+
+
+def test_demanda_que_no_esta_en_la_oferta_se_ignora():
+    brechas, _ = _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", valor_demanda_oferta="9"))
+    b = brechas[0]
+    assert b["condicion_critico"] is None and f"{clasificacion.MARCA_VALOR_NO_VERIFICADO}: valor_demanda_oferta" in b["marcas"]
+
+
+def test_valor_ofertado_dentro_del_limite_o_que_cubre_la_demanda_no_es_condicion():
+    texto = "Art. 4.2. APOYOS\nSe exigen 10 apoyos. Se admite hasta 4 apoyos."
+    assert _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", valor_limite_excepcion="4"), texto)[0][0]["condicion_critico"] is None
+    assert _correr_b5(dict(valor_ofertado="5", valor_exigido="10", tipo_limite="MINIMO", valor_demanda_oferta="3"))[0][0]["condicion_critico"] is None
+
+
+# Información faltante
+
+def _faltante(**campos):
+    return dict(veredicto="INFORMACION_FALTANTE", objeto_requisito="OTRO_TECNICO", valor_ofertado=None, valor_exigido=None, tipo_limite=None,
+                unidad=None, etapa_requisito="OFERTA", **campos)
+
+
+def test_informacion_faltante_de_item_critico_es_mayor_y_de_otro_menor():
+    b, _ = _correr_b5(_faltante(item_contenido_minimo=ITEM_CRITICO))
+    assert (b[0]["clase"], b[0]["regla"], b[0]["condicion_critico"]) == ("Mayor", "3.6.4", "a") and any(x.startswith("3.6.4") for x in b[0]["marcas"])
+    b, _ = _correr_b5(_faltante(item_contenido_minimo=ITEM_NO_CRITICO))
+    assert (b[0]["clase"], b[0]["regla"], b[0]["condicion_critico"]) == ("Menor", "3.6.4", None)
+
+
+def test_informacion_faltante_acepta_el_item_normalizado_y_con_su_disciplina():
+    item = next(i for i in C["contenido_minimo_oferta"]["items"] if i["materia_critica"])
+    for texto in (item["item"].upper(), f"{item['disciplina']}: {item['item']}", f"  {item['item']}. "):
+        assert _correr_b5(_faltante(item_contenido_minimo=texto))[0][0]["clase"] == "Mayor"
+
+
+@pytest.mark.parametrize("item", ["NINGUNO", None, "un dato que no está en la lista"])
+def test_informacion_faltante_sin_item_del_art_2_6_pasa_a_no_aplica_regla_2_5(item):
+    brechas, registro = _correr_b5(_faltante(item_contenido_minimo=item))
+    assert brechas == [] and registro[-1]["estado"] == "no_es_riesgo" and registro[-1]["regla"] == "2.5"
+
+
+def test_informacion_faltante_de_etapa_posterior_pasa_a_no_aplica_regla_2_7_c():
+    brechas, registro = _correr_b5({**_faltante(item_contenido_minimo=ITEM_CRITICO), "etapa_requisito": "POSTERIOR"})
+    assert brechas == [] and registro[-1]["estado"] == "no_es_riesgo" and registro[-1]["regla"] == "2.7.c"
+
+
+def test_el_modelo_ya_no_decide_la_clase_de_la_informacion_faltante():
+    # aunque declare materia_3_2_a, la clase sale del ítem del Art. 2.6
+    b, _ = _correr_b5(_faltante(item_contenido_minimo=ITEM_NO_CRITICO, materia_3_2_a=True))
+    assert b[0]["clase"] == "Menor"
+
+
+def test_motor_comparaciones_y_texto_de_items():
+    assert m.fuera_de_limite("5", "6", "MINIMO") and not m.fuera_de_limite("6", "6", "MINIMO")
+    assert m.fuera_de_limite("7", "6", "MAXIMO") and m.fuera_de_limite("-3,5", "3", "TOLERANCIA") and not m.fuera_de_limite("2", "3", "TOLERANCIA")
+    assert not m.fuera_de_limite("x", "6", "MINIMO") and not m.fuera_de_limite("5", "6", None)
+    assert m.no_cubre_demanda("5", "8", "CANTIDAD") and m.no_cubre_demanda("5", "8", "TOLERANCIA") and not m.no_cubre_demanda("8", "8", "MINIMO")
+    assert m.no_cubre_demanda("9", "8", "MAXIMO") and not m.no_cubre_demanda("5", "8", "FRECUENCIA") and not m.no_cubre_demanda("a", "8", "MINIMO")
+    lineas = m.items_contenido_minimo_texto(C).split("\n")
+    assert len(lineas) == len(C["contenido_minimo_oferta"]["items"]) and all(l.startswith("- ") and ": " in l for l in lineas)

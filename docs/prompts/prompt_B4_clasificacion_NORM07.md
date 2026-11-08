@@ -122,7 +122,7 @@ Hoy cada "Incumple" de la verificación pasa a una llamada de redacción que inv
 1. En `schemas.py`, el esquema `ClasificacionRiesgo`. **El orden de los campos importa: el motivo va antes del veredicto.**
    - `motivo`: str, hasta 30 palabras.
    - `veredicto`: Literal["DESVIO", "EXCEPCION_NO_ACREDITADA", "INFORMACION_FALTANTE", "NO_APLICA", "CUMPLE", "ALERTA"]
-   - `condicion_critico`: Optional[Literal["a", "b", "c", "d"]]
+   - (B5) `condicion_critico` se reemplazó por los hechos `item_contenido_minimo`, `etapa_requisito`, `materia_3_2_a`, `medida_ofrecida`, `practica_peligrosa`, `valor_limite_excepcion` y `valor_demanda_oferta`; la condición la calcula el código.
    - `objeto_requisito`: Optional[Literal[...los 7 valores...]]
    - `valor_ofertado`, `valor_exigido`: Optional[str], copiados tal cual figuran.
    - `unidad`: Optional[str]
@@ -173,6 +173,9 @@ Sos evaluador técnico de ofertas de la empresa. Aplicás los criterios de riesg
 === CRITERIOS DE LA EMPRESA ===
 {criterios}
 
+=== ÍTEMS DEL ART. 2.6 ===
+{items_contenido_minimo}
+
 === ARTÍCULO DE LA NORMATIVA ===
 {articulo}
 
@@ -190,7 +193,16 @@ Un verificador automático marcó este par como Incumple o Revisar. Puede estar 
    - Distinguí desvío de excepción no acreditada con los Art. 2.3 y 2.4.
    - Usá ALERTA solo en el caso del Art. 2.9.
 2. Si el veredicto es DESVIO, EXCEPCION_NO_ACREDITADA o INFORMACION_FALTANTE, completá:
-   a) condicion_critico: la letra del inciso del Art. 3.2 que se cumple (a, b, c o d), o null si no se cumple ninguno. Si la protección existe aunque sea insuficiente, no es "a". Para INFORMACION_FALTANTE, "a" indica que el dato faltante corresponde a una materia del Art. 3.2.a. Tené en cuenta el Art. 3.6.2.
+   a) Para INFORMACION_FALTANTE:
+      item_contenido_minimo: el ítem de la lista del Art. 2.6 al que corresponde el dato que falta, copiado tal cual de la lista; si no corresponde a ninguno, "NINGUNO".
+      etapa_requisito: "OFERTA" si el dato debe presentarse con la oferta; "POSTERIOR" si corresponde a ejecución, registros de obra, dossier, conforme a obra, actas o recepción.
+      Para DESVIO o EXCEPCION_NO_ACREDITADA:
+      materia_3_2_a: true si el requisito trata de alguna de las materias enumeradas en el Art. 3.2.a; si no, false.
+      medida_ofrecida: la frase de la oferta que propone algo para cumplir el requisito, copiada tal cual, aunque sea insuficiente. null solo si la oferta no propone nada.
+      practica_peligrosa: true solo si lo que propone la oferta crea por sí mismo el peligro que el requisito previene (Art. 3.2.b). false si solo es insuficiente o distinto de lo exigido.
+      valor_limite_excepcion: si el artículo admite apartarse del valor general hasta un límite, ese límite copiado del artículo; si no, null.
+      valor_demanda_oferta: si la propia oferta declara la carga o el uso que el valor ofertado debe cubrir, ese valor copiado de la oferta; si no, null.
+      No decidas si el desvío es Crítico: lo calcula el sistema con estos datos.
    b) objeto_requisito, uno de:
       DOCUMENTAL_PROCEDIMIENTO: requisito del tipo descrito en el Art. 3.4.c.
       RESERVA_ERGONOMIA_EFICIENCIA: requisito del tipo descrito en el Art. 3.4.d.
@@ -210,7 +222,7 @@ Un verificador automático marcó este par como Incumple o Revisar. Puede estar 
 3. Con CUMPLE, NO_APLICA o ALERTA completá solo motivo y veredicto; el resto va en null.
 
 Respondé SOLO con este JSON, en este orden:
-{"motivo": "...", "veredicto": "...", "condicion_critico": null, "objeto_requisito": null, "valor_ofertado": null, "valor_exigido": null, "unidad": null, "tipo_limite": null, "dimension_impacto": null, "impacto": null, "titulo": null, "enunciado": null, "accion": null, "solicitud_oferente": null}
+{"motivo": "...", "veredicto": "...", "item_contenido_minimo": null, "etapa_requisito": null, "materia_3_2_a": null, "medida_ofrecida": null, "practica_peligrosa": null, "valor_limite_excepcion": null, "valor_demanda_oferta": null, "objeto_requisito": null, "valor_ofertado": null, "valor_exigido": null, "unidad": null, "tipo_limite": null, "dimension_impacto": null, "impacto": null, "titulo": null, "enunciado": null, "accion": null, "solicitud_oferente": null}
 ```
 
 ## Etapa 4. Dashboard

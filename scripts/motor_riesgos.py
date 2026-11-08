@@ -54,12 +54,46 @@ def brecha_relativa(ofertado, exigido, tipo_limite):
     return None
 
 
+def fuera_de_limite(ofertado, limite, tipo_limite):
+    """Art. 3.2.c. True si el valor ofertado queda fuera del límite: MINIMO y CANTIDAD por debajo, MAXIMO y FRECUENCIA por encima,
+    TOLERANCIA con mayor amplitud. False si algún valor no es un número o el tipo no se conoce."""
+    o, l = _numero(ofertado), _numero(limite)
+    if o is None or l is None:
+        return False
+    if tipo_limite in ("MINIMO", "CANTIDAD"):
+        return o < l
+    if tipo_limite in ("MAXIMO", "FRECUENCIA"):
+        return o > l
+    if tipo_limite == "TOLERANCIA":
+        return abs(o) > abs(l)
+    return False
+
+
+def no_cubre_demanda(ofertado, demanda, tipo_limite):
+    """Art. 3.2.d. True si el valor ofertado no cubre la demanda que declara la propia oferta: MINIMO, CANTIDAD y TOLERANCIA
+    con ofertado < demanda; MAXIMO con ofertado > demanda. False si algún valor no es un número o el tipo no aplica."""
+    o, d = _numero(ofertado), _numero(demanda)
+    if o is None or d is None:
+        return False
+    if tipo_limite in ("MINIMO", "CANTIDAD", "TOLERANCIA"):
+        return o < d
+    if tipo_limite == "MAXIMO":
+        return o > d
+    return False
+
+
+def items_contenido_minimo_texto(criterios):
+    """Lista de ítems del Art. 2.6 para el prompt: '- <disciplina>: <item>' por línea."""
+    return "\n".join(f"- {i['disciplina']}: {i['item']}" for i in criterios["contenido_minimo_oferta"]["items"])
+
+
 # --- Clase ---
 
 def clase(fuente, condicion_critico, objeto_requisito, brecha, riesgo_personas, criterios):
     """Art. 3.6.1. Devuelve (clase, regla, marcas): se evalúa en orden y se adopta la primera regla que se cumple.
     marcas: ['brecha nula: revisar veredicto'] si la brecha calculada es 0 (el veredicto genera riesgo, pero lo ofertado cumple); se clasifica igual.
-    Información faltante: Mayor si condicion_critico == 'a', Menor si no (Art. 3.6.4), sin pasar por la tabla.
+    condicion_critico llega ya calculada por el código (clasificacion.py), no la elige el modelo.
+    Información faltante: Mayor si condicion_critico == 'a' (el ítem del Art. 2.6 es materia crítica), Menor si no (Art. 3.6.4), sin pasar por la tabla.
     Excepción no acreditada: mismas reglas que el desvío (Art. 3.6.5)."""
     if fuente not in FUENTES:
         raise ValueError(f"fuente desconocida: {fuente!r}")

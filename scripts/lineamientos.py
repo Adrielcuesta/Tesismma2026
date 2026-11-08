@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 ARCHIVO_CRITERIOS = "criterios_empresa.json"
 # Claves obligatorias de criterios_empresa.json. 'documento_criterios' nombra el documento de criterios (p. ej. NORM_07);
 # 'texto_para_el_modelo' declara qué capítulos y artículos de ese documento se le entregan al modelo.
-CLAVES_REQUERIDAS = ("documento_criterios", "texto_para_el_modelo", "probabilidad_por_fuente", "umbral_brecha_relativa",
+CLAVES_REQUERIDAS = ("documento_criterios", "texto_para_el_modelo", "contenido_minimo_oferta", "probabilidad_por_fuente", "umbral_brecha_relativa",
                      "rango_impacto_por_clase", "matriz_nivel", "consistencia", "decision_aceptabilidad", "estrategia_por_nivel",
                      "responsables", "categorias_rbs", "solicitudes_al_oferente")
 CLAVES_TEXTO_MODELO = ("capitulos", "articulos")

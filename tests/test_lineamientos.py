@@ -91,6 +91,12 @@ def test_json_incompleto_da_error(tmp_path):
         lineamientos.cargar_lineamientos(_carpeta(tmp_path, {**CRITERIOS, "texto_para_el_modelo": {"articulos": []}}))
 
 
+def test_json_sin_contenido_minimo_de_la_oferta_da_error(tmp_path):
+    sin_bloque = {k: v for k, v in CRITERIOS.items() if k != "contenido_minimo_oferta"}
+    with pytest.raises(lineamientos.LineamientosError, match="contenido_minimo_oferta"):
+        lineamientos.cargar_lineamientos(_carpeta(tmp_path, sin_bloque))
+
+
 def test_documento_de_criterios_ausente_da_error(tmp_path):
     carpeta = _carpeta(tmp_path, {**CRITERIOS, "documento_criterios": "NORM_09"})
     with pytest.raises(lineamientos.LineamientosError, match="NORM_09"):

@@ -123,6 +123,14 @@ OLLAMA_MODEL = "qwen3:8b"
 OLLAMA_NUM_CTX = 16384
 # Reproducibilidad: temperature=0 y esta semilla en todas las llamadas a ChatOllama
 OLLAMA_SEED = 42
+# Tope de tokens de salida (num_predict) por llamada: verificación y clasificación 1024, comentario general 400.
+# Sin tope, con format JSON el modelo puede quedar generando hasta llenar el contexto. Las listas del modo lista no lo usan.
+OLLAMA_NUM_PREDICT = 1024
+OLLAMA_NUM_PREDICT_COMENTARIO = 400
+# Modo lista (sin_rag, rag_seccion): la lista de riesgos de una sección es más larga que un JSON de verificación.
+OLLAMA_NUM_PREDICT_LISTA = 2048
+# Timeout (s) por llamada a Ollama; si se agota o la respuesta se corta por num_predict: un reintento y luego se descarta el par.
+OLLAMA_TIMEOUT_S = 240
 # Prueba controlada: razonamiento de Qwen3 SOLO en las llamadas de verificación (redacción y resumen siguen sin él).
 # Muestreo recomendado por Qwen para thinking; misma semilla.
 THINKING_VERIFICACION = False

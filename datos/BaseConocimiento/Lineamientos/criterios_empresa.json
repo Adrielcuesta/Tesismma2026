@@ -11,6 +11,106 @@
       "4.3"
     ]
   },
+  "contenido_minimo_oferta": {
+    "articulo_origen": "NORM_07 Art. 2.6 (ítems) y Art. 3.2.a. materia_critica = true cuando la falta del dato impide verificar la seguridad de personas o la integridad estructural o de equipos (materias del Art. 3.2.a); false cuando afecta durabilidad, desempeño o eficiencia. Se usa en el Art. 3.6.4.",
+    "items": [
+      {
+        "disciplina": "Obra civil",
+        "item": "Clase de hormigón",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Obra civil",
+        "item": "Contenido de cemento y relación agua/cemento",
+        "materia_critica": false
+      },
+      {
+        "disciplina": "Obra civil",
+        "item": "Recubrimiento en zonas expuestas a aceites o refrigerantes",
+        "materia_critica": false
+      },
+      {
+        "disciplina": "Obra civil",
+        "item": "Plazo de curado previo a la puesta en carga",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Obra civil",
+        "item": "Método de contención de las excavaciones que la norma exija contener",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Obra civil",
+        "item": "Tipo de apoyo de la máquina (fundación nueva o piso existente con su justificación)",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Obra civil",
+        "item": "Relación de masas o análisis dinámico de bancadas para máquinas con fuerzas alternas",
+        "materia_critica": false
+      },
+      {
+        "disciplina": "Instalación eléctrica",
+        "item": "Corriente de cortocircuito en el punto de instalación y poder de corte ofrecido",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Instalación eléctrica",
+        "item": "Caída de tensión",
+        "materia_critica": false
+      },
+      {
+        "disciplina": "Instalación eléctrica",
+        "item": "Sección del conductor de protección",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Instalación eléctrica",
+        "item": "Grado IP de tableros",
+        "materia_critica": false
+      },
+      {
+        "disciplina": "Instalación eléctrica",
+        "item": "Protección diferencial de tomas",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Izaje",
+        "item": "Para cada izaje crítico: peso bruto suspendido, equipo, radio, capacidad de tabla, utilización y esquema de eslingado",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Vía y gálibos",
+        "item": "Tolerancias de trocha y de nivelación propuestas",
+        "materia_critica": false
+      },
+      {
+        "disciplina": "Vía y gálibos",
+        "item": "Distancias libres a obstáculos fijos",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Montaje",
+        "item": "Tolerancia de nivelación de la máquina",
+        "materia_critica": false
+      },
+      {
+        "disciplina": "Montaje",
+        "item": "Tipo y resistencia del grout",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Montaje",
+        "item": "Procedimiento y objetivo de limpieza de circuitos hidráulicos con válvulas proporcionales o servoválvulas",
+        "materia_critica": true
+      },
+      {
+        "disciplina": "Pruebas",
+        "item": "Número y tipo de unidades del SAT, condición de carga y criterio de recepción",
+        "materia_critica": true
+      }
+    ]
+  },
   "probabilidad_por_fuente": {
     "articulo_origen": "NORM_07 Art. 4.2",
     "valores": {

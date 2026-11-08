@@ -6,6 +6,7 @@ import json
 import re
 import time
 import datetime
+import httpx
 from pydantic import ValidationError
 from typing import Optional
 
@@ -149,6 +150,72 @@ def _unir_y_deduplicar(riesgos: list) -> list:
     return unidos
 
 
+def _eval_count(mensaje):
+    """Tokens generados en la llamada (eval_count de Ollama); None si el mensaje no lo informa."""
+    return (getattr(mensaje, "response_metadata", None) or {}).get("eval_count")
+
+
+def _estadisticas_tokens(llamadas):
+    """{tipo de llamada: {'n', 'max', 'promedio'}} de los eval_count guardados en llamadas['eval_count']."""
+    return {tipo: {"n": len(v), "max": max(v), "promedio": round(sum(v) / len(v), 1)} for tipo, v in llamadas.get("eval_count", {}).items() if v}
+
+
+class LlamadaFallida(Exception):
+    """El modelo no respondió en el tiempo límite o la respuesta se cortó por num_predict, también tras el reintento."""
+
+
+_FALLOS_DE_TIEMPO = (LlamadaFallida, httpx.TimeoutException, TimeoutError)
+MOTIVO_TIEMPO_AGOTADO = "el modelo no respondió en el tiempo límite"
+
+
+def _invocar(cadena, entrada, etiqueta, llamadas, clave):
+    """Una llamada al modelo con UN reintento si se agota el tiempo o la respuesta se corta por num_predict (done_reason 'length').
+    Cuenta cada intento en llamadas[clave], cada fallo en llamadas['fallidas'] y guarda eval_count en llamadas['eval_count'][clave]. Si el segundo intento también falla, levanta LlamadaFallida."""
+    causa = ""
+    for intento in (1, 2):
+        llamadas[clave] += 1
+        try:
+            mensaje = cadena.invoke(entrada)
+        except (httpx.TimeoutException, TimeoutError) as e:
+            causa = f"tiempo agotado ({type(e).__name__})"
+        else:
+            if _eval_count(mensaje) is not None:
+                llamadas.setdefault("eval_count", {}).setdefault(clave, []).append(_eval_count(mensaje))
+            if (getattr(mensaje, "response_metadata", None) or {}).get("done_reason") == "length":
+                causa = "respuesta cortada por num_predict"
+            else:
+                return mensaje
+        llamadas["fallidas"] = llamadas.get("fallidas", 0) + 1
+        logger.warning(f"{etiqueta}: {causa}; " + ("se reintenta una vez." if intento == 1 else "se descarta el par."))
+    raise LlamadaFallida(causa)
+
+
+def _alerta_sin_respuesta(seccion, textos, norma, articulo, ids):
+    """Alerta de un par que el modelo no respondió: cita las oraciones indicadas y se ubica en la subsección de la primera."""
+    primera = rag_components.normalizar_para_comparar(textos[ids[0]])
+    subsecciones = seccion["subsecciones"]
+    seccion_oferta = next((titulo for titulo, texto in subsecciones if primera in rag_components.normalizar_para_comparar(texto)),
+                          subsecciones[0][0] if subsecciones else "")
+    return {"seccion": seccion["id"], "seccion_oferta": seccion_oferta, "norma": norma, "articulo": articulo, "oraciones": ids,
+            "cita": " ".join(textos[i] for i in ids), "motivo": MOTIVO_TIEMPO_AGOTADO, "estado": "tiempo_agotado"}
+
+
+def _generar_lista(cadena, entrada, llm, id_sec, llamadas):
+    """Modo lista: UNA llamada por sección con un reintento ante timeout o corte por largo. Devuelve (riesgos, mensaje).
+    Si vuelve a fallar, la sección queda sin riesgos (mensaje None) con una advertencia y la corrida sigue."""
+    raw = None
+    try:
+        mensaje = _invocar(cadena, entrada, f"{id_sec} (lista de riesgos)", llamadas, "lista")
+        raw = getattr(mensaje, "content", mensaje)
+        return _parsear_respuesta_llm(raw, llm).riesgos_identificados, mensaje
+    except _FALLOS_DE_TIEMPO:
+        logger.warning(f"{id_sec}: la sección queda sin riesgos, el modelo no respondió en el tiempo límite.")
+        return [], None
+    except (json.JSONDecodeError, ValidationError) as e:
+        logger.error(f"Respuesta del LLM para {id_sec} (string crudo):\n---INICIO---\n{raw}\n---FIN---")
+        raise AnalisisError(f"La respuesta del modelo para la sección {id_sec} no cumplió el formato JSON ni tras reintentar: {e}") from e
+
+
 def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, llm_clasif, lin, t_sec, llamadas):
     """Modo verificación de una sección: una llamada por fragmento (veredicto), validación por código, y una llamada de
     clasificación (según los lineamientos de la empresa) por cada Incumple o Revisar válido. `lin` es el resultado de
@@ -156,41 +223,52 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
     id_sec = seccion["id"]
     oraciones = document_utils.numerar_oraciones(seccion["texto"])
     seccion_numerada = rag_components.formatear_oraciones(oraciones)
-    registro, pendientes = [], []
+    registro, pendientes, brechas, alertas = [], [], [], []
+    textos = dict(oraciones)
 
     t0 = time.perf_counter()
     for d in docs:
         meta = {"seccion": id_sec, "norma": d.metadata.get("norma", ""), "articulo": str(d.metadata.get("articulo", ""))}
-        mensaje = cadena_verif.invoke({"seccion_numerada": seccion_numerada, "articulo": rag_components.formatear_articulo(d)})
-        llamadas["verificacion"] += 1
-        razon = {"razonamiento": _razonamiento(mensaje)} if config.THINKING_VERIFICACION else {}
         try:
+            mensaje = _invocar(cadena_verif, {"seccion_numerada": seccion_numerada, "articulo": rag_components.formatear_articulo(d)},
+                               f"{id_sec} {meta['norma']} Art. {meta['articulo']} (verificación)", llamadas, "verificacion")
+            razon = {"razonamiento": _razonamiento(mensaje)} if config.THINKING_VERIFICACION else {}
             original = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_verif, VerificacionArticulo)
+        except _FALLOS_DE_TIEMPO:
+            # no hay oraciones identificadas: el par se verificó contra toda la sección, que es la cita
+            registro.append({**meta, "veredicto": None, "oraciones": [], "estado": "tiempo_agotado", "motivo": MOTIVO_TIEMPO_AGOTADO})
+            if textos:
+                alertas.append(_alerta_sin_respuesta(seccion, textos, meta["norma"], meta["articulo"], list(textos)))
+            continue
         except (json.JSONDecodeError, ValidationError) as e:
             logger.warning(f"{id_sec} {meta['norma']} Art. {meta['articulo']}: verificación con formato inválido tras reintentar, se descarta: {e}")
-            registro.append({**meta, "veredicto": None, "oraciones": [], "estado": "descartada", "motivo": f"formato inválido tras reintentar: {str(e)[:200]}", **razon})
+            registro.append({**meta, "veredicto": None, "oraciones": [], "estado": "descartada", "motivo": f"formato inválido tras reintentar: {str(e)[:200]}", "eval_count": _eval_count(mensaje), **razon})
             continue
         verificada, extra = rag_components.procesar_verificacion(original, oraciones, d.page_content)
         final = verificada or original
-        registro.append({**meta, "veredicto": final.veredicto, "oraciones": final.oraciones, "explicacion": original.explicacion, **extra, **razon})
+        registro.append({**meta, "veredicto": final.veredicto, "oraciones": final.oraciones, "explicacion": original.explicacion, "eval_count": _eval_count(mensaje), **extra, **razon})
         if verificada and verificada.veredicto in ("Incumple", "Revisar"):
             pendientes.append((d, verificada, extra["estado"] == "discrepancia_numerica"))
     t_sec["verificacion"] = _segundos(t0)
 
     t0 = time.perf_counter()
-    brechas, alertas = [], []
-    textos = dict(oraciones)
+    items_2_6 = motor_riesgos.items_contenido_minimo_texto(lin["criterios"])
     for d, v, discrepancia in pendientes:
         norma, articulo = d.metadata.get("norma", ""), str(d.metadata.get("articulo", ""))
         meta = {"seccion": id_sec, "norma": norma, "articulo": articulo, "etapa": "clasificacion"}
-        mensaje = cadena_clasif.invoke({"criterios": lin["texto_para_el_modelo"], "articulo": rag_components.formatear_articulo(d),
-                                        "seccion_numerada": seccion_numerada, "verificacion": v.model_dump_json(exclude_none=True)})
-        llamadas["clasificacion"] += 1
         try:
+            mensaje = _invocar(cadena_clasif, {"criterios": lin["texto_para_el_modelo"], "items_contenido_minimo": items_2_6,
+                                               "articulo": rag_components.formatear_articulo(d), "seccion_numerada": seccion_numerada,
+                                               "verificacion": v.model_dump_json(exclude_none=True)},
+                               f"{id_sec} {norma} Art. {articulo} (clasificación)", llamadas, "clasificacion")
             c = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_clasif, ClasificacionRiesgo)
+        except _FALLOS_DE_TIEMPO:
+            registro.append({**meta, "veredicto": v.veredicto, "oraciones": v.oraciones, "estado": "tiempo_agotado", "motivo": MOTIVO_TIEMPO_AGOTADO})
+            alertas.append(_alerta_sin_respuesta(seccion, textos, norma, articulo, v.oraciones))
+            continue
         except (json.JSONDecodeError, ValidationError) as e:
             logger.warning(f"{id_sec} {norma} Art. {articulo}: clasificación con formato inválido tras reintentar, se descarta: {e}")
-            registro.append({**meta, "veredicto": v.veredicto, "oraciones": v.oraciones, "estado": "clasificacion_fallida", "motivo": str(e)[:200]})
+            registro.append({**meta, "veredicto": v.veredicto, "oraciones": v.oraciones, "estado": "clasificacion_fallida", "motivo": str(e)[:200], "eval_count": _eval_count(mensaje)})
             continue
         primera = rag_components.normalizar_para_comparar(textos[v.oraciones[0]])
         subsecciones = seccion["subsecciones"]
@@ -203,12 +281,14 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
         if r["tipo"] == "brecha":
             if discrepancia:
                 r["brecha"]["marcas"].append("verificar calculo")
+            r["brecha"]["eval_count"] = _eval_count(mensaje)
             brechas.append(r["brecha"])
         elif r["tipo"] == "alerta":
             alertas.append(r["alerta"])
         else:
             registro.append({**meta, "veredicto": c.veredicto, "oraciones": v.oraciones,
-                             "estado": "no_es_riesgo" if r["tipo"] == "no_riesgo" else "descartada", "motivo": r["motivo"]})
+                             "estado": "no_es_riesgo" if r["tipo"] == "no_riesgo" else "descartada", "motivo": r["motivo"],
+                             "eval_count": _eval_count(mensaje), **({"regla": r["regla"]} if r.get("regla") else {})})
     t_sec["clasificacion"] = _segundos(t0)
     return brechas, alertas, registro
 
@@ -223,7 +303,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     modo = config.MODO_GENERACION if usar_rag else "lista"
     verificacion = modo == "verificacion"
     usar_crag = usar_rag and config.USAR_CRAG
-    llamadas = {"verificacion": 0, "clasificacion": 0, "comentario": 0}
+    llamadas = {"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0}
     logger.info(f"--- ANÁLISIS POR SECCIÓN (Modelo: {selected_llm_model_id}, condición: {condicion}, modo: {modo}) ---")
 
     pdf_path = document_utils.obtener_ruta_pdf_proyecto(directorio_proyecto or config.DIRECTORIO_PROYECTO_ANALIZAR)
@@ -272,12 +352,13 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
 
     if verificacion:
         llm_verif = rag_components.get_llm_instance(selected_llm_model_id, formato=VerificacionArticulo.model_json_schema(),
-                                                    razonamiento=config.THINKING_VERIFICACION)
-        llm_clasif = rag_components.get_llm_instance(selected_llm_model_id, formato=ClasificacionRiesgo.model_json_schema())
+                                                    razonamiento=config.THINKING_VERIFICACION, num_predict=config.OLLAMA_NUM_PREDICT)
+        llm_clasif = rag_components.get_llm_instance(selected_llm_model_id, formato=ClasificacionRiesgo.model_json_schema(),
+                                                     num_predict=config.OLLAMA_NUM_PREDICT)
         if not llm_verif or not llm_clasif: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
         cadena_verif, cadena_clasif = rag_components.crear_cadena_verificacion(llm_verif), rag_components.crear_cadena_clasificacion(llm_clasif)
     else:
-        llm_generacion = rag_components.get_llm_instance(selected_llm_model_id, formato=LLMResponse.model_json_schema())
+        llm_generacion = rag_components.get_llm_instance(selected_llm_model_id, formato=LLMResponse.model_json_schema(), num_predict=config.OLLAMA_NUM_PREDICT_LISTA)
         if not llm_generacion: raise AnalisisError(f"No se pudo inicializar el modelo '{selected_llm_model_id}'.")
         cadena = rag_components.crear_cadena_seccion(llm_generacion, usar_rag)
 
@@ -323,14 +404,12 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         else:
             t0 = time.perf_counter()
             entrada = {"fragmentos": rag_components.formatear_fragmentos(docs), "seccion": seccion["texto"]} if usar_rag else {"seccion": seccion["texto"]}
-            mensaje = cadena.invoke(entrada)
-            raw = getattr(mensaje, "content", mensaje)
-            t_sec["tokens_prompt"] = (getattr(mensaje, "response_metadata", None) or {}).get("prompt_eval_count")
-            try:
-                riesgos = _parsear_respuesta_llm(raw, llm_generacion).riesgos_identificados
-            except (json.JSONDecodeError, ValidationError) as e:
-                logger.error(f"Respuesta del LLM para {id_sec} (string crudo):\n---INICIO---\n{raw}\n---FIN---")
-                raise AnalisisError(f"La respuesta del modelo para la sección {id_sec} ({', '.join(seccion['titulos'])}) no cumplió el formato JSON ni tras reintentar: {e}") from e
+            riesgos, mensaje = _generar_lista(cadena, entrada, llm_generacion, id_sec, llamadas)
+            if mensaje is None:
+                registro_tecnico.append({"seccion": id_sec, "etapa": "lista", "estado": "tiempo_agotado", "motivo": MOTIVO_TIEMPO_AGOTADO})
+            else:
+                t_sec["tokens_prompt"] = (getattr(mensaje, "response_metadata", None) or {}).get("prompt_eval_count")
+                registro_tecnico.append({"seccion": id_sec, "etapa": "lista", "estado": "ok", "eval_count": _eval_count(mensaje)})
             t_sec["generacion"] = _segundos(t0)
 
         t0 = time.perf_counter()
@@ -375,12 +454,14 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         cadena_comentario = None
         if riesgos_agrupados:
             try:   # temperatura 0 y seed fija; sin formato JSON (devuelve texto)
-                cadena_comentario = rag_components.crear_cadena_comentario(rag_components.get_llm_instance(selected_llm_model_id))
+                cadena_comentario = rag_components.crear_cadena_comentario(rag_components.get_llm_instance(selected_llm_model_id, num_predict=config.OLLAMA_NUM_PREDICT_COMENTARIO))
             except Exception as e_llm:
                 logger.warning(f"No se pudo inicializar el modelo para el comentario general, se usa la plantilla: {e_llm}")
         com = comentario.generar_comentario(resumen_ejecutivo, riesgos_agrupados, cadena_comentario)
         tiempos["comentario"] = _segundos(t_com)
         llamadas["comentario"] += int(com["llamo"])
+        if com.get("eval_count") is not None:
+            llamadas.setdefault("eval_count", {}).setdefault("comentario", []).append(com["eval_count"])
         resumen_ejecutivo.update(comentario_general=com["texto"], origen_comentario=com["origen"])
         logger.info(f"Comentario general: origen {com['origen']}" + (f" ({com['motivo']})" if com["motivo"] else ""))
         logger.info(f"Clasificación: {len(brechas_todas)} brechas -> {len(riesgos_agrupados)} riesgos, {len(solicitudes)} solicitudes, "
@@ -413,7 +494,9 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             "verif_temperature": config.VERIF_TEMPERATURE if verificacion and config.THINKING_VERIFICACION else "N/A",
             "verif_top_p": config.VERIF_TOP_P if verificacion and config.THINKING_VERIFICACION else "N/A",
             "verif_top_k": config.VERIF_TOP_K if verificacion and config.THINKING_VERIFICACION else "N/A",
-            "llamadas_llm": llamadas if verificacion else "N/A",
+            "llamadas_llm": {k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario")} if verificacion else {"lista": llamadas["lista"]},
+            "llamadas_fallidas": llamadas.get("fallidas", 0),
+            "tokens_generados_por_tipo": _estadisticas_tokens(llamadas),
             "excluir_introduccion": config.EXCLUIR_INTRODUCCION, "calcular_respaldo": config.CALCULAR_RESPALDO, "tiempos_s": tiempos,
             "tokens_prompt_por_seccion": tokens_prompt,
         })

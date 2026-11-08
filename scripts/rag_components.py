@@ -275,6 +275,9 @@ Sos evaluador técnico de ofertas de la empresa. Aplicás los criterios de riesg
 === CRITERIOS DE LA EMPRESA ===
 {criterios}
 
+=== ÍTEMS DEL ART. 2.6 ===
+{items_contenido_minimo}
+
 === ARTÍCULO DE LA NORMATIVA ===
 {articulo}
 
@@ -292,7 +295,16 @@ Un verificador automático marcó este par como Incumple o Revisar. Puede estar 
    - Distinguí desvío de excepción no acreditada con los Art. 2.3 y 2.4.
    - Usá ALERTA solo en el caso del Art. 2.9.
 2. Si el veredicto es DESVIO, EXCEPCION_NO_ACREDITADA o INFORMACION_FALTANTE, completá:
-   a) condicion_critico: la letra del inciso del Art. 3.2 que se cumple (a, b, c o d), o null si no se cumple ninguno. Si la protección existe aunque sea insuficiente, no es "a". Para INFORMACION_FALTANTE, "a" indica que el dato faltante corresponde a una materia del Art. 3.2.a. Tené en cuenta el Art. 3.6.2.
+   a) Para INFORMACION_FALTANTE:
+      item_contenido_minimo: el ítem de la lista del Art. 2.6 al que corresponde el dato que falta, copiado tal cual de la lista; si no corresponde a ninguno, "NINGUNO".
+      etapa_requisito: "OFERTA" si el dato debe presentarse con la oferta; "POSTERIOR" si corresponde a ejecución, registros de obra, dossier, conforme a obra, actas o recepción.
+      Para DESVIO o EXCEPCION_NO_ACREDITADA:
+      materia_3_2_a: true si el requisito trata de alguna de las materias enumeradas en el Art. 3.2.a; si no, false.
+      medida_ofrecida: la frase de la oferta que propone algo para cumplir el requisito, copiada tal cual, aunque sea insuficiente. null solo si la oferta no propone nada.
+      practica_peligrosa: true solo si lo que propone la oferta crea por sí mismo el peligro que el requisito previene (Art. 3.2.b). false si solo es insuficiente o distinto de lo exigido.
+      valor_limite_excepcion: si el artículo admite apartarse del valor general hasta un límite, ese límite copiado del artículo; si no, null.
+      valor_demanda_oferta: si la propia oferta declara la carga o el uso que el valor ofertado debe cubrir, ese valor copiado de la oferta; si no, null.
+      No decidas si el desvío es Crítico: lo calcula el sistema con estos datos.
    b) objeto_requisito, uno de:
       DOCUMENTAL_PROCEDIMIENTO: requisito del tipo descrito en el Art. 3.4.c.
       RESERVA_ERGONOMIA_EFICIENCIA: requisito del tipo descrito en el Art. 3.4.d.
@@ -312,7 +324,7 @@ Un verificador automático marcó este par como Incumple o Revisar. Puede estar 
 3. Con CUMPLE, NO_APLICA o ALERTA completá solo motivo y veredicto; el resto va en null.
 
 Respondé SOLO con este JSON, en este orden:
-{{"motivo": "...", "veredicto": "...", "condicion_critico": null, "objeto_requisito": null, "valor_ofertado": null, "valor_exigido": null, "unidad": null, "tipo_limite": null, "dimension_impacto": null, "impacto": null, "titulo": null, "enunciado": null, "accion": null, "solicitud_oferente": null}}
+{{"motivo": "...", "veredicto": "...", "item_contenido_minimo": null, "etapa_requisito": null, "materia_3_2_a": null, "medida_ofrecida": null, "practica_peligrosa": null, "valor_limite_excepcion": null, "valor_demanda_oferta": null, "objeto_requisito": null, "valor_ofertado": null, "valor_exigido": null, "unidad": null, "tipo_limite": null, "dimension_impacto": null, "impacto": null, "titulo": null, "enunciado": null, "accion": null, "solicitud_oferente": null}}
 """
 
 # --- Evaluador de evidencia (CRAG-lite) ---
@@ -445,9 +457,10 @@ def clasificar_evidencia(respuesta_cruda: str) -> str:
     return "AMBIGUO"
 
 
-def get_llm_instance(model_id: str, formato: Optional[dict] = None, razonamiento: bool = False):
+def get_llm_instance(model_id: str, formato: Optional[dict] = None, razonamiento: bool = False, num_predict: Optional[int] = None):
     """formato: esquema JSON con el que Ollama restringe la salida (solo aplica al proveedor ollama).
-    razonamiento: activa el thinking con el muestreo VERIF_* (solo ollama)."""
+    razonamiento: activa el thinking con el muestreo VERIF_* (solo ollama).
+    num_predict: tope de tokens de salida (solo ollama); sin valor, sin tope. En ollama todas las llamadas tienen timeout."""
     if model_id not in config.LLM_MODELS:
         logger.error(f"Modelo '{model_id}' no encontrado en config.LLM_MODELS.")
         raise ValueError(f"Modelo no soportado: {model_id}")
@@ -473,6 +486,8 @@ def get_llm_instance(model_id: str, formato: Optional[dict] = None, razonamiento
                 reasoning=razonamiento,
                 temperature=config.VERIF_TEMPERATURE if razonamiento else 0,
                 seed=config.OLLAMA_SEED,
+                client_kwargs={"timeout": config.OLLAMA_TIMEOUT_S},
+                **({"num_predict": num_predict} if num_predict else {}),
                 **({"top_p": config.VERIF_TOP_P, "top_k": config.VERIF_TOP_K} if razonamiento else {}),
                 **({"format": formato} if formato else {})
             )
@@ -616,7 +631,7 @@ def crear_cadena_verificacion(llm):
 
 def crear_cadena_clasificacion(llm):
     """Clasificación de un Incumple o Revisar según los lineamientos -> mensaje del LLM (su .content es el JSON de ClasificacionRiesgo)."""
-    return PromptTemplate(template=PROMPT_CLASIFICACION_STR, input_variables=["criterios", "articulo", "seccion_numerada", "verificacion"]) | llm
+    return PromptTemplate(template=PROMPT_CLASIFICACION_STR, input_variables=["criterios", "items_contenido_minimo", "articulo", "seccion_numerada", "verificacion"]) | llm
 
 
 def crear_cadena_comentario(llm):

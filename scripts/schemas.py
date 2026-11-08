@@ -157,7 +157,7 @@ class Redaccion(BaseModel):
 
 # --- Clasificación según los lineamientos de la empresa (reemplaza a la redacción) ---
 VeredictoClasificacion = Literal["DESVIO", "EXCEPCION_NO_ACREDITADA", "INFORMACION_FALTANTE", "NO_APLICA", "CUMPLE", "ALERTA"]
-CondicionCritico = Literal["a", "b", "c", "d"]
+EtapaRequisito = Literal["OFERTA", "POSTERIOR"]
 ObjetoRequisito = Literal["DOCUMENTAL_PROCEDIMIENTO", "RESERVA_ERGONOMIA_EFICIENCIA", "VERIFICACION_RUTINA", "ENSAYO_ACEPTACION",
                           "ORDINAL", "CUANTITATIVO_TECNICO", "OTRO_TECNICO"]
 TipoLimite = Literal["MINIMO", "MAXIMO", "TOLERANCIA", "CANTIDAD", "FRECUENCIA"]
@@ -187,7 +187,13 @@ class ClasificacionRiesgo(BaseModel):
     El orden de los campos es el orden de generación: el motivo va antes del veredicto."""
     motivo: str = Field(description="Por qué ese veredicto (hasta 30 palabras).")
     veredicto: VeredictoClasificacion
-    condicion_critico: Optional[CondicionCritico] = None
+    item_contenido_minimo: Optional[str] = Field(default=None, description="Ítem de la lista del Art. 2.6 copiado tal cual, o 'NINGUNO'.")
+    etapa_requisito: Optional[EtapaRequisito] = None
+    materia_3_2_a: Optional[bool] = None
+    medida_ofrecida: Optional[str] = Field(default=None, description="Frase de la oferta que propone algo para cumplir el requisito.")
+    practica_peligrosa: Optional[bool] = None
+    valor_limite_excepcion: Optional[str] = Field(default=None, description="Límite de la excepción, copiado del artículo.")
+    valor_demanda_oferta: Optional[str] = Field(default=None, description="Carga o uso declarado por la oferta, copiado de la oferta.")
     objeto_requisito: Optional[ObjetoRequisito] = None
     valor_ofertado: Optional[str] = Field(default=None, description="Copiado tal cual figura en la oferta.")
     valor_exigido: Optional[str] = Field(default=None, description="Copiado tal cual figura en el artículo.")
@@ -205,23 +211,22 @@ class ClasificacionRiesgo(BaseModel):
     def _normalizar_veredicto(cls, valor):
         return _a_literal(valor, get_args(VeredictoClasificacion))
 
-    @field_validator("condicion_critico", "objeto_requisito", "tipo_limite", "dimension_impacto", mode="before")
+    @field_validator("etapa_requisito", "objeto_requisito", "tipo_limite", "dimension_impacto", mode="before")
     @classmethod
     def _normalizar_opcionales(cls, valor, info):
         valor = _vacio_a_none(valor)
-        if info.field_name == "condicion_critico" and isinstance(valor, str):
-            return valor.strip().lower()
         if info.field_name == "dimension_impacto":
             return _dimension_por_primera_palabra(valor)
         return _a_literal(valor, get_args(get_args(cls.model_fields[info.field_name].annotation)[0]))
 
-    @field_validator("valor_ofertado", "valor_exigido", mode="before")
+    @field_validator("valor_ofertado", "valor_exigido", "valor_limite_excepcion", "valor_demanda_oferta", mode="before")
     @classmethod
     def _valor_a_texto(cls, valor):
         valor = _vacio_a_none(valor)
         return str(valor) if isinstance(valor, (int, float)) and not isinstance(valor, bool) else valor
 
-    @field_validator("unidad", "titulo", "enunciado", "accion", "solicitud_oferente", "impacto", mode="before")
+    @field_validator("unidad", "titulo", "enunciado", "accion", "solicitud_oferente", "impacto", "item_contenido_minimo", "medida_ofrecida",
+                     "materia_3_2_a", "practica_peligrosa", mode="before")
     @classmethod
     def _nulos(cls, valor):
         return _vacio_a_none(valor)
