@@ -1,0 +1,819 @@
+{
+  "configuracion_analisis": {
+    "modelo_llm_usado": "qwen3:8b",
+    "condicion": "rag_verificacion",
+    "llamadas_llm": {
+      "verificacion": 48,
+      "clasificacion": 9,
+      "comentario": 1
+    }
+  },
+  "fragmentos_fuente": [],
+  "nombre_proyecto_analizado": "Oferta de ejemplo (datos inventados)",
+  "timestamp_analisis": "2026-11-08T10:30:00",
+  "respuesta_cruda_llm": null,
+  "evaluacion_evidencia": null,
+  "advertencia_evidencia": null,
+  "suficiencia_evidencia": null,
+  "comentarios_generales": null,
+  "acciones_generales": [],
+  "secciones": [],
+  "registro_brechas": [
+    {
+      "id": "5|NORM_03|2.1",
+      "seccion": "5",
+      "seccion_oferta": "5.1 Izaje de cargas",
+      "norma": "NORM_03",
+      "articulo": "2.1",
+      "oraciones": [
+        "O1",
+        "O2"
+      ],
+      "cita": "La maniobra de izaje se realizará con personal propio y sin plan de izaje aprobado. El supervisor se designará el día de la maniobra.",
+      "texto_articulo": "Art. 2.1. PLAN DE IZAJE\nToda maniobra crítica requiere un plan de izaje aprobado antes de su ejecución.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "Verificación previa.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "condicion_critico": "b",
+        "objeto_requisito": "OTRO_TECNICO",
+        "valor_ofertado": null,
+        "valor_exigido": null,
+        "unidad": null,
+        "tipo_limite": null,
+        "dimension_impacto": "Seguridad de personas",
+        "impacto": 5,
+        "titulo": "Izaje crítico sin plan aprobado",
+        "enunciado": "Si la maniobra se ejecuta sin plan aprobado, puede producirse un accidente con daño a personas y al equipo.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Presentar el plan de izaje aprobado antes de la maniobra."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": null,
+      "clase": "Crítico",
+      "regla": "3.2.b",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 5,
+      "dimension_impacto": "Seguridad de personas",
+      "nivel_tabla": "Alto",
+      "nivel": "Alto",
+      "estrategia": "Evitar",
+      "responsable": "Gerencia de Seguridad Operacional y Salud Ocupacional",
+      "rbs": "RBS-3 Izaje y manipulación",
+      "umbral": "NORM_03, Art. 2.1",
+      "tipo_solicitud": "Solicitud de modificación de la oferta",
+      "plazo": "Antes de la adjudicación",
+      "titulo": "Izaje crítico sin plan aprobado",
+      "enunciado": "Si la maniobra se ejecuta sin plan aprobado, puede producirse un accidente con daño a personas y al equipo.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Presentar el plan de izaje aprobado antes de la maniobra.",
+      "motivo": "Motivo del evaluador."
+    },
+    {
+      "id": "5|NORM_03|2.4",
+      "seccion": "5",
+      "seccion_oferta": "5.1 Izaje de cargas",
+      "norma": "NORM_03",
+      "articulo": "2.4",
+      "oraciones": [
+        "O1",
+        "O2"
+      ],
+      "cita": "La maniobra de izaje se realizará con personal propio y sin plan de izaje aprobado. El supervisor se designará el día de la maniobra.",
+      "texto_articulo": "Art. 2.4. SUPERVISIÓN\nUn supervisor calificado debe estar designado y registrado antes de iniciar la maniobra.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "Verificación previa.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "condicion_critico": "b",
+        "objeto_requisito": "OTRO_TECNICO",
+        "valor_ofertado": null,
+        "valor_exigido": null,
+        "unidad": null,
+        "tipo_limite": null,
+        "dimension_impacto": "Seguridad de personas",
+        "impacto": 5,
+        "titulo": "Supervisor de izaje no designado con anticipación",
+        "enunciado": "Si el supervisor se designa el mismo día, no hay garantía de calificación previa.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Informar el supervisor calificado y su registro antes de la maniobra."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": null,
+      "clase": "Crítico",
+      "regla": "3.2.b",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 5,
+      "dimension_impacto": "Seguridad de personas",
+      "nivel_tabla": "Alto",
+      "nivel": "Alto",
+      "estrategia": "Evitar",
+      "responsable": "Gerencia de Seguridad Operacional y Salud Ocupacional",
+      "rbs": "RBS-3 Izaje y manipulación",
+      "umbral": "NORM_03, Art. 2.4",
+      "tipo_solicitud": "Solicitud de modificación de la oferta",
+      "plazo": "Antes de la adjudicación",
+      "titulo": "Supervisor de izaje no designado con anticipación",
+      "enunciado": "Si el supervisor se designa el mismo día, no hay garantía de calificación previa.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Informar el supervisor calificado y su registro antes de la maniobra.",
+      "motivo": "Motivo del evaluador."
+    },
+    {
+      "id": "3|NORM_01|4.2",
+      "seccion": "3",
+      "seccion_oferta": "3.2 Apoyos del equipo",
+      "norma": "NORM_01",
+      "articulo": "4.2",
+      "oraciones": [
+        "O1"
+      ],
+      "cita": "La oferta incluye 1 unidad de apoyo por equipo.",
+      "texto_articulo": "Art. 4.2. APOYOS\nSe exigen como mínimo 2 unidades de apoyo por equipo.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "Verificación previa.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "condicion_critico": null,
+        "objeto_requisito": "CUANTITATIVO_TECNICO",
+        "valor_ofertado": "1",
+        "valor_exigido": "2",
+        "unidad": "unidades",
+        "tipo_limite": "CANTIDAD",
+        "dimension_impacto": "Integridad del equipo u obra civil",
+        "impacto": 4,
+        "titulo": "Cantidad de apoyos inferior a la exigida",
+        "enunciado": "Si se instala una unidad donde se exigen dos, la estabilidad del equipo puede verse afectada.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Ajustar la oferta a un mínimo de 2 unidades de apoyo por equipo."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": 0.5,
+      "clase": "Mayor",
+      "regla": "3.3.a",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 4,
+      "dimension_impacto": "Integridad del equipo u obra civil",
+      "nivel_tabla": "Alto",
+      "nivel": "Alto",
+      "estrategia": "Evitar",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "umbral": "NORM_01, Art. 4.2",
+      "tipo_solicitud": "Solicitud de modificación de la oferta",
+      "plazo": "Antes de la adjudicación",
+      "titulo": "Cantidad de apoyos inferior a la exigida",
+      "enunciado": "Si se instala una unidad donde se exigen dos, la estabilidad del equipo puede verse afectada.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Ajustar la oferta a un mínimo de 2 unidades de apoyo por equipo.",
+      "motivo": "Motivo del evaluador."
+    },
+    {
+      "id": "6|NORM_04|2.1",
+      "seccion": "6",
+      "seccion_oferta": "6.1 Instalaciones",
+      "norma": "NORM_04",
+      "articulo": "2.1",
+      "oraciones": [
+        "O1"
+      ],
+      "cita": "El gálibo de las instalaciones se verificará oportunamente.",
+      "texto_articulo": "Art. 2.1. GÁLIBO\nEl oferente debe informar el gálibo de diseño de las instalaciones.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "Verificación previa.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "INFORMACION_FALTANTE",
+        "condicion_critico": "a",
+        "objeto_requisito": "OTRO_TECNICO",
+        "valor_ofertado": null,
+        "valor_exigido": null,
+        "unidad": null,
+        "tipo_limite": null,
+        "dimension_impacto": "Seguridad de personas",
+        "impacto": 4,
+        "titulo": "Gálibo de diseño sin informar",
+        "enunciado": "Sin el gálibo informado no se puede confirmar el paso seguro del material rodante.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Informar el gálibo de diseño de las instalaciones."
+      },
+      "fuente": "INFORMACION_FALTANTE",
+      "brecha_relativa": null,
+      "clase": "Mayor",
+      "regla": "3.6.4",
+      "marcas": [],
+      "probabilidad": 2,
+      "impacto": 4,
+      "dimension_impacto": "Seguridad de personas",
+      "nivel_tabla": "Medio",
+      "nivel": "Medio",
+      "estrategia": "Mitigar",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-4 Vía, trocha y gálibos",
+      "umbral": "NORM_04, Art. 2.1",
+      "tipo_solicitud": "Consulta técnica",
+      "plazo": "Antes de la firma del contrato",
+      "titulo": "Gálibo de diseño sin informar",
+      "enunciado": "Sin el gálibo informado no se puede confirmar el paso seguro del material rodante.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Informar el gálibo de diseño de las instalaciones.",
+      "motivo": "Motivo del evaluador."
+    },
+    {
+      "id": "7|NORM_05|1.6",
+      "seccion": "7",
+      "seccion_oferta": "7.1 Documentación",
+      "norma": "NORM_05",
+      "articulo": "1.6",
+      "oraciones": [
+        "O1"
+      ],
+      "cita": "El registro de montaje se entregará al final de la obra.",
+      "texto_articulo": "Art. 1.6. REGISTROS\nEl registro de montaje debe entregarse con cada etapa.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "Verificación previa.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "condicion_critico": null,
+        "objeto_requisito": "DOCUMENTAL_PROCEDIMIENTO",
+        "valor_ofertado": null,
+        "valor_exigido": null,
+        "unidad": null,
+        "tipo_limite": null,
+        "dimension_impacto": "Plazo",
+        "impacto": 2,
+        "titulo": "Registro de montaje entregado solo al final",
+        "enunciado": "Si el registro se entrega al final, no hay trazabilidad durante las etapas.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Entregar el registro de montaje con cada etapa."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": null,
+      "clase": "Menor",
+      "regla": "3.4.c",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 2,
+      "dimension_impacto": "Plazo",
+      "nivel_tabla": "Bajo",
+      "nivel": "Bajo",
+      "estrategia": "Aceptar",
+      "responsable": "Gerencia de Material Rodante y Equipamiento de Talleres",
+      "rbs": "RBS-5 Montaje mecánico, hidráulico y tolerancias",
+      "umbral": "NORM_05, Art. 1.6",
+      "tipo_solicitud": "Nota aclaratoria o ajuste",
+      "plazo": "Antes de la firma del contrato",
+      "titulo": "Registro de montaje entregado solo al final",
+      "enunciado": "Si el registro se entrega al final, no hay trazabilidad durante las etapas.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Entregar el registro de montaje con cada etapa.",
+      "motivo": "Motivo del evaluador."
+    },
+    {
+      "id": "3|NORM_01|4.3",
+      "seccion": "3",
+      "seccion_oferta": "3.4 Documentos de obra",
+      "norma": "NORM_01",
+      "articulo": "4.3",
+      "oraciones": [
+        "O3"
+      ],
+      "cita": "La memoria de cálculo se presentará durante la obra.",
+      "texto_articulo": "Art. 4.3. DOCUMENTOS\nLa memoria de cálculo debe presentarse antes del inicio de la obra.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "Verificación previa.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "condicion_critico": null,
+        "objeto_requisito": "DOCUMENTAL_PROCEDIMIENTO",
+        "valor_ofertado": null,
+        "valor_exigido": null,
+        "unidad": null,
+        "tipo_limite": null,
+        "dimension_impacto": "Plazo",
+        "impacto": 2,
+        "titulo": "Memoria de cálculo presentada tarde",
+        "enunciado": "Si la memoria llega durante la obra, la revisión previa no es posible.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Presentar la memoria de cálculo antes del inicio de la obra."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": null,
+      "clase": "Menor",
+      "regla": "3.4.c",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 2,
+      "dimension_impacto": "Plazo",
+      "nivel_tabla": "Bajo",
+      "nivel": "Bajo",
+      "estrategia": "Aceptar",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "umbral": "NORM_01, Art. 4.3",
+      "tipo_solicitud": "Nota aclaratoria o ajuste",
+      "plazo": "Antes de la firma del contrato",
+      "titulo": "Memoria de cálculo presentada tarde",
+      "enunciado": "Si la memoria llega durante la obra, la revisión previa no es posible.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Presentar la memoria de cálculo antes del inicio de la obra.",
+      "motivo": "Motivo del evaluador."
+    },
+    {
+      "id": "4|NORM_01|4.5",
+      "seccion": "4",
+      "seccion_oferta": "4.2 Accesos",
+      "norma": "NORM_01",
+      "articulo": "4.5",
+      "oraciones": [
+        "O2"
+      ],
+      "cita": "Los puntos de inspección tendrán acceso por escalera lateral.",
+      "texto_articulo": "Art. 4.5. ACCESOS\nSe procurará un acceso cómodo a los puntos de inspección.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "Verificación previa.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "condicion_critico": null,
+        "objeto_requisito": "RESERVA_ERGONOMIA_EFICIENCIA",
+        "valor_ofertado": null,
+        "valor_exigido": null,
+        "unidad": null,
+        "tipo_limite": null,
+        "dimension_impacto": "Desempeño o calidad",
+        "impacto": 1,
+        "titulo": "Acceso a inspección poco cómodo",
+        "enunciado": "Un acceso incómodo puede dificultar las inspecciones periódicas.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Aclarar la disposición del acceso a los puntos de inspección."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": null,
+      "clase": "Menor",
+      "regla": "3.4.d",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 1,
+      "dimension_impacto": "Desempeño o calidad",
+      "nivel_tabla": "Bajo",
+      "nivel": "Bajo",
+      "estrategia": "Aceptar",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "umbral": "NORM_01, Art. 4.5",
+      "tipo_solicitud": "Nota aclaratoria o ajuste",
+      "plazo": "Antes de la firma del contrato",
+      "titulo": "Acceso a inspección poco cómodo",
+      "enunciado": "Un acceso incómodo puede dificultar las inspecciones periódicas.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Aclarar la disposición del acceso a los puntos de inspección.",
+      "motivo": "Motivo del evaluador."
+    },
+    {
+      "id": "8|NORM_02|5.12",
+      "seccion": "8",
+      "seccion_oferta": "8.1 Conexiones",
+      "norma": "NORM_02",
+      "articulo": "5.12",
+      "oraciones": [
+        "O1"
+      ],
+      "cita": "Los tableros se entregan con el espacio justo para los circuitos actuales.",
+      "texto_articulo": "Art. 5.12. TABLEROS\nLos tableros deben contar con una reserva de espacio para ampliaciones.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "Verificación previa.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "condicion_critico": null,
+        "objeto_requisito": "RESERVA_ERGONOMIA_EFICIENCIA",
+        "valor_ofertado": null,
+        "valor_exigido": null,
+        "unidad": null,
+        "tipo_limite": null,
+        "dimension_impacto": "Costo (sobre monto del contrato)",
+        "impacto": 2,
+        "titulo": "Tableros sin reserva de espacio",
+        "enunciado": "Sin reserva, cualquier ampliación implica reemplazar el tablero.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Prever la reserva de espacio exigida en los tableros."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": null,
+      "clase": "Menor",
+      "regla": "3.4.d",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 2,
+      "dimension_impacto": "Costo (sobre monto del contrato)",
+      "nivel_tabla": "Bajo",
+      "nivel": "Bajo",
+      "estrategia": "Aceptar",
+      "responsable": "Gerencia de Energía e Instalaciones Electromecánicas",
+      "rbs": "RBS-2 Instalación eléctrica y puesta a tierra",
+      "umbral": "NORM_02, Art. 5.12",
+      "tipo_solicitud": "Nota aclaratoria o ajuste",
+      "plazo": "Antes de la firma del contrato",
+      "titulo": "Tableros sin reserva de espacio",
+      "enunciado": "Sin reserva, cualquier ampliación implica reemplazar el tablero.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Prever la reserva de espacio exigida en los tableros.",
+      "motivo": "Motivo del evaluador."
+    }
+  ],
+  "riesgos": [
+    {
+      "seccion": "5",
+      "oraciones": [
+        "O1",
+        "O2"
+      ],
+      "brechas": [
+        "5|NORM_03|2.1",
+        "5|NORM_03|2.4"
+      ],
+      "citas": [
+        {
+          "norma": "NORM_03",
+          "articulo": "2.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.4"
+        }
+      ],
+      "clase": "Crítico",
+      "nivel": "Alto",
+      "impacto": 5,
+      "probabilidad": 4,
+      "fuente": "DESVIO",
+      "dimension_impacto": "Seguridad de personas",
+      "regla": "3.2.b",
+      "rbs": "RBS-3 Izaje y manipulación",
+      "responsable": "Gerencia de Seguridad Operacional y Salud Ocupacional",
+      "titulo": "Izaje crítico sin plan aprobado",
+      "enunciado": "Si la maniobra se ejecuta sin plan aprobado, puede producirse un accidente con daño a personas y al equipo.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "umbral": "NORM_03, Art. 2.1; NORM_03, Art. 2.4",
+      "estrategia": "Evitar",
+      "id": "R1"
+    },
+    {
+      "seccion": "3",
+      "oraciones": [
+        "O1"
+      ],
+      "brechas": [
+        "3|NORM_01|4.2"
+      ],
+      "citas": [
+        {
+          "norma": "NORM_01",
+          "articulo": "4.2"
+        }
+      ],
+      "clase": "Mayor",
+      "nivel": "Alto",
+      "impacto": 4,
+      "probabilidad": 4,
+      "fuente": "DESVIO",
+      "dimension_impacto": "Integridad del equipo u obra civil",
+      "regla": "3.3.a",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "titulo": "Cantidad de apoyos inferior a la exigida",
+      "enunciado": "Si se instala una unidad donde se exigen dos, la estabilidad del equipo puede verse afectada.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "umbral": "NORM_01, Art. 4.2",
+      "estrategia": "Evitar",
+      "id": "R2"
+    },
+    {
+      "seccion": "6",
+      "oraciones": [
+        "O1"
+      ],
+      "brechas": [
+        "6|NORM_04|2.1"
+      ],
+      "citas": [
+        {
+          "norma": "NORM_04",
+          "articulo": "2.1"
+        }
+      ],
+      "clase": "Mayor",
+      "nivel": "Medio",
+      "impacto": 4,
+      "probabilidad": 2,
+      "fuente": "INFORMACION_FALTANTE",
+      "dimension_impacto": "Seguridad de personas",
+      "regla": "3.6.4",
+      "rbs": "RBS-4 Vía, trocha y gálibos",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "titulo": "Gálibo de diseño sin informar",
+      "enunciado": "Sin el gálibo informado no se puede confirmar el paso seguro del material rodante.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "umbral": "NORM_04, Art. 2.1",
+      "estrategia": "Mitigar",
+      "id": "R3"
+    },
+    {
+      "seccion": "7",
+      "oraciones": [
+        "O1"
+      ],
+      "brechas": [
+        "7|NORM_05|1.6"
+      ],
+      "citas": [
+        {
+          "norma": "NORM_05",
+          "articulo": "1.6"
+        }
+      ],
+      "clase": "Menor",
+      "nivel": "Bajo",
+      "impacto": 2,
+      "probabilidad": 4,
+      "fuente": "DESVIO",
+      "dimension_impacto": "Plazo",
+      "regla": "3.4.c",
+      "rbs": "RBS-5 Montaje mecánico, hidráulico y tolerancias",
+      "responsable": "Gerencia de Material Rodante y Equipamiento de Talleres",
+      "titulo": "Registro de montaje entregado solo al final",
+      "enunciado": "Si el registro se entrega al final, no hay trazabilidad durante las etapas.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "umbral": "NORM_05, Art. 1.6",
+      "estrategia": "Aceptar",
+      "id": "R4"
+    },
+    {
+      "seccion": "8",
+      "oraciones": [
+        "O1"
+      ],
+      "brechas": [
+        "8|NORM_02|5.12"
+      ],
+      "citas": [
+        {
+          "norma": "NORM_02",
+          "articulo": "5.12"
+        }
+      ],
+      "clase": "Menor",
+      "nivel": "Bajo",
+      "impacto": 2,
+      "probabilidad": 4,
+      "fuente": "DESVIO",
+      "dimension_impacto": "Costo (sobre monto del contrato)",
+      "regla": "3.4.d",
+      "rbs": "RBS-2 Instalación eléctrica y puesta a tierra",
+      "responsable": "Gerencia de Energía e Instalaciones Electromecánicas",
+      "titulo": "Tableros sin reserva de espacio",
+      "enunciado": "Sin reserva, cualquier ampliación implica reemplazar el tablero.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "umbral": "NORM_02, Art. 5.12",
+      "estrategia": "Aceptar",
+      "id": "R5"
+    },
+    {
+      "seccion": "3",
+      "oraciones": [
+        "O2",
+        "O3"
+      ],
+      "brechas": [
+        "3|NORM_01|4.3",
+        "4|NORM_01|4.5"
+      ],
+      "citas": [
+        {
+          "norma": "NORM_01",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.5"
+        }
+      ],
+      "clase": "Menor",
+      "nivel": "Bajo",
+      "impacto": 2,
+      "probabilidad": 4,
+      "fuente": "DESVIO",
+      "dimension_impacto": "Plazo",
+      "regla": "3.4.c",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "titulo": "Aclaraciones menores: RBS-1 Obra civil y fundaciones",
+      "enunciado": "Memoria de cálculo presentada tarde; Acceso a inspección poco cómodo",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "umbral": "NORM_01, Art. 4.3; NORM_01, Art. 4.5",
+      "estrategia": "Aceptar",
+      "agrupado_6_2": true,
+      "id": "R6"
+    }
+  ],
+  "solicitudes": [
+    {
+      "riesgo": "R1",
+      "tipo": "Solicitud de modificación de la oferta",
+      "plazo": "Antes de la adjudicación",
+      "citas": [
+        {
+          "norma": "NORM_03",
+          "articulo": "2.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.4"
+        }
+      ],
+      "oraciones": [
+        "O1",
+        "O2"
+      ],
+      "cita_oferta": "La maniobra de izaje se realizará con personal propio y sin plan de izaje aprobado. El supervisor se designará el día de la maniobra.",
+      "pedido": "NORM_03 Art. 2.1: Presentar el plan de izaje aprobado antes de la maniobra.\nNORM_03 Art. 2.4: Informar el supervisor calificado y su registro antes de la maniobra.",
+      "clase": "Crítico",
+      "responsable": "Gerencia de Seguridad Operacional y Salud Ocupacional",
+      "rbs": "RBS-3 Izaje y manipulación",
+      "numero": 1
+    },
+    {
+      "riesgo": "R2",
+      "tipo": "Solicitud de modificación de la oferta",
+      "plazo": "Antes de la adjudicación",
+      "citas": [
+        {
+          "norma": "NORM_01",
+          "articulo": "4.2"
+        }
+      ],
+      "oraciones": [
+        "O1"
+      ],
+      "cita_oferta": "La oferta incluye 1 unidad de apoyo por equipo.",
+      "pedido": "NORM_01 Art. 4.2: Ajustar la oferta a un mínimo de 2 unidades de apoyo por equipo.",
+      "clase": "Mayor",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "numero": 2
+    },
+    {
+      "riesgo": "R3",
+      "tipo": "Consulta técnica",
+      "plazo": "Antes de la firma del contrato",
+      "citas": [
+        {
+          "norma": "NORM_04",
+          "articulo": "2.1"
+        }
+      ],
+      "oraciones": [
+        "O1"
+      ],
+      "cita_oferta": "El gálibo de las instalaciones se verificará oportunamente.",
+      "pedido": "NORM_04 Art. 2.1: Informar el gálibo de diseño de las instalaciones.",
+      "clase": "Mayor",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-4 Vía, trocha y gálibos",
+      "numero": 3
+    },
+    {
+      "riesgo": "R6",
+      "tipo": "Nota aclaratoria o ajuste",
+      "plazo": "Antes de la firma del contrato",
+      "citas": [
+        {
+          "norma": "NORM_01",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.5"
+        }
+      ],
+      "oraciones": [
+        "O2",
+        "O3"
+      ],
+      "cita_oferta": "La memoria de cálculo se presentará durante la obra. Los puntos de inspección tendrán acceso por escalera lateral.",
+      "pedido": "NORM_01 Art. 4.3: Presentar la memoria de cálculo antes del inicio de la obra.\nNORM_01 Art. 4.5: Aclarar la disposición del acceso a los puntos de inspección.",
+      "clase": "Menor",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "numero": 4
+    },
+    {
+      "riesgo": "R5",
+      "tipo": "Nota aclaratoria o ajuste",
+      "plazo": "Antes de la firma del contrato",
+      "citas": [
+        {
+          "norma": "NORM_02",
+          "articulo": "5.12"
+        }
+      ],
+      "oraciones": [
+        "O1"
+      ],
+      "cita_oferta": "Los tableros se entregan con el espacio justo para los circuitos actuales.",
+      "pedido": "NORM_02 Art. 5.12: Prever la reserva de espacio exigida en los tableros.",
+      "clase": "Menor",
+      "responsable": "Gerencia de Energía e Instalaciones Electromecánicas",
+      "rbs": "RBS-2 Instalación eléctrica y puesta a tierra",
+      "numero": 5
+    },
+    {
+      "riesgo": "R4",
+      "tipo": "Nota aclaratoria o ajuste",
+      "plazo": "Antes de la firma del contrato",
+      "citas": [
+        {
+          "norma": "NORM_05",
+          "articulo": "1.6"
+        }
+      ],
+      "oraciones": [
+        "O1"
+      ],
+      "cita_oferta": "El registro de montaje se entregará al final de la obra.",
+      "pedido": "NORM_05 Art. 1.6: Entregar el registro de montaje con cada etapa.",
+      "clase": "Menor",
+      "responsable": "Gerencia de Material Rodante y Equipamiento de Talleres",
+      "rbs": "RBS-5 Montaje mecánico, hidráulico y tolerancias",
+      "numero": 6
+    }
+  ],
+  "alertas": [
+    {
+      "seccion": "9",
+      "seccion_oferta": "9.1 Alimentación",
+      "norma": "NORM_02",
+      "articulo": "3.1",
+      "oraciones": [
+        "O1"
+      ],
+      "cita": "La alimentación será la disponible en el sitio.",
+      "motivo": "No queda claro si la tensión disponible coincide con la vigente."
+    }
+  ],
+  "resumen_ejecutivo": {
+    "decision": "No aceptable",
+    "por_nivel": {
+      "Alto": 2,
+      "Medio": 1,
+      "Bajo": 3
+    },
+    "por_clase": {
+      "Crítico": 1,
+      "Mayor": 2,
+      "Menor": 3
+    },
+    "comentario_general": "La oferta resulta No aceptable, principalmente por el izaje crítico sin plan aprobado (NORM_03 Art. 2.1) y por la cantidad de apoyos inferior a la exigida (NORM_01 Art. 4.2). Los riesgos de clase Crítico y Mayor se concentran en la Gerencia de Seguridad Operacional y Salud Ocupacional y en la Gerencia de Infraestructura y Vías. Antes de la adjudicación el oferente debe presentar el plan de izaje aprobado, ajustar los apoyos e informar el gálibo de diseño.",
+    "origen_comentario": "modelo"
+  },
+  "lineamientos": {
+    "huella": "a3f9c2e17b4d58e06f1a92c7d3b84e5f0a6c1d29e8b7f4035c6a1d2e9b8f7a64",
+    "caracteres_criterios": 12345,
+    "documentos": {}
+  },
+  "registro_tecnico": [],
+  "riesgos_identificados_estructurados": []
+}

@@ -284,3 +284,24 @@ Normalizá el texto en minúsculas, sin acentos y con espacios simples.
   - las salvaguardas;
   - cómo correr `evaluar.py`.
 - Indicame el comando para correr P1 y el de evaluarlo. No los ejecutes.
+
+## Prompt del comentario general
+
+Una llamada al LLM al final del análisis (temperatura 0 y seed fija). Recibe solo la decisión, los conteos y el registro de riesgos agrupados.
+El código valida la respuesta (cada NORM_0X y Art. X.Y tiene que estar en el registro; entre 2 y 5 oraciones). Si falla, o si el registro está vacío, usa una plantilla armada por código.
+
+```
+Redactá el comentario general de un informe de evaluación técnica de una oferta. Usá SOLO la información de abajo. No agregues riesgos, valores, normas ni recomendaciones que no figuren en ella.
+
+Decisión de aceptabilidad: {decision}
+Riesgos por nivel: {conteo_nivel}
+Riesgos por clase: {conteo_clase}
+Registro de riesgos (título | clase | nivel | responsable | normas y artículos):
+{registro}
+
+Escribí entre 3 y 4 oraciones, en tono formal e impersonal:
+1. La decisión de aceptabilidad y el motivo principal.
+2. En qué áreas responsables se concentran los riesgos de clase Crítico y Mayor.
+3. Qué debe resolver el oferente antes de la adjudicación.
+Respondé solo con el texto, sin títulos ni viñetas.
+```

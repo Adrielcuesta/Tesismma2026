@@ -23,3 +23,9 @@
 - motor_riesgos.solicitudes y resumen_ejecutivo. tests/test_clasificacion.py. 173 tests pasan.
 - Pendiente de confirmar: nombres de las 6 dimensiones del Art. 4.3 (schemas.DimensionImpacto; solo "Seguridad de personas" viene del prompt).
 - Correcciones Etapa 3: DimensionImpacto con nombres completos del Art. 4.3 y validación por primera palabra; solicitudes agrupadas = una línea por brecha, tipo/plazo del componente de mayor clase; prompt del modo lista con RAG sin el espacio de NORM_06; test de identidad con docs/prompts/prompt_B4_clasificacion_NORM07.md. 189 tests pasan.
+
+## Etapa 4 — Dashboard (hecha, sin commit)
+- scripts/dashboard_generator.py reescrito: modo verificación (4 secciones) y modo lista (leyenda + lista simple). tests/test_dashboard.py.
+- Ejemplo: tests/fixtures/resultado_ejemplo.json -> tests/salida/dashboard_ejemplo.html (tests/salida/ en .gitignore).
+- Ajuste Etapa 4: registro dividido por nivel (Altos/Medios/Bajos, borde rojo/ámbar/verde), RBS en el detalle; top 5 eliminado (dashboard, resumen_ejecutivo, motor_riesgos.top5 y sus tests). 194 tests pasan.
+- Ajuste Etapa 4 (diseño): una sola familia tipográfica en --fuente, sin emojis, títulos en mayúsculas y negrita, etiquetas rectangulares; barra de color en las secciones por nivel. Resumen del informe: comentario general (LLM con validación + plantilla, scripts/comentario.py) y acciones antes de la adjudicación (código). Prompt del comentario en docs/prompts y test de igualdad extendido.

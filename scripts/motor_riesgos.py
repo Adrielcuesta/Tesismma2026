@@ -260,12 +260,6 @@ def decision_aceptabilidad(riesgos, criterios):
     return bloque["por_defecto"]
 
 
-def top5(riesgos, criterios):
-    """Art. 8.3. Los cinco mayores por nivel, después impacto, después clase."""
-    c, n = rango_clase(criterios), rango_nivel(criterios)
-    return sorted(riesgos, key=lambda r: (n[r["nivel"]], r.get("impacto") or 0, c[r["clase"]]), reverse=True)[:5]
-
-
 def solicitudes(riesgos, brechas, criterios):
     """Art. 8.4. Una solicitud por riesgo. El pedido lista una línea por cada brecha del grupo, con su norma y artículo; el tipo y
     el plazo son los del componente de mayor clase. Ordenadas por clase y después por categoría RBS."""
@@ -284,8 +278,7 @@ def solicitudes(riesgos, brechas, criterios):
 
 
 def resumen_ejecutivo(riesgos, criterios):
-    """Art. 8.3. Decisión de aceptabilidad, conteo por nivel y por clase, y top 5."""
+    """Art. 8.3. Decisión de aceptabilidad y conteo de riesgos por nivel y por clase."""
     return {"decision": decision_aceptabilidad(riesgos, criterios),
             "por_nivel": {n: sum(1 for r in riesgos if r["nivel"] == n) for n in criterios["estrategia_por_nivel"]["valores"]},
-            "por_clase": {c: sum(1 for r in riesgos if r["clase"] == c) for c in criterios["rango_impacto_por_clase"]["valores"]},
-            "top5": [r.get("id") for r in top5(riesgos, criterios)]}
+            "por_clase": {c: sum(1 for r in riesgos if r["clase"] == c) for c in criterios["rango_impacto_por_clase"]["valores"]}}

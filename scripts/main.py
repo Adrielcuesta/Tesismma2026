@@ -9,7 +9,7 @@ import datetime
 from pydantic import ValidationError
 from typing import Optional
 
-from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator, lineamientos, motor_riesgos, clasificacion
+from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator, lineamientos, motor_riesgos, clasificacion, comentario
 from .schemas import RiskReport, SourceChunk, LLMResponse, RiskItem, SeccionInforme, FragmentoRecuperado, FuenteNorma, VerificacionArticulo, ClasificacionRiesgo
 from .report_utils import calcular_exposicion
 
@@ -223,7 +223,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     modo = config.MODO_GENERACION if usar_rag else "lista"
     verificacion = modo == "verificacion"
     usar_crag = usar_rag and config.USAR_CRAG
-    llamadas = {"verificacion": 0, "clasificacion": 0}
+    llamadas = {"verificacion": 0, "clasificacion": 0, "comentario": 0}
     logger.info(f"--- ANÁLISIS POR SECCIÓN (Modelo: {selected_llm_model_id}, condición: {condicion}, modo: {modo}) ---")
 
     pdf_path = document_utils.obtener_ruta_pdf_proyecto(directorio_proyecto or config.DIRECTORIO_PROYECTO_ANALIZAR)
@@ -371,6 +371,16 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         for i, s in enumerate(solicitudes, 1):
             s["numero"] = i
         resumen_ejecutivo = motor_riesgos.resumen_ejecutivo(riesgos_agrupados, lin["criterios"])
+        cadena_comentario = None
+        if riesgos_agrupados:
+            try:   # temperatura 0 y seed fija; sin formato JSON (devuelve texto)
+                cadena_comentario = rag_components.crear_cadena_comentario(rag_components.get_llm_instance(selected_llm_model_id))
+            except Exception as e_llm:
+                logger.warning(f"No se pudo inicializar el modelo para el comentario general, se usa la plantilla: {e_llm}")
+        com = comentario.generar_comentario(resumen_ejecutivo, riesgos_agrupados, cadena_comentario)
+        llamadas["comentario"] += int(com["llamo"])
+        resumen_ejecutivo.update(comentario_general=com["texto"], origen_comentario=com["origen"])
+        logger.info(f"Comentario general: origen {com['origen']}" + (f" ({com['motivo']})" if com["motivo"] else ""))
         logger.info(f"Clasificación: {len(brechas_todas)} brechas -> {len(riesgos_agrupados)} riesgos, {len(solicitudes)} solicitudes, "
                     f"{len(alertas_todas)} alertas; decisión: {resumen_ejecutivo['decision']}.")
     tiempos["resumen_final"] = _segundos(t0)

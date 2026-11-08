@@ -161,7 +161,7 @@ def test_solicitudes_y_resumen_ejecutivo():
     assert len(sol) == 1 and sol[0]["tipo"] == "Solicitud de modificación de la oferta"
     assert sol[0]["pedido"].split("\n") == ["NORM_01 Art. 4.2: pedido A", "NORM_05 Art. 1.6: pedido B"]   # una línea por brecha
     res = m.resumen_ejecutivo(riesgos, c)
-    assert res["decision"] == "Aceptable con condiciones" and res["por_clase"]["Mayor"] == 1 and res["top5"] == ["R1"]
+    assert res["decision"] == "Aceptable con condiciones" and res["por_clase"]["Mayor"] == 1 and "top5" not in res
 
 
 # --- Valores y esquema ---
@@ -221,18 +221,25 @@ def test_riesgo_personas_es_la_dimension_seguridad_de_personas():
 
 # --- Prompt ---
 
-def test_el_prompt_es_identico_al_del_documento():
+def _bloque_del_documento(titulo):
+    """Texto entre las tres comillas invertidas que siguen a `titulo` en docs/prompts/prompt_B4_clasificacion_NORM07.md."""
     ruta = os.path.join(os.path.dirname(__file__), os.pardir, "docs", "prompts", "prompt_B4_clasificacion_NORM07.md")
     with open(ruta, encoding="utf-8") as f:
         lineas = f.read().split("\n")
-    inicio = next(i for i, l in enumerate(lineas) if "Texto del prompt" in l)
+    inicio = next(i for i, l in enumerate(lineas) if titulo in l)
     abre = next(i for i in range(inicio, len(lineas)) if lineas[i].strip() == "```")
     cierra = next(i for i in range(abre + 1, len(lineas)) if lineas[i].strip() == "```")
-    esperado = "\n".join(lineas[abre + 1:cierra]).strip()
-    variables = ["criterios", "articulo", "seccion_numerada", "verificacion"]
-    renderizado = PromptTemplate(template=rag_components.PROMPT_CLASIFICACION_STR, input_variables=variables).format(
+    return "\n".join(lineas[abre + 1:cierra]).strip()
+
+
+@pytest.mark.parametrize("titulo,plantilla,variables", [
+    ("Texto del prompt", "PROMPT_CLASIFICACION_STR", ["criterios", "articulo", "seccion_numerada", "verificacion"]),
+    ("Prompt del comentario general", "PROMPT_COMENTARIO_GENERAL_STR", ["decision", "conteo_nivel", "conteo_clase", "registro"]),
+])
+def test_los_prompts_son_identicos_a_los_del_documento(titulo, plantilla, variables):
+    renderizado = PromptTemplate(template=getattr(rag_components, plantilla), input_variables=variables).format(
         **{v: "{" + v + "}" for v in variables})
-    assert renderizado.strip() == esperado
+    assert renderizado.strip() == _bloque_del_documento(titulo)
 
 
 def test_el_prompt_no_contiene_ejemplos_de_las_ofertas():

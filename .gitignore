@@ -59,3 +59,5 @@ temp_files/
 *ISO_31000_Gestion_de_Riesgos.pdf
 # *.docx
 # *.doc
+# Salida de tests (dashboard de ejemplo)
+tests/salida/

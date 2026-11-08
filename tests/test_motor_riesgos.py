@@ -215,13 +215,6 @@ def test_regla_sin_condiciones_nunca_se_cumple():
     assert m.decision_aceptabilidad([{"clase": "Menor", "nivel": "Bajo"}], c) == "Aceptable"
 
 
-def test_top5_por_nivel_impacto_y_clase():
-    rs = [{"titulo": f"r{i}", "nivel": n, "impacto": imp, "clase": c}
-          for i, (n, imp, c) in enumerate([("Bajo", 2, "Menor"), ("Alto", 4, "Mayor"), ("Alto", 5, "Crítico"), ("Medio", 3, "Mayor"),
-                                           ("Alto", 4, "Crítico"), ("Medio", 3, "Menor"), ("Bajo", 1, "Menor")])]
-    assert [r["titulo"] for r in m.top5(rs, C)] == ["r2", "r4", "r1", "r3", "r5"]
-
-
 # --- Consistencia con el ground truth: el código implementa la norma igual que el ground truth (no mide al modelo) ---
 
 def _filas_gt():

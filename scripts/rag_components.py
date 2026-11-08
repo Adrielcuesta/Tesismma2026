@@ -250,6 +250,23 @@ ARTÍCULO A VERIFICAR:
 {articulo}
 """
 
+# Comentario general del informe (modo verificación): recibe solo la decisión, los conteos y el registro de riesgos agrupados.
+PROMPT_COMENTARIO_GENERAL_STR = """
+Redactá el comentario general de un informe de evaluación técnica de una oferta. Usá SOLO la información de abajo. No agregues riesgos, valores, normas ni recomendaciones que no figuren en ella.
+
+Decisión de aceptabilidad: {decision}
+Riesgos por nivel: {conteo_nivel}
+Riesgos por clase: {conteo_clase}
+Registro de riesgos (título | clase | nivel | responsable | normas y artículos):
+{registro}
+
+Escribí entre 3 y 4 oraciones, en tono formal e impersonal:
+1. La decisión de aceptabilidad y el motivo principal.
+2. En qué áreas responsables se concentran los riesgos de clase Crítico y Mayor.
+3. Qué debe resolver el oferente antes de la adjudicación.
+Respondé solo con el texto, sin títulos ni viñetas.
+"""
+
 # Clasificación según los lineamientos de la empresa. {criterios} = capítulos y artículos que declara criterios_empresa.json
 # (texto_para_el_modelo); el resto de las variables es lo mismo que recibía la redacción. Sin ejemplos propios: se citan los artículos.
 PROMPT_CLASIFICACION_STR = """
@@ -600,6 +617,11 @@ def crear_cadena_verificacion(llm):
 def crear_cadena_clasificacion(llm):
     """Clasificación de un Incumple o Revisar según los lineamientos -> mensaje del LLM (su .content es el JSON de ClasificacionRiesgo)."""
     return PromptTemplate(template=PROMPT_CLASIFICACION_STR, input_variables=["criterios", "articulo", "seccion_numerada", "verificacion"]) | llm
+
+
+def crear_cadena_comentario(llm):
+    """Comentario general -> mensaje del LLM (su .content es el texto). Temperatura 0 y seed fija (get_llm_instance)."""
+    return PromptTemplate(template=PROMPT_COMENTARIO_GENERAL_STR, input_variables=["decision", "conteo_nivel", "conteo_clase", "registro"]) | llm
 
 
 def formatear_oraciones(oraciones: List[tuple]) -> str:

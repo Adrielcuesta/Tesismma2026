@@ -1,4 +1,7 @@
 # scripts/dashboard_generator.py
+"""Dashboard HTML (un solo archivo, sin dependencias externas ni fuentes descargadas). Dos tipos de resultado:
+- modo verificación (JSON con riesgos clasificados): resumen ejecutivo, registro de riesgos, solicitudes al oferente y alertas;
+- modo lista (línea de base sin clasificación): lista simple con título, descripción y cita de la oferta."""
 import json
 import os
 import logging
@@ -8,6 +11,77 @@ import base64
 
 logger = logging.getLogger(__name__)
 CURRENT_YEAR = datetime.datetime.now().year
+
+LEYENDA_SIN_RAG = "Línea de base sin base de conocimiento: sin clasificación según los lineamientos"
+LEYENDA_LISTA_CON_RAG = "Modo lista con base de conocimiento: sin clasificación según los lineamientos"
+LEYENDA_ALERTAS = "Dudas internas del evaluador; no se envían al oferente."
+CLASES = ("Crítico", "Mayor", "Menor")
+CLASE_CSS = {"Crítico": "critico", "Mayor": "mayor", "Menor": "menor"}
+NIVEL_CSS = {"Alto": "alto", "Medio": "medio", "Bajo": "bajo"}
+DECISION_CSS = {"No aceptable": "no-aceptable", "Aceptable con condiciones": "condiciones", "Aceptable": "aceptable"}
+FUENTE_TEXTO = {"DESVIO": "Desvío", "EXCEPCION_NO_ACREDITADA": "Excepción no acreditada", "INFORMACION_FALTANTE": "Información faltante"}
+# Secciones del registro, de mayor a menor nivel
+SECCIONES_NIVEL = (("Alto", "RIESGOS DE NIVEL ALTO"), ("Medio", "RIESGOS DE NIVEL MEDIO"), ("Bajo", "RIESGOS DE NIVEL BAJO"))
+# Plazos de las solicitudes que el resumen del informe distingue
+PLAZO_ADJUDICACION = "Antes de la adjudicación"
+PLAZO_FIRMA = "Antes de la firma del contrato"
+
+CSS = """
+        :root{--fuente:"Avenir LT 35 Light","Avenir LT Std","Avenir","Avenir Next","Segoe UI","Helvetica Neue",Arial,sans-serif;}
+        body{font-family:var(--fuente);font-weight:400;margin:0;padding:0;background-color:#f0f2f5;color:#333;}
+        .page-wrapper{width:100%;display:flex;flex-direction:column;align-items:center;padding:20px;box-sizing:border-box;}
+        .main-dashboard-container{background-color:#fff;padding:30px 40px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.1);width:100%;max-width:1200px;text-align:left;margin-bottom:30px;box-sizing:border-box;}
+        .abstract-banner-container{width:100%;height:100px;margin-bottom:25px;background-image:url("__BANNER__");background-size:cover;background-position:center;border-radius:6px;}
+        .header-content{text-align:center;margin-bottom:30px;}
+        .title-with-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;}
+        .title-with-logo img.logo-inline{height:37px;width:auto;}
+        h1{color:#1a2533;font-size:1.7em;margin:0;} h2{color:#2c3e50;font-size:1.3em;margin-top:8px;font-weight:500;} h3{color:#4a5568;font-size:1.1em;margin:8px 0;font-weight:400;}
+        .project-analysis-title{text-align:center;font-size:1.6em;color:#1a2533;margin-top:0;margin-bottom:30px;padding-bottom:15px;border-bottom:2px solid #e0e0e0;}
+        .risk-section{margin-bottom:35px;}
+        .risk-section-title{font-size:1.15em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#2c3e50;border-bottom:1px solid #e0e0e0;padding-bottom:10px;margin-bottom:20px;}
+        .subtitulo{font-size:.85em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#2c3e50;margin:14px 0 6px;}
+        .detail-label{font-weight:400;color:#6b7280;}
+        .leyenda{border-radius:8px;padding:12px 18px;margin-bottom:20px;font-size:.95em;background-color:#fff8e1;border:1px solid #f39c12;color:#7a5c00;}
+        .marca{display:inline-block;background-color:#fff6e0;border:1px solid #f0c36d;color:#7a5c00;border-radius:2px;padding:0 6px;font-size:.78em;margin-right:4px;}
+        .badge{display:inline-block;border:1px solid;border-radius:2px;padding:1px 7px;font-size:.78em;white-space:nowrap;}
+        .badge.critico,.badge.alto{background:#fdecea;border-color:#e74c3c;color:#9b2c20;}
+        .badge.mayor{background:#fdf0e3;border-color:#e67e22;color:#8a4a0f;}
+        .badge.menor{background:#eef0f1;border-color:#95a5a6;color:#55606a;}
+        .badge.medio{background:#fff6e0;border-color:#f39c12;color:#8a5a00;}
+        .badge.bajo{background:#e8f8ef;border-color:#2ecc71;color:#1d7a45;}
+        .decision{font-size:1.15em;color:#333;margin:0 0 18px;}
+        .decision .valor{color:#7f8c8d;} .decision.no-aceptable .valor{color:#c0392b;} .decision.condiciones .valor{color:#b9770e;} .decision.aceptable .valor{color:#1e8449;}
+        .conteos{display:flex;flex-wrap:wrap;gap:30px;margin-bottom:18px;} .conteos div{font-size:.95em;} .conteos .badge{margin-left:4px;margin-right:10px;}
+        .informe-general{background-color:#f5f8fb;border:1px solid #d6e0ea;border-radius:2px;padding:16px 20px;font-size:.95em;line-height:1.55;}
+        .informe-general p{margin:6px 0;} .informe-general ul{margin:6px 0;padding-left:22px;}
+        .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;align-items:start;}
+        details.risk-card{background-color:#fdfdfd;border:1px solid #e9ecef;border-radius:8px;padding:0;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left-width:5px;border-left-style:solid;}
+        details.risk-card.alto{border-left-color:#e74c3c;} details.risk-card.medio{border-left-color:#f39c12;} details.risk-card.bajo{border-left-color:#2ecc71;}
+        details.risk-card[open]{grid-column:1 / -1;}
+        details.risk-card summary{cursor:pointer;padding:16px 20px;list-style:none;} details.risk-card summary::-webkit-details-marker{display:none;}
+        details.risk-card summary:hover{background:#f7f9fb;}
+        .card-title{margin:0 0 10px;color:#34495e;font-size:1.05em;line-height:1.4;display:block;}
+        .card-meta{font-size:.85em;color:#555;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+        .risk-detail{padding:4px 20px 18px;border-top:1px dashed #ccc;font-size:.92em;line-height:1.55;}
+        .risk-detail p{margin:6px 0;}
+        .lado-a-lado{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0 14px;}
+        .lado{background:#f5f8fb;border:1px solid #d6e0ea;border-radius:2px;padding:10px 14px;}
+        .lado h5{margin:0 0 6px;font-size:.9em;font-weight:400;color:#2c3e50;}
+        .lado .texto{white-space:pre-wrap;max-height:170px;overflow:auto;font-size:.9em;}
+        .tabla{border-collapse:collapse;width:100%;font-size:.88em;}
+        .tabla th{text-align:left;background:#f5f8fb;border-bottom:2px solid #d6e0ea;padding:8px 10px;font-size:.85em;font-weight:700;text-transform:uppercase;}
+        .tabla td{border-bottom:1px solid #e9ecef;padding:8px 10px;vertical-align:top;} .tabla td.pedido{white-space:pre-wrap;}
+        .tabla-wrap{overflow-x:auto;}
+        .alerta{border:1px solid #e9ecef;border-left:5px solid #f39c12;border-radius:8px;padding:12px 18px;margin-bottom:12px;background:#fffdf7;font-size:.92em;line-height:1.55;}
+        .alerta p{margin:4px 0;}
+        .lista-simple .item{border:1px solid #e9ecef;border-left:5px solid #95a5a6;border-radius:8px;padding:12px 18px;margin-bottom:12px;font-size:.93em;line-height:1.55;}
+        .lista-simple .item h4{margin:0 0 6px;color:#34495e;font-size:1.02em;font-weight:400;} .lista-simple .item p{margin:4px 0;}
+        .pie-tecnico{margin-top:35px;padding-top:12px;border-top:1px solid #e0e0e0;font-size:.82em;color:#6c757d;text-align:center;}
+        .vacio{font-style:italic;color:#6c757d;}
+        .dashboard-page-footer{width:100%;text-align:center;padding:25px 0;font-size:.9em;color:#6c757d;margin-top:30px;border-top:1px solid #d0d0d0;}
+        @media (max-width:700px){.lado-a-lado{grid-template-columns:1fr;}.main-dashboard-container{padding:20px;}}
+"""
+
 
 def image_to_base64(image_filename_in_static_images):
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -26,267 +100,208 @@ def image_to_base64(image_filename_in_static_images):
         logger.error(f"Error codificando imagen {image_path} a Base64: {e}")
         return ""
 
-def formatear_exposicion(riesgo):
-    """Texto de la exposición (impacto x probabilidad), p. ej. '6/9 (Alta)'."""
-    exposicion = riesgo.get("exposicion_riesgo")
-    if exposicion is None:
-        return "N/D"
-    return f"{exposicion}/9 ({escape(str(riesgo.get('nivel_exposicion', 'N/D')))})"
 
-def formatear_respaldo(riesgo):
-    """Respaldo en la Base de Conocimiento (score del re-ranker, 0-1) como porcentaje."""
-    respaldo = riesgo.get("respaldo_base_conocimiento")
-    return f"{respaldo:.0%}" if respaldo is not None else "N/D"
+def _e(valor, vacio="N/D"):
+    return escape(str(valor)) if valor not in (None, "") else vacio
 
-def formatear_fuentes(riesgo):
-    """Fuentes normativas del riesgo, p. ej. 'NORM_01 Art. 4.2; NORM_02 Art. 1.1' (ya escapadas)."""
-    fuentes = riesgo.get("fuentes") or []
-    return escape("; ".join(f"{f.get('norma', '?')} Art. {f.get('articulo', '?')}" for f in fuentes)) if fuentes else "—"
 
-def formatear_marcas(riesgo):
-    """Marcas de validación del riesgo (ya escapadas), o '—' si no tiene."""
-    marcas = riesgo.get("marcas") or []
-    return " ".join(f'<span class="marca">{escape(str(m))}</span>' for m in marcas) if marcas else "—"
+def _badge(valor, mapa):
+    return f'<span class="badge {mapa.get(valor, "menor")}">{_e(valor)}</span>'
 
-CLASE_ESTADO = {"Rojo": "rojo", "Ámbar": "ambar", "Verde": "verde"}
 
-def formatear_requisitos(riesgo):
-    """Requisitos del artículo como lista HTML (ya escapados), o '—'."""
-    requisitos = riesgo.get("requisitos") or []
-    return "<ul>" + "".join(f"<li>{escape(str(r))}</li>" for r in requisitos) + "</ul>" if requisitos else "—"
+def _badge_cuenta(clave, cuenta, mapa):
+    return f'<span class="badge {mapa.get(clave, "menor")}">{cuenta}</span>'
 
-def tarjetas_verificacion(titulo, emoji, riesgos):
-    """Sección de hallazgos (Incumple) o de alertas a revisar (Revisar): por cada uno, cita, artículo, requisitos y motivo."""
+
+def _citas_texto(citas):
+    return "; ".join(f"{c.get('norma', '?')} Art. {c.get('articulo', '?')}" for c in citas or []) or "—"
+
+
+# --- 1. Resumen ejecutivo ---
+
+def acciones_previas(solicitudes, riesgos, orden_clases):
+    """Líneas '<responsable>: <título del riesgo> (<norma y artículo>)' de las solicitudes con plazo previo a la adjudicación,
+    ordenadas por clase, y cantidad de solicitudes con plazo previo a la firma del contrato."""
+    titulos = {r.get("id"): r.get("titulo") for r in riesgos}
+    rango = {c: i for i, c in enumerate(orden_clases)}
+    previas = sorted((s for s in solicitudes if s.get("plazo") == PLAZO_ADJUDICACION), key=lambda s: rango.get(s.get("clase"), 99))
+    lineas = [f"{s.get('responsable') or 'N/D'}: {titulos.get(s.get('riesgo')) or 'N/D'} ({_citas_texto(s.get('citas'))})" for s in previas]
+    return lineas, sum(1 for s in solicitudes if s.get("plazo") == PLAZO_FIRMA)
+
+
+def seccion_resumen(resumen, riesgos, solicitudes, orden_clases):
+    decision = resumen.get("decision", "N/D")
+    por_nivel, por_clase = resumen.get("por_nivel", {}), resumen.get("por_clase", {})
+    niveles = " ".join(f'<span>{_e(n)}{_badge_cuenta(n, c, NIVEL_CSS)}</span>' for n, c in por_nivel.items())
+    clases = " ".join(f'<span>{_e(k)}{_badge_cuenta(k, c, CLASE_CSS)}</span>' for k, c in por_clase.items())
+    lineas, firma = acciones_previas(solicitudes, riesgos, orden_clases)
+    comentario = resumen.get("comentario_general")
+    comentario_html = f'<p class="subtitulo">Comentario general</p><p>{_e(comentario)}</p>' if comentario else ""
+    acciones = "".join(f"<li>{escape(l)}</li>" for l in lineas) or '<li class="vacio">No hay acciones previas a la adjudicación.</li>'
+    return f'''
+    <div class="risk-section" id="resumen">
+        <h3 class="risk-section-title">Resumen ejecutivo</h3>
+        <div class="decision {DECISION_CSS.get(decision, "otra")}">Decisión de aceptabilidad: <span class="valor">{_e(decision)}</span></div>
+        <div class="conteos"><div><span class="detail-label">Riesgos por nivel</span> {niveles}</div><div><span class="detail-label">Riesgos por clase</span> {clases}</div></div>
+        <div class="informe-general">
+            <p class="subtitulo" style="margin-top:0">Resumen del informe</p>
+            {comentario_html}
+            <p class="subtitulo">Acciones antes de la adjudicación</p>
+            <ul>{acciones}</ul>
+            <p>Solicitudes con plazo «{PLAZO_FIRMA}»: {firma}.</p>
+        </div>
+    </div>'''
+
+
+# --- 2. Registro de riesgos ---
+
+def _lado_a_lado(b):
+    oraciones = ", ".join(b.get("oraciones") or []) or "—"
+    return f'''
+        <div class="lado-a-lado">
+            <div class="lado"><h5>Oferta — sección {_e(b.get("seccion_oferta"))} (oraciones {escape(oraciones)})</h5><div class="texto">{_e(b.get("cita"))}</div></div>
+            <div class="lado"><h5>Requisito — {_e(b.get("norma"))} Art. {_e(b.get("articulo"))}</h5><div class="texto">{_e(b.get("texto_articulo"))}</div></div>
+        </div>'''
+
+
+def tarjeta_riesgo(r, brechas_por_id):
+    componentes = [brechas_por_id[i] for i in r.get("brechas", []) if i in brechas_por_id]
+    marcas = list(dict.fromkeys(m for b in componentes for m in b.get("marcas", [])))
+    marcas_html = f'<p><span class="detail-label">Marcas del sistema:</span> {" ".join(f"<span class=marca>{escape(str(m))}</span>" for m in marcas)}</p>' if marcas else ""
+    fuente = FUENTE_TEXTO.get(r.get("fuente"), _e(r.get("fuente")))
+    return f'''
+        <details class="risk-card {NIVEL_CSS.get(r.get("nivel"), "bajo")}" id="{escape(str(r.get("id", "")))}">
+            <summary>
+                <span class="card-title">{_e(r.get("titulo"))}</span>
+                <span class="card-meta">{_badge(r.get("clase"), CLASE_CSS)} <span><span class="detail-label">Responsable:</span> {_e(r.get("responsable"))}</span></span>
+            </summary>
+            <div class="risk-detail">
+                {"".join(_lado_a_lado(b) for b in componentes)}
+                <p><span class="detail-label">Enunciado:</span> {_e(r.get("enunciado"))}</p>
+                <p><span class="detail-label">Categoría RBS:</span> {_e(r.get("rbs"))}</p>
+                <p><span class="detail-label">Fuente:</span> {escape(fuente)} · <span class="detail-label">Clase:</span> {_e(r.get("clase"))} (regla {_e(r.get("regla"))} de los criterios)</p>
+                <p><span class="detail-label">Probabilidad × impacto = nivel:</span> {_e(r.get("probabilidad"))} × {_e(r.get("impacto"))} = {_badge(r.get("nivel"), NIVEL_CSS)} · <span class="detail-label">Dimensión del impacto:</span> {_e(r.get("dimension_impacto"))}</p>
+                <p><span class="detail-label">Estrategia:</span> {_e(r.get("estrategia"))}</p>
+                <p><span class="detail-label">Acción de mitigación:</span> {_e(r.get("accion"))}</p>
+                <p><span class="detail-label">Umbral:</span> {_e(r.get("umbral"))}</p>
+                <p><span class="detail-label">Responsable:</span> {_e(r.get("responsable"))}</p>
+                {marcas_html}
+            </div>
+        </details>'''
+
+
+def seccion_registro(riesgos, brechas, orden_clases):
     if not riesgos:
-        return ""
-    tarjetas = "".join(f'''
-                <div class="risk-card {CLASE_ESTADO.get(r.get("estado_RAG_sugerido"), "gris")}">
-                    <h6>{escape(r.get("descripcion_riesgo", "N/A"))}</h6>
-                    <div class="risk-card-body">
-                        <p><span class="detail-label">Cita de la oferta:</span> {escape(r.get("cita_oferta") or "N/D")}</p>
-                        <p><span class="detail-label">Artículo:</span> {formatear_fuentes(r)}</p>
-                        <p><span class="detail-label">Requisitos:</span></p>{formatear_requisitos(r)}
-                        <p><span class="detail-label">Motivo:</span> {escape(r.get("motivo") or "N/D")}</p>
-                        <p><span class="detail-label">Sección:</span> {escape(r.get("seccion_oferta") or "N/D")}</p>
-                        <p><span class="detail-label">Acción:</span> {escape(r.get("accion_mitigacion", "N/A"))}</p>
-                        <p><span class="detail-label">Exposición (impacto × prob.):</span> {formatear_exposicion(r)}</p>
-                    </div>
-                </div>''' for r in riesgos)
-    return f'<div class="risk-section"><h3 class="risk-section-title"><span class="section-emoji">{emoji}</span>{titulo} ({len(riesgos)})</h3><div class="dashboard-grid">{tarjetas}</div></div>'
+        return '<div class="risk-section"><h3 class="risk-section-title">Registro de riesgos</h3><p class="vacio">No se identificaron riesgos.</p></div>'
+    por_id = {b.get("id"): b for b in brechas}
+    rango = {c: i for i, c in enumerate(orden_clases)}
+    secciones = []
+    for nivel, titulo in SECCIONES_NIVEL:
+        items = sorted((r for r in riesgos if r.get("nivel") == nivel), key=lambda x: (-(x.get("impacto") or 0), rango.get(x.get("clase"), 99)))
+        if items:   # una sección sin riesgos no se muestra
+            secciones.append(f'<div class="risk-section"><h3 class="risk-section-title">{titulo} ({len(items)})</h3>'
+                             f'<div class="dashboard-grid">{"".join(tarjeta_riesgo(r, por_id) for r in items)}</div></div>')
+    return f'<div class="risk-section"><h3 class="risk-section-title">Registro de riesgos ({len(riesgos)})</h3></div>{"".join(secciones)}'
+
+
+# --- 3. Solicitudes al oferente ---
+
+def seccion_solicitudes(solicitudes):
+    if not solicitudes:
+        return '<div class="risk-section"><h3 class="risk-section-title">Solicitudes al oferente</h3><p class="vacio">No hay solicitudes.</p></div>'
+    filas = "".join(
+        f'<tr><td>{_e(s.get("numero"))}</td><td>{_e(s.get("tipo"))}</td><td>{escape(_citas_texto(s.get("citas")))}</td><td>{_e(s.get("cita_oferta"))}</td>'
+        f'<td class="pedido">{_e(s.get("pedido"))}</td><td>{_badge(s.get("clase"), CLASE_CSS)}</td><td>{_e(s.get("responsable"))}</td><td>{_e(s.get("plazo"))}</td></tr>'
+        for s in solicitudes)
+    return f'''<div class="risk-section"><h3 class="risk-section-title">Solicitudes al oferente ({len(solicitudes)})</h3>
+        <div class="tabla-wrap"><table class="tabla"><tr><th>N°</th><th>Tipo de solicitud</th><th>Norma y artículo</th><th>Cita de la oferta</th><th>Pedido</th><th>Clase</th><th>Responsable</th><th>Plazo</th></tr>{filas}</table></div></div>'''
+
+
+# --- 4. Alertas ---
+
+def seccion_alertas(alertas):
+    items = "".join(f'''
+        <div class="alerta"><p>{_e(a.get("norma"))} Art. {_e(a.get("articulo"))} · sección {_e(a.get("seccion_oferta"))}</p>
+        <p><span class="detail-label">Motivo:</span> {_e(a.get("motivo"))}</p><p><span class="detail-label">Cita de la oferta:</span> {_e(a.get("cita"))}</p></div>''' for a in alertas)
+    return f'''<div class="risk-section"><h3 class="risk-section-title">Alertas a revisar ({len(alertas)})</h3>
+        <p class="vacio">{LEYENDA_ALERTAS}</p>{items or '<p class="vacio">No hay alertas.</p>'}</div>'''
+
+
+def pie_tecnico(datos):
+    cfg = datos.get("configuracion_analisis") or {}
+    llamadas = cfg.get("llamadas_llm") if isinstance(cfg.get("llamadas_llm"), dict) else {}
+    huella = (datos.get("lineamientos") or {}).get("huella", "")
+    fecha = str(datos.get("timestamp_analisis") or "N/D")[:16].replace("T", " ")
+    origen = (datos.get("resumen_ejecutivo") or {}).get("origen_comentario")
+    return (f'<p class="pie-tecnico">Modelo: {_e(cfg.get("modelo_llm_usado"))} · Fecha: {escape(fecha)} · '
+            f'Huella de los lineamientos: <span title="{escape(huella)}">{escape(huella[:12]) or "N/D"}</span> · '
+            f'Verificaciones: {_e(llamadas.get("verificacion"))} · Clasificaciones: {_e(llamadas.get("clasificacion"))} · '
+            f'Comentario general: {_e(origen)}</p>')
+
+
+# --- Modo lista ---
+
+def lista_simple(datos):
+    riesgos = datos.get("riesgos_identificados_estructurados") or datos.get("riesgos_identificados") or []
+    if not riesgos:
+        return '<p class="vacio">No se identificaron riesgos.</p>'
+    items = []
+    for r in riesgos:
+        descripcion = r.get("descripcion_riesgo") or ""
+        palabras = descripcion.split()
+        titulo = " ".join(palabras[:12]) + ("…" if len(palabras) > 12 else "")
+        items.append(f'<div class="item"><h4>{_e(titulo)}</h4><p><span class="detail-label">Descripción:</span> {_e(r.get("explicacion_riesgo") or descripcion)}</p>'
+                     f'<p><span class="detail-label">Cita de la oferta:</span> {_e(r.get("cita_oferta"))}</p></div>')
+    return f'<div class="lista-simple">{"".join(items)}</div>'
+
+
+def es_modo_verificacion(datos):
+    return bool(datos.get("registro_brechas")) or datos.get("resumen_ejecutivo") is not None
+
 
 def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, info_tesis_config=None):
     try:
         with open(ruta_json_resultados, 'r', encoding='utf-8') as f:
-            datos_analisis = json.load(f)
+            datos = json.load(f)
     except Exception as e:
         logger.error(f"Error abriendo o parseando JSON en {ruta_json_resultados}: {e}")
         return
 
-    nombre_proyecto_analizado = escape(datos_analisis.get("nombre_proyecto_analizado", "Proyecto No Especificado"))
-    riesgos_identificados = datos_analisis.get("riesgos_identificados_estructurados", [])
-    fragmentos_fuente = datos_analisis.get("fragmentos_fuente", [])
-    # Resultado del evaluador de evidencia CRAG-lite
-    evaluacion_evidencia = datos_analisis.get("evaluacion_evidencia")
-    advertencia_evidencia = datos_analisis.get("advertencia_evidencia")
-    # Cierre del informe del análisis por sección
-    suficiencia_evidencia = datos_analisis.get("suficiencia_evidencia")
-    comentarios_generales = datos_analisis.get("comentarios_generales")
-    acciones_generales = datos_analisis.get("acciones_generales") or []
     it = info_tesis_config or {}
+    nombre_proyecto = escape(datos.get("nombre_proyecto_analizado", "Proyecto No Especificado"))
+    logo_inline, logo_footer = image_to_base64("logo-itba.png"), image_to_base64("itba.png")
 
-    header_banner_base64 = image_to_base64("header_banner_abstract.png")
-    logo_inline_base64 = image_to_base64("logo-itba.png")
-    logo_itba_footer_base64 = image_to_base64("itba.png")
+    if es_modo_verificacion(datos):
+        riesgos, brechas, solicitudes = datos.get("riesgos") or [], datos.get("registro_brechas") or [], datos.get("solicitudes") or []
+        resumen = datos.get("resumen_ejecutivo") or {}
+        orden_clases = list(resumen.get("por_clase", {})) or list(CLASES)
+        cuerpo = (seccion_resumen(resumen, riesgos, solicitudes, orden_clases) + seccion_registro(riesgos, brechas, orden_clases)
+                  + seccion_solicitudes(solicitudes) + seccion_alertas(datos.get("alertas") or []) + pie_tecnico(datos))
+    else:
+        condicion = (datos.get("configuracion_analisis") or {}).get("condicion", "sin_rag")
+        leyenda = LEYENDA_SIN_RAG if condicion == "sin_rag" else LEYENDA_LISTA_CON_RAG
+        cuerpo = f'<div class="leyenda">{leyenda}</div>' + lista_simple(datos)
 
-    risk_category_emojis = {"Rojo": "🔥", "Ámbar": "⚠️", "Verde": "✅", "Gris (Indeterminado)": "❓"}
-    estado_map = {
-        "Rojo": {"clase": "rojo", "titulo": "Riesgos Altos"},
-        "Ámbar": {"clase": "ambar", "titulo": "Riesgos Medios"},
-        "Verde": {"clase": "verde", "titulo": "Riesgos Bajos"},
-        "Gris (Indeterminado)": {"clase": "gris", "titulo": "Riesgos Indeterminados"}
-    }
-    # Modo verificación: hallazgos (Incumple) y alertas a revisar (Revisar) van en secciones propias;
-    # el resto (modo lista) se agrupa por estado RAG como siempre. El registro técnico no se muestra.
-    hallazgos = [r for r in riesgos_identificados if r.get("veredicto") == "Incumple"]
-    alertas_revisar = [r for r in riesgos_identificados if r.get("veredicto") == "Revisar"]
-    riesgos_agrupados = {key: [] for key in estado_map}
-    for riesgo in (r for r in riesgos_identificados if r.get("veredicto") not in ("Incumple", "Revisar")):
-        estado = riesgo.get("estado_RAG_sugerido", "Gris (Indeterminado)")
-        riesgos_agrupados.get(estado, riesgos_agrupados["Gris (Indeterminado)"]).append(riesgo)
-    orden_secciones = ["Rojo", "Ámbar", "Verde", "Gris (Indeterminado)"]
-
-    final_html = f'''
-<!DOCTYPE html>
+    final_html = f'''<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Análisis de Riesgos: {nombre_proyecto_analizado}</title>
-    <style>
-        body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;margin:0;padding:0;background-color:#f0f2f5;color:#333;}}
-        .page-wrapper{{width:100%;display:flex;flex-direction:column;align-items:center;padding:20px;box-sizing:border-box;}}
-        .main-dashboard-container{{background-color:#fff;padding:30px 40px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.1);width:100%;max-width:1200px;text-align:left;margin-bottom:30px;}}
-        .abstract-banner-container{{width:100%;height:100px;margin-bottom:25px;background-image:url("{header_banner_base64}");background-size:cover;background-position:center;border-radius:6px;}}
-        .header-content{{text-align:center;margin-bottom:30px;}}
-        .title-with-logo{{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;}}
-        .title-with-logo img.logo-inline{{height:37px;width:auto;}}
-        h1{{color:#1a2533;font-size:1.7em;margin:0;}} h2{{color:#2c3e50;font-size:1.3em;margin-top:8px;font-weight:500;}} h3{{color:#4a5568;font-size:1.1em;margin:8px 0;font-weight:400;}}
-        .app-subtitle{{color:#555;font-size:1.0em;font-weight:bold;font-style:italic;margin-top:2px;margin-bottom:15px;}}
-        .student-name{{color:#333;font-size:1.1em;font-weight:bold;margin-top:15px;}}
-        .project-analysis-title{{text-align:center;font-size:1.6em;color:#1a2533;margin-top:0;margin-bottom:30px;padding-bottom:15px;border-bottom:2px solid #e0e0e0;}}
-        .evidencia-banner{{border-radius:8px;padding:16px 20px;margin-bottom:25px;font-size:.95em;line-height:1.5;}}
-        .evidencia-banner.ambiguo{{background-color:#fff8e1;border:1px solid #f39c12;color:#7a5c00;}}
-        .evidencia-banner.insuficiente{{background-color:#fdecea;border:1px solid #e74c3c;color:#7a1f14;}}
-        .evidencia-banner strong{{display:block;margin-bottom:4px;font-size:1.05em;}}
-        .informe-general{{background-color:#f5f8fb;border:1px solid #d6e0ea;border-radius:8px;padding:16px 20px;margin-bottom:25px;font-size:.95em;line-height:1.5;}}
-        .informe-general h3{{margin:0 0 8px;font-size:1.1em;color:#2c3e50;}} .informe-general ul{{margin:6px 0 0;padding-left:22px;}}
-        .marca{{display:inline-block;background-color:#fff3cd;border:1px solid #f0c36d;color:#7a5c00;border-radius:10px;padding:0 8px;font-size:.85em;margin-right:4px;}}
-        .risk-section{{margin-bottom:35px;}}
-        .risk-section-title{{font-size:1.4em;color:#2c3e50;border-bottom:1px solid #e0e0e0;padding-bottom:10px;margin-bottom:20px;display:flex;align-items:center;}}
-        .section-emoji{{margin-right:12px;font-size:1.2em;}}
-        .dashboard-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;}}
-        .risk-card{{background-color:#fdfdfd;border:1px solid #e9ecef;border-radius:8px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:transform .2s,box-shadow .2s;border-left-width:5px;border-left-style:solid;display:flex;flex-direction:column;}}
-        .risk-card:hover{{transform:translateY(-4px);box-shadow:0 5px 15px rgba(0,0,0,.1);}}
-        .risk-card h6{{margin:0 0 12px;color:#34495e;font-size:1.05em;line-height:1.4;flex-grow:1;}}
-        .risk-card-body p{{font-size:0.85em;line-height:1.5;margin:4px 0;}}
-        .risk-card-confidence{{text-align:right;margin-top:12px;padding-top:8px;border-top:1px solid #eee;}}
-        .risk-card.rojo{{border-left-color:#e74c3c;}} .risk-card.ambar{{border-left-color:#f39c12;}} .risk-card.verde{{border-left-color:#2ecc71;}} .risk-card.gris{{border-left-color:#95a5a6;}}
-        .details-section{{margin-top:40px;padding-top:20px;border-top:2px solid #e0e0e0;}}
-        .details-section-title{{text-align:left;font-size:1.4em;color:#2c3e50;margin-bottom:25px;}}
-        .risk-detail-item{{margin-bottom:20px;padding-bottom:15px;border-bottom:1px dashed #ccc;}} .risk-detail-item:last-child{{border-bottom:none;}}
-        .risk-detail-item h4{{font-size:1.1em;color:#34495e;margin:0 0 8px; display:flex; align-items:center;}}
-        .risk-detail-item p{{font-size:.95em;line-height:1.6;margin:4px 0;}}
-        .detail-label{{font-weight:600;color:#555;}}
-        .kb-section{{margin-top:40px;padding-top:20px;border-top:1px solid #e8e8e8;}} .kb-section h2{{font-size:1.4em;}}
-        .confidence-score{{font-size:0.9em;font-weight:700;}}
-        .conf-high-text{{color:#27ae60;}} .conf-medium-text{{color:#f39c12;}} .conf-low-text{{color:#e74c3c;}} .conf-none-text{{color:#7f8c8d;}}
-        .dashboard-page-footer{{width:100%;text-align:center;padding:25px 0;font-size:.9em;color:#6c757d;margin-top:30px;border-top:1px solid #d0d0d0;}}
-    </style>
+    <title>Dashboard de Análisis de Riesgos: {nombre_proyecto}</title>
+    <style>{CSS.replace("__BANNER__", image_to_base64("header_banner_abstract.png"))}</style>
 </head>
 <body>
 <div class="page-wrapper">
     <div class="main-dashboard-container">
         <div class="abstract-banner-container"></div>
         <div class="header-content">
-            <div class="title-with-logo"><img src="{logo_inline_base64}" alt="Logo" class="logo-inline"><h1>{escape(it.get("titulo_tesis_h1", ""))}</h1></div>
+            <div class="title-with-logo"><img src="{logo_inline}" alt="Logo" class="logo-inline"><h1>{escape(it.get("titulo_tesis_h1", ""))}</h1></div>
             <h2>{escape(it.get("titulo_tesis_h2", ""))}</h2><h3>{escape(it.get("titulo_tesis_h3", ""))}</h3>
         </div>
-        <h2 class="project-analysis-title">Resultados del Análisis para: {nombre_proyecto_analizado}</h2>
-    '''
-
-    if evaluacion_evidencia == "INSUFICIENTE":
-        final_html += f'''
-        <div class="evidencia-banner insuficiente">
-            <strong>⛔ Evidencia insuficiente en la Base de Conocimiento</strong>
-            {escape(advertencia_evidencia or "No se encontró relación real entre la Base de Conocimiento y el proyecto descrito.")}
-        </div>'''
-    elif evaluacion_evidencia == "AMBIGUO":
-        final_html += f'''
-        <div class="evidencia-banner ambiguo">
-            <strong>⚠️ Evidencia genérica, revisar con cautela</strong>
-            {escape(advertencia_evidencia or "La evidencia recuperada es temáticamente relacionada pero no específica para este proyecto.")}
-        </div>'''
-
-    if suficiencia_evidencia or comentarios_generales or acciones_generales:
-        acciones_html = "".join(f"<li>{escape(str(a))}</li>" for a in acciones_generales)
-        acciones_bloque = f'<p class="detail-label">Acciones generales:</p><ul>{acciones_html}</ul>' if acciones_html else ""
-        final_html += f'''
-        <div class="informe-general">
-            <h3>Resumen del informe</h3>
-            <p><span class="detail-label">Suficiencia de la evidencia:</span> {escape(str(suficiencia_evidencia or "N/D"))}</p>
-            <p><span class="detail-label">Comentarios generales:</span> {escape(str(comentarios_generales or "N/D"))}</p>
-            {acciones_bloque}
-        </div>'''
-
-    # --- SECCIÓN DE TARJETAS DE RESUMEN ---
-    summary_html_parts = []
-    for estado_key in orden_secciones:
-        riesgos_en_seccion = riesgos_agrupados[estado_key]
-        if riesgos_en_seccion:
-            info_estado = estado_map[estado_key]
-            emoji = risk_category_emojis.get(estado_key, '')
-            summary_html_parts.append(f'<div class="risk-section"><h3 class="risk-section-title"><span class="section-emoji">{emoji}</span>{info_estado["titulo"]}</h3><div class="dashboard-grid">')
-            for riesgo in riesgos_en_seccion:
-                summary_html_parts.append(f'''
-                <div class="risk-card {info_estado['clase']}">
-                    <h6>{escape(riesgo.get("descripcion_riesgo","N/A"))}</h6>
-                    <div class="risk-card-body">
-                        <p><span class="detail-label">Tipo:</span> {escape(riesgo.get("tipo_de_riesgo", "N/A"))}</p>
-                        <p><span class="detail-label">Impacto:</span> {escape(riesgo.get("impacto_estimado","N/A"))}</p>
-                        <p><span class="detail-label">Probabilidad:</span> {escape(riesgo.get("probabilidad_estimada","N/A"))}</p>
-                        <p><span class="detail-label">Responsable:</span> {escape(riesgo.get("responsable_accidente", "N/A"))}</p>
-                        <p><span class="detail-label">Acción:</span> {escape(riesgo.get("accion_mitigacion", "N/A"))}</p>
-                        <p><span class="detail-label">Fuentes:</span> {formatear_fuentes(riesgo)}</p>
-                        <p><span class="detail-label">Sección:</span> {escape(riesgo.get("seccion_oferta") or "N/D")}</p>
-                        <p><span class="detail-label">Subsanación:</span> {escape(riesgo.get("subsanacion") or "N/D")}</p>
-                        <p><span class="detail-label">Marcas:</span> {formatear_marcas(riesgo)}</p>
-                    </div>
-                    <div class="risk-card-confidence">
-                        <p><span class="detail-label">Exposición (impacto × prob.):</span> <span class="confidence-score conf-none-text">{formatear_exposicion(riesgo)}</span></p>
-                        <p><span class="detail-label">Respaldo en base de conocimiento:</span> <span class="confidence-score conf-none-text">{formatear_respaldo(riesgo)}</span></p>
-                    </div>
-                </div>''')
-            summary_html_parts.append('</div></div>')
-
-    final_html += tarjetas_verificacion("Hallazgos", "🔥", hallazgos) + tarjetas_verificacion("Alertas a revisar", "🔎", alertas_revisar)
-
-    if not any(riesgos_agrupados.values()) and not hallazgos and not alertas_revisar:
-        if evaluacion_evidencia == "INSUFICIENTE":
-            final_html += "<p style='text-align:center; font-style:italic;'>No se generó un análisis de riesgos porque la evidencia disponible fue insuficiente (ver aviso arriba).</p>"
-        else:
-            final_html += "<p style='text-align:center; font-style:italic;'>No se identificaron riesgos.</p>"
-    else:
-        final_html += "".join(summary_html_parts)
-
-    # --- SECCIÓN DE DETALLES COMPLETOS ---
-    if riesgos_identificados:
-        final_html += '<div class="details-section"><h3 class="details-section-title">Detalles Completos de Riesgos Identificados</h3>'
-        for riesgo in riesgos_identificados:
-            final_html += f'''
-            <div class="risk-detail-item">
-                <h4><span class="section-emoji">ℹ️</span>{escape(riesgo.get("descripcion_riesgo","N/A"))}</h4>
-                <p><span class="detail-label">Explicación:</span> {escape(riesgo.get("explicacion_riesgo","N/A"))}</p>
-                <p><span class="detail-label">Cita de la oferta:</span> {escape(riesgo.get("cita_oferta") or "N/D")}</p>
-                <p><span class="detail-label">Sección de la oferta:</span> {escape(riesgo.get("seccion_oferta") or "N/D")}</p>
-                <p><span class="detail-label">Fuentes normativas:</span> {formatear_fuentes(riesgo)}</p>
-                <p><span class="detail-label">Comentario:</span> {escape(riesgo.get("comentario") or "N/D")}</p>
-                <p><span class="detail-label">Subsanación:</span> {escape(riesgo.get("subsanacion") or "N/D")} | <span class="detail-label">Marcas:</span> {formatear_marcas(riesgo)}</p>
-                <p><span class="detail-label">Impacto:</span> {escape(riesgo.get("impacto_estimado","N/A"))} | <span class="detail-label">Probabilidad:</span> {escape(riesgo.get("probabilidad_estimada","N/A"))}</p>
-                <p><span class="detail-label">Responsable (Mitigación):</span> {escape(riesgo.get("responsabilidad_mitigacion", "N/A"))}</p>
-                <p><span class="detail-label">Responsable (Accidente):</span> {escape(riesgo.get("responsable_accidente", "N/A"))}</p>
-                <p><span class="detail-label">Acción de Mitigación:</span> {escape(riesgo.get("accion_mitigacion", "N/A"))}</p>
-                <p><span class="detail-label">Umbral de Alerta:</span> {escape(riesgo.get("umbral_alerta", "N/A"))}</p>
-                <p><span class="detail-label">Tipo de Riesgo:</span> {escape(riesgo.get("tipo_de_riesgo", "N/A"))}</p>
-                <p><span class="detail-label">Exposición (impacto × probabilidad):</span> <span class="confidence-score conf-none-text">{formatear_exposicion(riesgo)}</span></p>
-                <p><span class="detail-label">Respaldo en la Base de Conocimiento:</span> <span class="confidence-score conf-none-text">{formatear_respaldo(riesgo)}</span></p>
-            </div>'''
-        final_html += '</div>'
-
-    # --- SECCIÓN DE BASE DE CONOCIMIENTO ---
-    kb_html = ""
-    if fragmentos_fuente:
-        documentos_unicos = sorted(list(set(frag.get("nombre_documento_fuente") for frag in fragmentos_fuente if frag.get("nombre_documento_fuente"))))
-        list_items = "".join([f'<li>{escape(doc)}</li>' for doc in documentos_unicos])
-        # Fragmentos recuperados con la relevancia que les asignó el re-ranker (0-1)
-        filas = []
-        for frag in fragmentos_fuente:
-            rel = frag.get("score_relevancia")
-            rel_txt = f"{rel:.0%}" if rel is not None else "N/D"
-            filas.append(f'<tr><td>{escape(str(frag.get("nombre_documento_fuente", "N/D")))}</td><td>{escape(str(frag.get("numero_pagina", "N/D")))}</td><td>{rel_txt}</td></tr>')
-        scores_validos = [f.get("score_relevancia") for f in fragmentos_fuente if f.get("score_relevancia") is not None]
-        resumen_rel = f'<p>Relevancia máxima de la evidencia recuperada (re-ranker): <strong>{max(scores_validos):.0%}</strong></p>' if scores_validos else ""
-        tabla_frag = (
-            f'{resumen_rel}<table style="border-collapse:collapse;margin-top:8px;">'
-            '<tr><th style="text-align:left;padding:4px 12px 4px 0;">Documento</th><th style="text-align:left;padding:4px 12px;">Página</th><th style="text-align:left;padding:4px 12px;">Relevancia</th></tr>'
-            + "".join(filas) + '</table>'
-        )
-        kb_html = f'<div class="kb-section"><h2>Documentos de la Base de Conocimiento Utilizada</h2><ul>{list_items}</ul><h3>Fragmentos recuperados</h3>{tabla_frag}</div>'
-    final_html += kb_html
-
-    # --- FOOTER ---
-    final_html += f'''
+        <h2 class="project-analysis-title">Resultados del Análisis para: {nombre_proyecto}</h2>
+        {cuerpo}
     </div>
     <div class="dashboard-page-footer">
-        <img src="{logo_itba_footer_base64}" alt="Logo ITBA" style="max-height:45px;margin-bottom:10px;">
+        <img src="{logo_footer}" alt="Logo ITBA" style="max-height:45px;margin-bottom:10px;">
         <p>{escape(it.get("institucion_line1",""))} - {escape(it.get("institucion_line2",""))}</p>
         <p><a href="{escape(str(it.get('github_repo_url','#')))}" target="_blank">Ver Repositorio en GitHub</a></p>
         <p>&copy; {CURRENT_YEAR} {escape(it.get("alumno",""))}. Todos los derechos reservados.</p>
@@ -295,53 +310,9 @@ def generar_dashboard_html(ruta_json_resultados, ruta_output_dashboard_html, inf
 </body></html>'''
 
     try:
-        os.makedirs(os.path.dirname(ruta_output_dashboard_html), exist_ok=True)
+        os.makedirs(os.path.dirname(os.path.abspath(ruta_output_dashboard_html)), exist_ok=True)
         with open(ruta_output_dashboard_html, 'w', encoding='utf-8') as f_html:
             f_html.write(final_html)
         logger.info(f"Dashboard HTML generado exitosamente en: {ruta_output_dashboard_html}")
     except IOError as e:
         logger.error(f"Error al guardar el dashboard HTML en {ruta_output_dashboard_html}: {e}")
-
-
-if __name__ == '__main__':
-    if not logging.getLogger().handlers:
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-
-    logger.info("--- Ejecutando dashboard_generator.py en modo de prueba ---")
-
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-    test_output_dir = os.path.join(project_root, "datos", "Resultados", "ModoPrueba")
-    os.makedirs(test_output_dir, exist_ok=True)
-
-    dummy_json_path = os.path.join(test_output_dir, "analisis_de_prueba.json")
-    dummy_dashboard_path = os.path.join(test_output_dir, "dashboard_de_prueba.html")
-
-    try:
-        from config import INFO_TESIS
-    except ImportError:
-        INFO_TESIS = {}
-
-    dummy_data = {
-        "nombre_proyecto_analizado": "Proyecto de Prueba de Diseño (Final)",
-        "evaluacion_evidencia": "AMBIGUO",
-        "advertencia_evidencia": "La evidencia recuperada es genérica, no específica para este proyecto de prueba.",
-        "riesgos_identificados_estructurados": [
-            {"descripcion_riesgo": "Fallo crítico en sistema por sobrecalentamiento", "tipo_de_riesgo": "Implícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Alto", "probabilidad_estimada": "Alta", "estado_RAG_sugerido": "Rojo", "exposicion_riesgo": 9, "nivel_exposicion": "Alta", "respaldo_base_conocimiento": 0.72, "responsabilidad_mitigacion": "Mantenimiento", "responsable_accidente": "Jefe de Operaciones", "accion_mitigacion": "Instalar sensores de temperatura con corte automático y realizar inspección semanal.", "umbral_alerta": "Temperatura de operación superior a 80°C sostenida por más de 5 minutos."},
-            {"descripcion_riesgo": "Retrasos en la entrega de componentes clave", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Medio", "probabilidad_estimada": "Media", "estado_RAG_sugerido": "Ámbar", "exposicion_riesgo": 4, "nivel_exposicion": "Media", "respaldo_base_conocimiento": 0.41, "responsabilidad_mitigacion": "Compras", "responsable_accidente": "Logística", "accion_mitigacion": "Confirmar stock de proveedor alternativo antes del inicio de obra.", "umbral_alerta": "Confirmación de entrega no recibida 10 días antes de la fecha planificada."},
-            {"descripcion_riesgo": "Documentación del manual de usuario incompleta", "tipo_de_riesgo": "Explícito", "explicacion_riesgo": "Explicación detallada...", "impacto_estimado": "Bajo", "probabilidad_estimada": "Baja", "estado_RAG_sugerido": "Verde", "exposicion_riesgo": 1, "nivel_exposicion": "Baja", "respaldo_base_conocimiento": 0.08, "responsabilidad_mitigacion": "Ingeniería", "responsable_accidente": "Equipo de Proyecto", "accion_mitigacion": "Revisar manual contra checklist de contenidos mínimos antes de la entrega.", "umbral_alerta": "Menos de 5 días hábiles restantes antes de la fecha de entrega sin revisión completada."}
-        ],
-        "fragmentos_fuente": [{"nombre_documento_fuente": "Manual_Tecnico.pdf", "numero_pagina": 7, "score_relevancia": 0.63}]
-    }
-
-    with open(dummy_json_path, 'w', encoding='utf-8') as f_dummy:
-        json.dump(dummy_data, f_dummy, ensure_ascii=False, indent=4)
-    logger.info(f"Archivo JSON de prueba creado en: {dummy_json_path}")
-
-    generar_dashboard_html(
-        ruta_json_resultados=dummy_json_path,
-        ruta_output_dashboard_html=dummy_dashboard_path,
-        info_tesis_config=INFO_TESIS
-    )
-
-    logger.info(f"--- Prueba completada. Abre este archivo en tu navegador: ---")
-    logger.info(f"{os.path.abspath(dummy_dashboard_path)}")
