@@ -452,14 +452,19 @@ def candidatos_de_consulta(vector_db_instance, consulta: str, k: int) -> List[Do
     return fusion_rrf([densa, buscar_bm25(vector_db_instance, consulta, k)], config.RRF_K)[:k]
 
 
-def recuperar_con_candidatos(vector_db_instance, consulta: str, k: int, top_n: int):
-    """(candidatos, docs): los k de la búsqueda (densa o híbrida) en su orden (antes del reranker) y los top_n finales.
-    Sin reranker, docs son los primeros top_n de los candidatos."""
+def recuperar_con_candidatos(vector_db_instance, consulta: str, k: int, top_n: int, top_densa: int = 0):
+    """(candidatos, docs): los k de la búsqueda (densa o híbrida) en su orden (antes del reranker) y los finales: los top_n del reranker y,
+    con top_densa > 0, también los top_densa primeros de la densa (unión, ordenada por puntaje del reranker; todos llevan relevance_score).
+    Sin reranker, docs son los primeros max(top_n, top_densa) de los candidatos."""
     candidatos = candidatos_de_consulta(vector_db_instance, consulta, k)
     if not config.USE_RERANKER:
-        return candidatos, candidatos[:top_n]
-    compressor = CrossEncoderRerankerConScore(model=_get_reranker_model(RERANKER_MODEL_NAME), top_n=top_n)
-    return candidatos, compressor.compress_documents(candidatos, consulta)
+        return candidatos, candidatos[:max(top_n, top_densa)]
+    compressor = CrossEncoderRerankerConScore(model=_get_reranker_model(RERANKER_MODEL_NAME), top_n=max(top_n, len(candidatos)) if top_densa else top_n)
+    puntuados = compressor.compress_documents(candidatos, consulta)
+    if not top_densa:
+        return candidatos, puntuados
+    elegidos = {_clave_fusion(d) for d in puntuados[:top_n]} | {_clave_fusion(d) for d in candidatos[:top_densa]}
+    return candidatos, [d for d in puntuados if _clave_fusion(d) in elegidos]
 
 
 def _clave_documento(d: Document) -> tuple:
@@ -482,17 +487,19 @@ def _sin_preambulo(docs: List[Document]) -> List[Document]:
     return [d for d in docs if d.metadata.get("articulo") != "preambulo"]
 
 
-def recuperar_seccion(vector_db_instance, seccion: dict, tope: Optional[int] = None, sin_preambulo: bool = False):
+def recuperar_seccion(vector_db_instance, seccion: dict, tope: Optional[int] = None, sin_preambulo: bool = False, con_union: bool = False):
     """(candidatos, docs) de una sección. Por defecto una sola consulta con el texto de la sección;
     con RECUPERACION_POR_SUBSECCION una consulta por subsección y unión de los resultados.
-    tope: máximo de fragmentos finales (por defecto TOPE_FRAGMENTOS_SECCION); sin_preambulo: los chunks 'preambulo' no cuentan."""
+    tope: máximo de fragmentos finales (por defecto TOPE_FRAGMENTOS_SECCION); sin_preambulo: los chunks 'preambulo' no cuentan;
+    con_union: por subsección se agregan los TOP_DENSA_SUBSECCION primeros de la densa a los del reranker (modo verificación)."""
     tope = tope or config.TOPE_FRAGMENTOS_SECCION
     quitar = _sin_preambulo if sin_preambulo else (lambda docs: docs)
     subsecciones = [x for _, x in seccion["subsecciones"] if len(x) >= config.MIN_CHARS_SUBSECCION]
     if not config.RECUPERACION_POR_SUBSECCION or not subsecciones:
         candidatos, docs = recuperar_con_candidatos(vector_db_instance, seccion["texto"][:config.SECTION_QUERY_MAX_CHARS], config.K_RECUPERACION, config.TOP_N_POR_SECCION)
         return candidatos, quitar(docs)
-    resultados = [recuperar_con_candidatos(vector_db_instance, x[:config.SUBSECTION_QUERY_MAX_CHARS], config.K_SUBSECCION, config.TOP_N_SUBSECCION) for x in subsecciones]
+    top_densa = config.TOP_DENSA_SUBSECCION if con_union else 0
+    resultados = [recuperar_con_candidatos(vector_db_instance, x[:config.SUBSECTION_QUERY_MAX_CHARS], config.K_SUBSECCION, config.TOP_N_SUBSECCION, top_densa) for x in subsecciones]
     candidatos, vistos = [], set()
     for cands, _ in resultados:
         for d in cands:

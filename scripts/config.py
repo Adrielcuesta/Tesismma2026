@@ -98,6 +98,9 @@ K_SUBSECCION = 10
 RECUPERACION = "densa"
 RRF_K = 60   # constante estándar de la literatura; sin pesos que ajustar
 TOP_N_SUBSECCION = 5
+# Modo verificación: además del top TOP_N_SUBSECCION del reranker, cada subsección conserva los TOP_DENSA_SUBSECCION primeros de la densa
+# (el reranker baja de puesto artículos que la densa tenía entre los primeros). Unión medida con scripts.diagnostico_recuperacion recorte.
+TOP_DENSA_SUBSECCION = 5
 TOPE_FRAGMENTOS_SECCION = 12
 MIN_CHARS_SUBSECCION = 150
 # Evaluador de evidencia CRAG por sección (solo informa): apagado por defecto, el código se conserva
@@ -106,7 +109,7 @@ USAR_CRAG = False
 # Incumple y Revisar. "lista": una llamada por sección que devuelve la lista de riesgos (la usa la condición sin_rag)
 MODO_GENERACION = "verificacion"
 # Máximo de fragmentos que se verifican por sección (sin preámbulos)
-VERIFICAR_TOPE = 15
+VERIFICAR_TOPE = 25
 # Líneas más cortas que esto (normalizadas, sin dígitos) no se quitan como encabezado/pie en la oferta:
 # "Página 3 de 9" (9) sí se quita; unidades de tablas como "1.600 mm" (4) se conservan
 MIN_LARGO_ENCABEZADO_OFERTA = 6

@@ -374,7 +374,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         docs, candidatos, clasificacion = [], None, None
         if usar_rag:
             t0 = time.perf_counter()
-            candidatos, docs = rag_components.recuperar_seccion(vector_db, seccion, **({"tope": config.VERIFICAR_TOPE, "sin_preambulo": True} if verificacion else {}))
+            candidatos, docs = rag_components.recuperar_seccion(vector_db, seccion, **({"tope": config.VERIFICAR_TOPE, "sin_preambulo": True, "con_union": True} if verificacion else {}))
             t_sec["recuperacion"] = _segundos(t0)
             if usar_crag:
                 # CRAG por sección: solo informa, no bloquea la generación
@@ -486,6 +486,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             "recuperacion_por_subseccion": config.RECUPERACION_POR_SUBSECCION if usar_rag else "N/A",
             "k_subseccion": config.K_SUBSECCION if usar_rag and config.RECUPERACION_POR_SUBSECCION else "N/A",
             "top_n_subseccion": config.TOP_N_SUBSECCION if usar_rag and config.RECUPERACION_POR_SUBSECCION else "N/A",
+            "top_densa_subseccion": config.TOP_DENSA_SUBSECCION if usar_rag and verificacion and config.RECUPERACION_POR_SUBSECCION else "N/A",
             "tope_fragmentos_por_seccion": (config.VERIFICAR_TOPE if verificacion else config.TOPE_FRAGMENTOS_SECCION) if usar_rag else "N/A",
             "modo_generacion": modo, "usar_crag": usar_crag,
             "temperature": 0 if config.LLM_MODELS.get(selected_llm_model_id, {}).get("provider") == "ollama" else "N/A",

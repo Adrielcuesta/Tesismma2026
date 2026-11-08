@@ -132,3 +132,68 @@ def test_candidatos_densa_o_hibrida_segun_la_config(monkeypatch):
     assert _ids(hibrida)[0] == "3.1" and len(hibrida) == 3             # BM25 sube el artículo con el código exacto; el reranker recibe k candidatos
     assert len(rc.candidatos_de_consulta(db, "grado IP55 en tableros", 2)) == 2
     rc._indices_bm25.clear()
+
+
+# --- Recuperación por defecto: unión de la densa y el reranker (K=10, top 5 + top 5, tope 25) ---
+
+def test_la_recuperacion_por_defecto_es_la_union_k10_top5_top5_tope25():
+    from scripts import config
+    assert (config.K_SUBSECCION, config.TOP_N_SUBSECCION, config.TOP_DENSA_SUBSECCION, config.VERIFICAR_TOPE) == (10, 5, 5, 25)
+    assert config.RECUPERACION == "densa" and config.RECUPERACION_POR_SUBSECCION and config.USE_RERANKER
+
+
+class _ModeloFalso:
+    """Cross-encoder falso: el puntaje de cada fragmento es el número que lleva en el texto."""
+    def score(self, pares):
+        return [float(texto.split()[-1]) / 100 for _, texto in pares]
+
+
+def _preparar_reranker(monkeypatch):
+    from langchain_community.cross_encoders.base import BaseCrossEncoder
+
+    class Modelo(BaseCrossEncoder):
+        def score(self, text_pairs):
+            return _ModeloFalso().score(text_pairs)
+    monkeypatch.setattr(rc, "_get_reranker_model", lambda nombre: Modelo())
+    monkeypatch.setattr(rc.config, "USE_RERANKER", True)
+    monkeypatch.setattr(rc.config, "RECUPERACION", "densa")
+
+
+def _db_diez():
+    # densa: a0..a9; el reranker prefiere los últimos (a9 el mejor)
+    docs = [Document(page_content=f"texto {i}", metadata={"norma": "N", "articulo": f"a{i}", "parte": 1}) for i in range(10)]
+    return _Chroma(docs, docs)
+
+
+def test_union_agrega_el_top_denso_al_top_del_reranker(monkeypatch):
+    _preparar_reranker(monkeypatch)
+    candidatos, docs = rc.recuperar_con_candidatos(_db_diez(), "q", 10, 5, top_densa=5)
+    assert len(candidatos) == 10
+    assert _ids(docs) == ["a9", "a8", "a7", "a6", "a5", "a4", "a3", "a2", "a1", "a0"]      # los 5 del reranker + los 5 primeros de la densa, por puntaje
+    assert all("relevance_score" in d.metadata for d in docs)                                  # todos llevan puntaje del reranker
+    _, solo_reranker = rc.recuperar_con_candidatos(_db_diez(), "q", 10, 5)
+    assert _ids(solo_reranker) == ["a9", "a8", "a7", "a6", "a5"]
+
+
+def test_union_sin_repetidos_cuando_los_dos_criterios_coinciden(monkeypatch):
+    _preparar_reranker(monkeypatch)
+    docs = [Document(page_content=f"texto {10 - i}", metadata={"norma": "N", "articulo": f"b{i}", "parte": 1}) for i in range(6)]   # el reranker coincide con la densa
+    _, final = rc.recuperar_con_candidatos(_Chroma(docs, docs), "q", 6, 3, top_densa=3)
+    assert _ids(final) == ["b0", "b1", "b2"]
+
+
+def test_recuperar_seccion_con_union_aplica_top_densa_y_el_tope_por_seccion(monkeypatch):
+    _preparar_reranker(monkeypatch)
+    seccion = {"texto": "x" * 400, "subsecciones": [("1 Tema", "x" * 400)]}
+    _, sin = rc.recuperar_seccion(_db_diez(), seccion, tope=25, sin_preambulo=True)
+    _, con = rc.recuperar_seccion(_db_diez(), seccion, tope=25, sin_preambulo=True, con_union=True)
+    assert len(sin) == 5 and len(con) == 10
+    _, acotada = rc.recuperar_seccion(_db_diez(), seccion, tope=7, sin_preambulo=True, con_union=True)
+    assert _ids(acotada) == ["a9", "a8", "a7", "a6", "a5", "a4", "a3"]
+
+
+def test_main_pide_la_union_solo_en_modo_verificacion():
+    import inspect
+    from scripts import main
+    codigo = inspect.getsource(main._analizar_por_secciones)
+    assert '"con_union": True} if verificacion else {}' in codigo
