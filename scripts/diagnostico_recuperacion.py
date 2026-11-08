@@ -6,6 +6,10 @@
 
 Extrae, divide y recupera por sección con la misma función que usa el pipeline. El ground truth solo se usa acá,
 para calcular hit@K (antes del reranker) y hit@top_n (después). Los argumentos sobrescriben la config solo en este proceso.
+
+Recuperación densa contra híbrida (BM25 + densa con RRF), trampa por trampa, sobre el ground truth v3 de P1 y P2:
+
+    python -m scripts.diagnostico_recuperacion hibrida --oferta P1=<oferta_P1.pdf|docx> --oferta P2=<oferta_P2.pdf|docx> [--csv ruta]
 """
 import argparse
 import csv
@@ -61,7 +65,114 @@ def _donde(par, por_seccion: list, campo: str) -> str:
     return ";".join(f"{s['id']}:{_rangos(s[campo])[par]}" for s in por_seccion if par in _rangos(s[campo]))
 
 
+# --- Densa contra híbrida sobre el ground truth v3 (solo P1 y P2) ---
+
+OFERTAS_DIAGNOSTICO = ("P1", "P2")
+
+
+def _alfanumerico(texto) -> str:
+    return "".join(c for c in rag_components._sin_tildes(str(texto or "")) if c.isalnum())
+
+
+def seccion_de_trampa(trampa: dict, secciones: list):
+    """Índice de la sección de la oferta cuyo texto contiene el fragmento de la trampa (normalizado); None si ninguna."""
+    frase = _alfanumerico(trampa["fragmento_trampa"])
+    return next((i for i, s in enumerate(secciones) if frase and frase in _alfanumerico(s["texto"])), None)
+
+
+def recall_articulo(trampas: list, secciones: list, articulos_por_seccion: list) -> list:
+    """Una fila por trampa: ¿su artículo (o un equivalente) queda entre los artículos a verificar de su sección?
+    articulos_por_seccion[i] = conjunto de (norma, artículo base) que se verificarían en secciones[i]."""
+    from evaluacion.evaluar import pares_trampa
+    filas = []
+    for t in trampas:
+        i = seccion_de_trampa(t, secciones)
+        pares = {(n, _base(a)) for n, a in pares_trampa(t)}
+        filas.append({"id": t["id"], "oferta": t["oferta"], "seccion": secciones[i]["id"] if i is not None else None,
+                      "articulo": f"{t['norma']} {_base(t['articulo'])}", "recuperada": i is not None and bool(pares & articulos_por_seccion[i])})
+    return filas
+
+
+def decision_adopcion(densa: list, hibrida: list) -> dict:
+    """Regla fijada de antemano: se adopta la híbrida si mejora el Recall@artículo sumado de P1 y P2 sin perder ninguna trampa que la densa recuperaba."""
+    recuperadas_densa = {f["id"] for f in densa if f["recuperada"]}
+    recuperadas_hibrida = {f["id"] for f in hibrida if f["recuperada"]}
+    perdidas, ganadas = sorted(recuperadas_densa - recuperadas_hibrida), sorted(recuperadas_hibrida - recuperadas_densa)
+    return {"n": len(densa), "densa": len(recuperadas_densa), "hibrida": len(recuperadas_hibrida), "perdidas": perdidas, "ganadas": ganadas,
+            "adopta": len(recuperadas_hibrida) > len(recuperadas_densa) and not perdidas}
+
+
+def articulos_a_verificar(vector_db, secciones: list, modo: str) -> list:
+    """Por sección, los (norma, artículo base) que el pipeline verificaría con la recuperación `modo` ('densa' o 'hibrida')."""
+    previo = config.RECUPERACION
+    config.RECUPERACION = modo
+    try:
+        resultado = []
+        for s in secciones:
+            _, docs = rag_components.recuperar_seccion(vector_db, s, tope=config.VERIFICAR_TOPE, sin_preambulo=True)
+            resultado.append({(d.metadata.get("norma"), _base(d.metadata.get("articulo", ""))) for d in docs})
+        return resultado
+    finally:
+        config.RECUPERACION = previo
+
+
+def informe_hibrida(densa: list, hibrida: list) -> str:
+    por_id = {f["id"]: f for f in hibrida}
+    L = ["Trampa    Artículo               Sección  densa  híbrida"]
+    for f in densa:
+        h = por_id[f["id"]]
+        L.append(f"{f['id']:<9} {f['articulo']:<22} {str(f['seccion']):<8} {'sí' if f['recuperada'] else 'no':<6} {'sí' if h['recuperada'] else 'no'}")
+    d = decision_adopcion(densa, hibrida)
+    L += ["", f"Recall@artículo densa:   {d['densa']}/{d['n']} ({d['densa'] / d['n']:.0%})", f"Recall@artículo híbrida: {d['hibrida']}/{d['n']} ({d['hibrida'] / d['n']:.0%})",
+          f"Ganadas por la híbrida: {', '.join(d['ganadas']) or 'ninguna'}", f"Perdidas por la híbrida: {', '.join(d['perdidas']) or 'ninguna'}",
+          "Decisión: " + ("ADOPTAR la híbrida (poner RECUPERACION = \"hibrida\" en config.py)." if d["adopta"]
+                          else "MANTENER la densa; la híbrida se reporta como resultado negativo.")]
+    return "\n".join(L)
+
+
+def main_hibrida(argv=None) -> int:
+    from evaluacion.evaluar import cargar_gt
+    p = argparse.ArgumentParser(prog="diagnostico_recuperacion hibrida", description="Recall@artículo con recuperación densa e híbrida (sin LLM).")
+    p.add_argument("--oferta", action="append", required=True, metavar="P1=ruta", help="oferta y su archivo (P1 y P2); repetible")
+    p.add_argument("--csv", help="Ruta donde guardar el detalle por trampa")
+    args = p.parse_args(argv)
+    rutas = dict(x.split("=", 1) for x in args.oferta)
+    if set(rutas) != set(OFERTAS_DIAGNOSTICO) or not all(os.path.isfile(r) for r in rutas.values()):
+        print("Hacen falta --oferta P1=<archivo> y --oferta P2=<archivo>, y los archivos tienen que existir.", file=sys.stderr)
+        return 1
+
+    embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
+    vector_db = vector_db_manager.crear_o_cargar_chroma_db(
+        chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
+        embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP,
+        recrear_db_flag=False, collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True) if embedding_function else None
+    if not vector_db:
+        print("No se pudo cargar el índice de la KB por artículos.", file=sys.stderr)
+        return 1
+
+    densa, hibrida = [], []
+    for oferta in OFERTAS_DIAGNOSTICO:
+        secciones = document_utils.dividir_en_secciones(document_utils.extraer_texto_oferta(rutas[oferta]))
+        if config.EXCLUIR_INTRODUCCION:
+            secciones = [s for s in secciones if not document_utils.es_introduccion(s)]
+        trampas = cargar_gt(oferta)
+        densa += recall_articulo(trampas, secciones, articulos_a_verificar(vector_db, secciones, "densa"))
+        hibrida += recall_articulo(trampas, secciones, articulos_a_verificar(vector_db, secciones, "hibrida"))
+    print(informe_hibrida(densa, hibrida))
+    if args.csv:
+        por_id = {f["id"]: f for f in hibrida}
+        with open(args.csv, "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f, delimiter=";")
+            w.writerow(["trampa", "oferta", "seccion", "articulo", "densa", "hibrida"])
+            w.writerows([[x["id"], x["oferta"], x["seccion"], x["articulo"], int(x["recuperada"]), int(por_id[x["id"]]["recuperada"])] for x in densa])
+        print(f"CSV: {args.csv}")
+    return 0
+
+
 def main(argv=None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] == "hibrida":
+        return main_hibrida(argv[1:])
     p = argparse.ArgumentParser(description="Diagnóstico de la recuperación por sección (sin LLM).")
     p.add_argument("oferta", help="Ruta de la oferta (.pdf o .docx)")
     p.add_argument("--gt", required=True, help="Ground truth (JSON); solo se usa para las métricas")

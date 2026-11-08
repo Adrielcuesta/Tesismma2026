@@ -12,6 +12,7 @@ import logging
 import math
 import os
 import re
+import unicodedata
 
 from .schemas import LLMResponse, FuenteNorma, RiskItem, VerificacionArticulo, Redaccion, _sin_tildes
 from . import config
@@ -388,10 +389,73 @@ def _construir_retriever(vector_db_instance, k: Optional[int] = None, top_n: Opt
     return final_retriever
 
 
+# --- Recuperación híbrida: BM25 sobre los mismos fragmentos + densa, fusionadas con RRF ---
+
+_RE_TOKEN = re.compile(r"[a-z0-9]+(?:[.,][0-9]+)*")
+_indices_bm25 = {}
+
+
+def tokenizar(texto: str) -> List[str]:
+    """Minúsculas y sin acentos; conserva números y códigos ('ip55', '4406', '1,5'); sin stemming."""
+    sin_tildes = "".join(c for c in unicodedata.normalize("NFD", str(texto or "")) if unicodedata.category(c) != "Mn")
+    return _RE_TOKEN.findall(sin_tildes.lower())
+
+
+def _clave_fusion(d: Document) -> tuple:
+    return (d.metadata.get("norma"), d.metadata.get("articulo"), d.metadata.get("parte"))
+
+
+def fusion_rrf(listas: List[List[Document]], k_rrf: int = 60) -> List[Document]:
+    """Reciprocal Rank Fusion: puntaje = suma de 1 / (k_rrf + posición) en cada lista (posición desde 1). Orden por puntaje descendente;
+    a igual puntaje, el que apareció primero. Sin repetidos (norma, artículo, parte)."""
+    puntajes, docs, orden = {}, {}, {}
+    for lista in listas:
+        for posicion, d in enumerate(lista, 1):
+            clave = _clave_fusion(d)
+            puntajes[clave] = puntajes.get(clave, 0.0) + 1.0 / (k_rrf + posicion)
+            docs.setdefault(clave, d)
+            orden.setdefault(clave, len(orden))
+    return [docs[c] for c in sorted(puntajes, key=lambda c: (-puntajes[c], orden[c]))]
+
+
+def construir_indice_bm25(vector_db_instance):
+    """(BM25Okapi, [Document]) sobre todos los fragmentos de la base vectorial, en memoria; no reindexa Chroma. None si la base está vacía."""
+    from rank_bm25 import BM25Okapi
+    datos = vector_db_instance.get(include=["documents", "metadatas"])
+    docs = [Document(page_content=t, metadata=m or {}) for t, m in zip(datos.get("documents") or [], datos.get("metadatas") or [])]
+    if not docs:
+        return None
+    return BM25Okapi([tokenizar(d.page_content) or [""] for d in docs]), docs
+
+
+def buscar_bm25(vector_db_instance, consulta: str, k: int) -> List[Document]:
+    """Los k fragmentos de mayor puntaje BM25 (solo los de puntaje positivo). El índice se construye una vez por base vectorial."""
+    clave = id(vector_db_instance)
+    if clave not in _indices_bm25:
+        _indices_bm25[clave] = construir_indice_bm25(vector_db_instance)
+    indice = _indices_bm25[clave]
+    tokens = tokenizar(consulta)
+    if indice is None or not tokens:
+        return []
+    bm25, docs = indice
+    puntajes = bm25.get_scores(tokens)
+    mejores = sorted(range(len(docs)), key=lambda i: (-puntajes[i], i))[:k]
+    return [docs[i] for i in mejores if puntajes[i] > 0]
+
+
+def candidatos_de_consulta(vector_db_instance, consulta: str, k: int) -> List[Document]:
+    """Candidatos que se pasan al reranker: los k de la densa o, con RECUPERACION = 'hibrida', los k mejores de la densa y de BM25
+    fusionados con RRF y recortados a k (el reranker recibe el mismo número de candidatos)."""
+    densa = vector_db_instance.as_retriever(search_kwargs={"k": k}).invoke(consulta)
+    if config.RECUPERACION != "hibrida":
+        return densa
+    return fusion_rrf([densa, buscar_bm25(vector_db_instance, consulta, k)], config.RRF_K)[:k]
+
+
 def recuperar_con_candidatos(vector_db_instance, consulta: str, k: int, top_n: int):
-    """(candidatos, docs): los k de la búsqueda vectorial en su orden (antes del reranker) y los top_n finales.
+    """(candidatos, docs): los k de la búsqueda (densa o híbrida) en su orden (antes del reranker) y los top_n finales.
     Sin reranker, docs son los primeros top_n de los candidatos."""
-    candidatos = vector_db_instance.as_retriever(search_kwargs={"k": k}).invoke(consulta)
+    candidatos = candidatos_de_consulta(vector_db_instance, consulta, k)
     if not config.USE_RERANKER:
         return candidatos, candidatos[:top_n]
     compressor = CrossEncoderRerankerConScore(model=_get_reranker_model(RERANKER_MODEL_NAME), top_n=top_n)

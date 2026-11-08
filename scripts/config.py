@@ -92,6 +92,11 @@ TOP_N_POR_SECCION = 4
 RECUPERACION_POR_SUBSECCION = True
 SUBSECTION_QUERY_MAX_CHARS = 800
 K_SUBSECCION = 10
+# Recuperación de candidatos: "densa" (embeddings) o "hibrida" (densa + BM25 fusionadas con Reciprocal Rank Fusion). Se adopta la
+# híbrida solo si el diagnóstico (scripts.diagnostico_recuperacion hibrida) cumple la regla fijada de antemano: mejora el Recall@artículo
+# sumado de P1 y P2 sin perder ninguna trampa que la densa recuperaba.
+RECUPERACION = "densa"
+RRF_K = 60   # constante estándar de la literatura; sin pesos que ajustar
 TOP_N_SUBSECCION = 5
 TOPE_FRAGMENTOS_SECCION = 12
 MIN_CHARS_SUBSECCION = 150
