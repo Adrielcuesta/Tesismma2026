@@ -158,6 +158,27 @@ FECHA_REFERENCIA = os.environ.get("FECHA_REFERENCIA", "").strip() or datetime.da
 OLLAMA_KV_CACHE_TYPE = "q8_0"
 OLLAMA_FLASH_ATTENTION = "1"
 
+# --- Experimento en la nube (scripts/nube.py): verificación y clasificación con un modelo grande, solo diagnóstico ---
+# Perfiles del proveedor genérico "openai_compatible"; la clave se lee del .env (nunca se escribe acá).
+PERFILES_NUBE = {
+    "deepinfra": {"base_url": "https://api.deepinfra.com/v1/openai", "api_key_env": "DEEPINFRA_API_KEY"},
+    "groq": {"base_url": "https://api.groq.com/openai/v1", "api_key_env": "GROQ_API_KEY"},
+}
+NUBE_PROVEEDOR = "deepinfra"
+NUBE_MODELO = "Qwen/Qwen3-32B"
+NUBE_CONCURRENCIA = 8          # secciones en paralelo (los pares de una sección siguen en orden)
+NUBE_MAX_REINTENTOS = 5        # ante 429 o 5xx el cliente respeta retry-after y espera con backoff exponencial
+NUBE_TIMEOUT_S = 240
+NUBE_MAX_TOKENS = 1024         # igual que OLLAMA_NUM_PREDICT
+NUBE_MAX_TOKENS_THINKING = 8192
+# USD por millón de tokens. Un modelo que no figure acá no arranca.
+PRECIOS_NUBE = {
+    "Qwen/Qwen3-32B": {"entrada": 0.08, "salida": 0.28},
+    "Qwen/Qwen3-235B-A22B-Instruct-2507": {"entrada": 0.09, "salida": 0.55},
+    "qwen/qwen3.8-27b": {"entrada": 0.80, "salida": 4.00},
+}
+PRESUPUESTO_USD = 4.0          # tope de gasto acumulado de una corrida: al alcanzarlo se guarda lo hecho y se detiene
+
 # --- Configuración de LLMs ---
 LLM_MODELS = {
     # --- Modelos disponibles ---
