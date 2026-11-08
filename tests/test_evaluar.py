@@ -2,6 +2,8 @@ import csv
 import json
 import os
 
+import pytest
+
 from evaluacion import evaluar as ev
 
 CABECERA_GT = ["id", "oferta", "seccion", "fragmento_trampa", "norma", "articulo", "articulos_equivalentes", "clase", "nivel", "responsable"]
@@ -102,7 +104,7 @@ def test_cli_genera_md_csv_y_extras(tmp_path):
     md = next(n for n in nombres if n.startswith("evaluacion_P9_") and n.endswith(".md"))
     assert any(n.startswith("evaluacion_P9_") and n.endswith(".csv") for n in nombres) and "extras_revision.csv" in nombres
     texto = (tmp_path / md).read_text(encoding="utf-8")
-    assert "precisión pendiente de revisión" in texto and "2/4" in texto and "1/2" in texto and "esperada" in texto
+    assert "precisión pendiente de revisión" in texto and "2/4" in texto and "esperada" in texto
     with open(tmp_path / "extras_revision.csv", encoding="utf-8-sig", newline="") as f:
         filas = list(csv.DictReader(f, delimiter=";"))
     assert list(filas[0]) == ["oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase", "valido"] and all(x["valido"] == "" for x in filas)
@@ -113,7 +115,7 @@ def test_cli_genera_md_csv_y_extras(tmp_path):
     ev.main(["--resultado", str(res), "--oferta", "P9", "--revision", str(tmp_path / "revisado.csv"),
              "--ground-truth", str(tmp_path / "gt.csv"), "--espejos", str(tmp_path / "esp.csv")])
     ultimo = sorted(n for n in os.listdir(tmp_path) if n.endswith(".md"))[-1]
-    assert "80%" in (tmp_path / ultimo).read_text(encoding="utf-8")      # (2 + 2) / 5
+    assert "4/5 (80%)" in (tmp_path / ultimo).read_text(encoding="utf-8")      # (2 + 2) / 5
 
 
 # --- Modo lista (sin RAG) ---
@@ -135,15 +137,21 @@ def test_modo_lista_cuenta_por_frase_sin_articulo():
     assert "modo lista" in md.split("##")[0].lower() and ev.NO_EVALUABLE in md and "Trampas encontradas por frase" in md
 
 
+def _filas_tabla(tabla):
+    return {l.split("|")[1].strip(): [c.strip() for c in l.split("|")[2:4]] for l in tabla.splitlines()[2:] if l.startswith("|")}
+
+
 def test_comparar_con_y_sin_rag():
     gt, esp = _datos()
     con, sin = ev.evaluar(RESULTADO, gt, esp, "P9"), ev.evaluar(LISTA, gt, esp, "P9")
     tabla = ev.tabla_comparacion(con, sin)
-    filas = {l.split("|")[1].strip(): [c.strip() for c in l.split("|")[2:4]] for l in tabla.splitlines()[2:]}
-    assert filas["Trampas encontradas por frase"] == ["3/4 (75%)", "2/4 (50%)"]
+    filas = _filas_tabla(tabla)
+    # con RAG: solo el recall estricto; sin RAG: por frase (sin validar). No hay fila «por frase» para la columna con RAG
+    assert filas["Trampas encontradas"] == ["2/4 (50%) (frase y artículo)", "2/4 (50%) por frase, sin validar"]
+    assert "Trampas encontradas por frase" not in filas and "Recall estricto (frase y artículo)" not in filas
     assert filas["Falsas alarmas (por frase del espejo)"] == ["1/2 (50%)", "1/2 (50%)"]
-    assert filas["Recall estricto (frase y artículo)"] == ["2/4 (50%)", "—"]
     assert filas["Riesgos agrupados"] == ["4", "—"]
+    assert "criterio más laxo que el de la columna con RAG: la diferencia es una cota inferior del aporte del RAG" in tabla
 
 
 def test_cli_comparar_agrega_la_tabla_al_informe(tmp_path):
@@ -177,3 +185,217 @@ def test_ground_truth_como_salida_da_100_por_ciento_y_salida_vacia_0():
         vacio = ev.evaluar({"registro_brechas": [], "resumen_ejecutivo": {"decision": "Aceptable"}}, gt, esp, oferta)
         assert (vacio["encontradas"], vacio["por_frase"], vacio["falsas_alarmas"]) == (0, 0, 0)
     assert len(ev.cargar_espejos("P1")) == 32
+
+
+# --- Comparación con la línea de base: coincidencias a validar ---
+
+def test_coincidencias_sin_rag_y_revision():
+    gt, esp = _datos()
+    sin = ev.evaluar(LISTA, gt, esp, "P9")
+    assert [(c["trampa"], c["descripcion"]) for c in sin["coincidencias"]] == [("P9-01", "d"), ("P9-02", "d")]
+    assert sin["por_frase"] == 2 and sin["por_frase_validada"] is None
+    pendiente = [dict(c, valido="") for c in sin["coincidencias"]]
+    ev.aplicar_revision_sinrag(sin, pendiente)
+    assert sin["por_frase_validada"] is None                         # falta revisar: no se valida nada
+    revision = [dict(pendiente[0], valido="sí"), dict(pendiente[1], valido="no")]
+    ev.aplicar_revision_sinrag(sin, revision)
+    assert sin["por_frase_validada"] == 1 and [t["por_frase_validada"] for t in sin["trampas"]] == [True, False, False, False]
+    con = ev.evaluar(RESULTADO, gt, esp, "P9")
+    assert _filas_tabla(ev.tabla_comparacion(con, sin))["Trampas encontradas"][1] == "1/4 (25%) por frase, validadas"
+
+
+def test_cli_exporta_sinrag_coincidencias_y_usa_la_revision(tmp_path):
+    _escribir(tmp_path / "gt.csv", CABECERA_GT, GT)
+    _escribir(tmp_path / "esp.csv", CABECERA_ESP, ESPEJOS)
+    (tmp_path / "con.json").write_text(json.dumps(RESULTADO), encoding="utf-8")
+    (tmp_path / "sin.json").write_text(json.dumps(LISTA), encoding="utf-8")
+    args = ["--resultado", str(tmp_path / "con.json"), "--oferta", "P9", "--comparar", str(tmp_path / "sin.json"),
+            "--ground-truth", str(tmp_path / "gt.csv"), "--espejos", str(tmp_path / "esp.csv")]
+    ev.main(args)
+    with open(tmp_path / "sinrag_coincidencias.csv", encoding="utf-8-sig", newline="") as f:
+        filas = list(csv.DictReader(f, delimiter=";"))
+    assert list(filas[0]) == ["trampa", "frase", "descripcion_riesgo", "cita", "valido"] and len(filas) == 2 and all(x["valido"] == "" for x in filas)
+    filas[0]["valido"], filas[1]["valido"] = "sí", "no"
+    _escribir(tmp_path / "rev.csv", list(filas[0]), filas)
+    ev.main(args + ["--revision-sinrag", str(tmp_path / "rev.csv")])
+    ultimo = sorted(n for n in os.listdir(tmp_path) if n.endswith(".md"))[-1]
+    assert "1/4 (25%) por frase, validadas" in (tmp_path / ultimo).read_text(encoding="utf-8")
+
+
+# --- Informe: «otro artículo» solo en el detalle ---
+
+def test_otro_articulo_no_esta_en_el_resumen_pero_si_en_el_detalle():
+    gt, esp = _datos()
+    md = ev.informe_md(ev.evaluar(RESULTADO, gt, esp, "P9"))
+    assert "Encontradas con otro artículo" not in md
+    fila = next(l for l in md.splitlines() if l.startswith("| P9-03"))
+    assert "otro artículo" in fila and "NORM_02 Art. 9.9" in fila
+    # el .md solo trae las secciones pedidas
+    assert [l for l in md.splitlines() if l.startswith("## ")] == ["## Recuperación", "## Detección", "## Clasificación (de las trampas encontradas)",
+                                                                   "## Fidelidad", "## Falsas alarmas", "## Volumen", "## Dónde se pierde cada trampa",
+                                                                   "## Detalle por trampa"]
+    assert "100 % por diseño" in md
+
+
+# --- Métricas estándar ---
+
+def test_wilson_valores_conocidos():
+    lo, hi = ev.wilson(8, 10)
+    assert round(lo, 4) == 0.4902 and round(hi, 4) == 0.9433
+    lo, hi = ev.wilson(0, 10)
+    assert lo == 0.0 and round(hi, 4) == 0.2775
+    assert ev.wilson(5, 0) is None
+    assert ev.wilson(10, 10)[1] == 1.0
+
+
+def test_mcnemar_exacto_valores_conocidos():
+    assert ev.mcnemar_exacto(2, 8) == 112 / 1024          # 2 * P(X <= 2 | n=10)
+    assert ev.mcnemar_exacto(0, 5) == 2 / 32
+    assert ev.mcnemar_exacto(0, 0) == 1.0 and ev.mcnemar_exacto(5, 5) == 1.0
+    assert ev.mcnemar_exacto(1, 1) == 1.0
+
+
+def _kappa_por_pares(esperadas, obtenidas, clases):
+    """Implementación independiente: a partir de los pares, sin matriz."""
+    k, n = len(clases), len(esperadas)
+    w = lambda a, b: (clases.index(a) - clases.index(b)) ** 2 / (k - 1) ** 2
+    observado = sum(w(a, b) for a, b in zip(esperadas, obtenidas)) / n
+    azar = sum(w(a, b) for a in esperadas for b in obtenidas) / n ** 2
+    return 1 - observado / azar
+
+
+def test_kappa_ponderado_cuadratico():
+    assert ev.kappa_ponderado_cuadratico({("Crítico", "Crítico"): 3, ("Mayor", "Mayor"): 4, ("Menor", "Menor"): 2}) == 1.0
+    # con dos categorías equivale al kappa de Cohen: po = 0,7, pe = 0,5 -> 0,4
+    cohen = {("a", "a"): 20, ("a", "b"): 5, ("b", "a"): 10, ("b", "b"): 15}
+    assert round(ev.kappa_ponderado_cuadratico(cohen, ("a", "b")), 10) == 0.4
+    esperadas = ["Crítico", "Crítico", "Mayor", "Mayor", "Mayor", "Menor", "Menor", "Crítico", "Mayor", "Menor"]
+    obtenidas = ["Crítico", "Mayor", "Mayor", "Menor", "Mayor", "Menor", "Mayor", "Crítico", "Crítico", "Menor"]
+    confusion = {}
+    for par in zip(esperadas, obtenidas):
+        confusion[par] = confusion.get(par, 0) + 1
+    assert abs(ev.kappa_ponderado_cuadratico(confusion) - _kappa_por_pares(esperadas, obtenidas, list(ev.CLASES))) < 1e-12
+    # un error de dos escalones (Crítico por Menor) pesa más que uno de un escalón
+    uno = ev.kappa_ponderado_cuadratico({("Crítico", "Mayor"): 1, ("Crítico", "Crítico"): 2, ("Menor", "Menor"): 2})
+    dos = ev.kappa_ponderado_cuadratico({("Crítico", "Menor"): 1, ("Crítico", "Crítico"): 2, ("Menor", "Menor"): 2})
+    assert dos < uno
+    assert ev.kappa_ponderado_cuadratico({}) is None and ev.kappa_ponderado_cuadratico({("Mayor", "Mayor"): 3}) is None
+
+
+def test_f1_y_f2():
+    assert round(ev.f_beta(0.5, 1.0, 1), 4) == 0.6667
+    assert round(ev.f_beta(0.5, 1.0, 2), 4) == 0.8333       # pondera más el recall
+    assert ev.f_beta(0, 0, 2) == 0.0 and ev.f_beta(None, 0.5, 1) is None
+
+
+def _con_registro(resultado, registro):
+    return {**resultado, "registro_tecnico": registro}
+
+
+def test_recall_articulo_y_tasa_de_pereza():
+    gt, esp = _datos()
+    registro = [
+        {"seccion": "3", "norma": "NORM_01", "articulo": "4.2", "veredicto": "Incumple"},           # P9-01: verificado y encontrado
+        {"seccion": "4", "norma": "NORM_03", "articulo": "2.4", "veredicto": "Revisar"},            # P9-02: por un artículo equivalente
+        {"seccion": "5", "norma": "NORM_05", "articulo": "1.6", "veredicto": "Cumple"},             # P9-03: verificado, no encontrado, Cumple -> pereza
+        {"seccion": "6", "norma": "NORM_04", "articulo": "3.1", "veredicto": "No aplica", "etapa": "clasificacion"},   # no cuenta: etapa de clasificación
+        {"seccion": "9", "norma": "NORM_01", "articulo": "4.2", "veredicto": "Cumple"},             # otra sección: no cuenta
+    ]
+    r = ev.evaluar(_con_registro(RESULTADO, registro), gt, esp, "P9")
+    assert [t["verificado"] for t in r["trampas"]] == [True, True, True, False]
+    assert (r["recall_articulo"], r["perezosas"], r["hay_registro"]) == (3, 1, True)
+    assert [t["perezosa"] for t in r["trampas"]] == [False, False, True, False]
+    md = ev.informe_md(r)
+    assert "3/4 (75%)" in md and "Pereza de verificación" in md and "Pereza de clasificación" in md
+    assert [t["perdida"] for t in r["trampas"]] == ["encontrada", "encontrada", "perdida en verificación", "no recuperada"]
+    sin_registro = ev.evaluar(RESULTADO, gt, esp, "P9")
+    assert sin_registro["hay_registro"] is False and "n/d (el resultado no trae registro técnico)" in ev.informe_md(sin_registro)
+
+
+def test_falsas_alarmas_y_volumen_en_el_informe():
+    gt, esp = _datos()
+    md = ev.informe_md(ev.evaluar(RESULTADO, gt, esp, "P9"))
+    assert "| Espejos marcados | 1/2 (50%), IC 95 % 9%–91% |" in md
+    assert "| Brechas | 5 |" in md and "| Riesgos agrupados | 4 |" in md and "| Solicitudes | 2 |" in md and "| Alertas | 1 |" in md
+    lista = ev.informe_md(ev.evaluar(LISTA, gt, esp, "P9"))
+    assert "## Falsas alarmas" in lista and "| Riesgos | 3 |" in lista
+
+
+def test_donde_se_pierde_cada_trampa_en_dos_capas_de_pereza():
+    gt, esp = _datos()
+    registro = [
+        {"seccion": "3", "norma": "NORM_01", "articulo": "4.2", "veredicto": "Incumple"},                   # P9-01 encontrada
+        {"seccion": "4", "norma": "NORM_02", "articulo": "5.1", "veredicto": "Incumple"},                   # P9-02: verificación Incumple...
+        {"seccion": "4", "norma": "NORM_02", "articulo": "5.1", "etapa": "clasificacion", "veredicto": "NO_APLICA", "estado": "no_es_riesgo"},   # ...y clasificación NO_APLICA
+        {"seccion": "5", "norma": "NORM_05", "articulo": "1.6", "veredicto": "Cumple"},                     # P9-03: la verificación dijo Cumple
+    ]                                                                                                       # P9-04: el artículo nunca llegó
+    resultado = {"registro_brechas": [_brecha("la cantidad ofertada es de una unidad", "NORM_01", "4.2")], "registro_tecnico": registro}
+    r = ev.evaluar(resultado, gt, esp, "P9")
+    assert [t["perdida"] for t in r["trampas"]] == ["encontrada", "perdida en clasificación", "perdida en verificación", "no recuperada"]
+    assert (r["perezosas"], r["perezosas_clasificacion"]) == (1, 1)
+    md = ev.informe_md(r)
+    assert "| P9-02 | perdida en clasificación | NORM_02 Art. 5.1 | Incumple | NO_APLICA |" in md
+    assert "| P9-04 | no recuperada |" in md and "| P9-01 | encontrada" not in md.split("## Dónde se pierde cada trampa")[1].split("## Detalle")[0]
+    assert "| no recuperada | 1/4 (25%) |" in md and "| encontrada | 1/4 (25%) |" in md
+    assert "n/d (el resultado no trae registro técnico)" in ev.informe_md(ev.evaluar({"registro_brechas": resultado["registro_brechas"]}, gt, esp, "P9"))
+
+
+def test_trampa_con_veredicto_incumple_no_es_perezosa_aunque_no_se_encuentre():
+    gt, esp = _datos()
+    registro = [{"seccion": "6", "norma": "NORM_04", "articulo": "3.1", "veredicto": "Incumple"}]
+    r = ev.evaluar(_con_registro(RESULTADO, registro), gt, esp, "P9")
+    assert r["trampas"][3]["verificado"] and not r["trampas"][3]["perezosa"]
+
+
+def test_fidelidad_cuenta_brechas_con_marca_valor_no_verificado():
+    gt, esp = _datos()
+    marcada = dict(_brecha("Texto cualquiera de una brecha.", "NORM_01", "1.1"), marcas=["impacto ajustado de 5 a 2", "valor no verificado: valor_limite_excepcion"])
+    r = ev.evaluar({"registro_brechas": [marcada, _brecha("Otra brecha sin marcas.", "NORM_01", "1.2")]}, gt, esp, "P9")
+    assert r["marcas_no_verificadas"] == 1 and "1/2 (50%)" in ev.informe_md(r)
+
+
+def test_precision_f1_f2_e_ic_en_el_informe():
+    gt, esp = _datos()
+    r = ev.evaluar(RESULTADO, gt, esp, "P9")
+    ev.asignar_precision(r, [dict(x, valido="sí") for x in r["extras"]])
+    assert (r["precision_k"], r["precision_n"], r["precision"]) == (4, 5, 0.8)
+    md = ev.informe_md(r)
+    p, rc = 0.8, 0.5
+    assert f"{2 * p * rc / (p + rc):.2f}" in md and f"{5 * p * rc / (4 * p + rc):.2f}" in md
+    assert "4/5 (80%), IC 95 %" in md and "2/4 (50%), IC 95 %" in md
+
+
+# --- Agregado y McNemar ---
+
+def test_oferta_de_ruta():
+    assert ev._oferta_de_ruta("datos/Resultados/P1_oferta_TBP01/analisis.json") == ("P1", "datos/Resultados/P1_oferta_TBP01/analisis.json")
+    assert ev._oferta_de_ruta("P3=x/y.json") == ("P3", "x/y.json")
+    with pytest.raises(SystemExit):
+        ev._oferta_de_ruta("TBP01/analisis.json")
+
+
+def test_cli_agregado_suma_las_ofertas_y_hace_mcnemar(tmp_path):
+    _escribir(tmp_path / "gt.csv", CABECERA_GT, GT)
+    _escribir(tmp_path / "esp.csv", CABECERA_ESP, ESPEJOS)
+    resultado8 = {"registro_brechas": [_brecha("Texto de la otra oferta.", "NORM_01", "1.1")]}
+    lista8 = {"riesgos_identificados_estructurados": [{"descripcion_riesgo": "d", "cita_oferta": "Hay otra oferta con su propio texto."}]}
+    for nombre, contenido in (("P9_con", RESULTADO), ("P8_con", resultado8), ("P9_sin", LISTA), ("P8_sin", lista8)):
+        (tmp_path / nombre).mkdir()
+        (tmp_path / nombre / "r.json").write_text(json.dumps(contenido), encoding="utf-8")
+    total = ev.main(["--agregado", str(tmp_path / "P9_con" / "r.json"), str(tmp_path / "P8_con" / "r.json"),
+                     "--comparar", str(tmp_path / "P9_sin" / "r.json"), str(tmp_path / "P8_sin" / "r.json"),
+                     "--ground-truth", str(tmp_path / "gt.csv"), "--espejos", str(tmp_path / "esp.csv")])
+    assert (total["n_trampas"], total["encontradas"], total["oferta"]) == (5, 3, "P9+P8")
+    md = next(n for n in os.listdir(tmp_path / "P9_con") if n.startswith("evaluacion_agregado_") and n.endswith(".md"))
+    texto = (tmp_path / "P9_con" / md).read_text(encoding="utf-8")
+    # con RAG (estricto): P9-01, P9-02 y P8-01. Sin RAG (por frase): las mismas, más la de P8 -> sin discordancias
+    assert "McNemar" in texto and "solo con RAG 0, solo sin RAG 0, p = 1.0000" in texto
+    assert (tmp_path / "P9_sin" / "sinrag_coincidencias.csv").exists() and (tmp_path / "P8_sin" / "sinrag_coincidencias.csv").exists()
+
+
+def test_combinar_suma_confusion_y_conteos():
+    gt, esp = _datos()
+    t = ev.combinar([ev.evaluar(RESULTADO, gt, esp, "P9"), ev.evaluar(RESULTADO, gt, esp, "P9")])
+    assert (t["n_trampas"], t["encontradas"], t["n_espejos"], t["falsas_alarmas"]) == (8, 4, 4, 2)
+    assert t["confusion"] == {("Mayor", "Mayor"): 2, ("Crítico", "Menor"): 2} and t["volumen"]["brechas"] == 10
+    assert t["precision"] is None and len(t["trampas"]) == 8

@@ -15,6 +15,12 @@ def _generar(ruta_json, ruta_html):
         return f.read()
 
 
+def _tarjeta(html, id_):
+    """HTML de una tarjeta o línea de riesgo: desde su id hasta la siguiente tarjeta o sección."""
+    t = re.search(rf'id="{id_}">.*?(?=<details class="risk-|<div class="risk-section"|<p class="pie-tecnico")', html, re.S).group(0)
+    return t[t.index('<div class="risk-detail">'):]
+
+
 def test_dashboard_de_ejemplo_modo_verificacion():
     """Genera tests/salida/dashboard_ejemplo.html (ignorado por git) para revisarlo en el navegador."""
     html = _generar(EJEMPLO, SALIDA)
@@ -25,27 +31,46 @@ def test_dashboard_de_ejemplo_modo_verificacion():
     assert 'class="decision no-aceptable"' in html and "No aceptable" in html
     assert "Riesgos por nivel" in html and "Riesgos por clase" in html and "Top 5" not in html and 'href="#R' not in html
     # registro dividido por nivel, de mayor a menor, con el color de borde de cada nivel
-    posiciones = [html.index(t) for t in ("RIESGOS DE NIVEL ALTO (2)", "RIESGOS DE NIVEL MEDIO (1)", "RIESGOS DE NIVEL BAJO (3)")]
+    posiciones = [html.index(t) for t in ("RIESGOS DE NIVEL ALTO (2)", "RIESGOS DE NIVEL MEDIO (2)", "RIESGOS DE NIVEL BAJO (3)")]
     assert posiciones == sorted(posiciones)
     assert len(re.findall(r'<details class="risk-card alto"', html)) == 2
-    assert len(re.findall(r'<details class="risk-card medio"', html)) == 1
-    assert len(re.findall(r'<details class="risk-card bajo"', html)) == 3
-    assert "details.risk-card.alto{border-left-color:#e74c3c;}" in html and "details.risk-card.medio{border-left-color:#f39c12;}" in html \
-        and "details.risk-card.bajo{border-left-color:#2ecc71;}" in html
+    assert len(re.findall(r'<details class="risk-card medio"', html)) == 2
+    # los de nivel Bajo van como lista compacta: una línea por riesgo (título · clase · responsable · norma y artículo)
+    assert len(re.findall(r'<details class="risk-card bajo"', html)) == 0 and len(re.findall(r'<details class="risk-linea"', html)) == 3
+    assert 'class="lista-compacta"' in html
+    linea = re.search(r'id="R4">\s*<summary>(.*?)</summary>', html, re.S).group(1)
+    assert linea.count(" · ") == 3 and "Registro de montaje entregado solo al final" in linea and "badge menor" in linea and "NORM_05 Art. 1.6" in linea
+    assert "details.risk-card.alto{border-left-color:#e74c3c;}" in html and "details.risk-card.medio{border-left-color:#f39c12;}" in html
     # dentro de la sección, por impacto (R1: 5, R2: 4)
     assert html.index('id="R1"') < html.index('id="R2"')
     # la tarjeta cerrada muestra título, clase con color y responsable; la categoría RBS va en el detalle
     cerrada = re.search(r'id="R1">\s*<summary>(.*?)</summary>', html, re.S).group(1)
     assert "Izaje crítico sin plan aprobado" in cerrada and 'badge critico' in cerrada and "Gerencia de Seguridad Operacional y Salud Ocupacional" in cerrada
-    assert "RBS" not in cerrada and "Categoría RBS:</span> RBS-3 Izaje y manipulación" in html
+    assert "RBS" not in cerrada
     assert len(re.findall(r'<span class="badge critico">Crítico</span>', html)) >= 1
     assert "Aclaraciones menores: RBS-1" in html
-    # detalle: cita y requisito lado a lado, regla, probabilidad × impacto = nivel, umbral
-    assert 'class="lado-a-lado"' in html and "Requisito — NORM_03 Art. 2.1" in html and "NORM_03 Art. 2.4" in html
-    assert "regla 3.2.b" in html and "4 × 5 =" in html and "NORM_03, Art. 2.1; NORM_03, Art. 2.4" in html
+    # detalle, en este orden y nada más
+    detalle = _tarjeta(html, "R1")
+    orden = ["La oferta dice", "La norma exige", "Ver artículo", "Qué se pide al oferente", "Fuente:", "Marcas"]
+    posiciones = [detalle.find(t) for t in orden[:5]]
+    assert -1 not in posiciones and posiciones == sorted(posiciones) and "Marcas del sistema" not in detalle   # sin marcas, no se muestra la línea
+    assert "Presentar el plan de izaje aprobado antes de la maniobra." in detalle and "Verificación previa." in detalle
+    assert "Clase:</span> Crítico (regla 3.2.b)" in detalle and "4 × 5 =" in detalle and "Estrategia:</span>" in detalle
+    assert "NORM_03 Art. 2.1; NORM_03 Art. 2.4" in detalle
+    assert '<details class="articulo"><summary>Ver artículo</summary>' in detalle and "Art. 2.4." in detalle   # el texto completo del artículo va plegado
+    # se eliminan del detalle la categoría RBS, el umbral, el responsable, el enunciado y la acción de mitigación
+    for ausente in ("Categoría RBS", "Umbral", "Acción de mitigación", "Responsable:", "Enunciado", "Dimensión del impacto", "lado-a-lado"):
+        assert ausente not in detalle, ausente
     assert "Información faltante" in html
+    # la trocha duplicada (Art. 2.3 y Art. 2.16, mismo valor ofertado) es UN solo riesgo, con los dos artículos
+    assert html.count("Tolerancia de trocha superior a la admitida") == 2 and "Variación de trocha superior a la admitida" not in html
+    trocha = _tarjeta(html, "R7")
+    assert "NORM_01 Art. 2.3; NORM_01 Art. 2.16" in trocha
+    dice = trocha[trocha.index("La oferta dice"):trocha.index("La norma exige")]
+    assert dice.count('class="cita-oferta"') == 2 and "±3 mm" in dice   # solo las oraciones que contienen el valor, como máximo 2
+    assert trocha.count("Ver artículo") == 2 and "Ofrecer una tolerancia de trocha no mayor que ±2 mm." in trocha
     # solicitudes: una fila por riesgo, con una línea por brecha del grupo
-    assert html.count("<tr><td>") == 6 and "NORM_03 Art. 2.1: Presentar el plan de izaje" in html
+    assert html.count("<tr><td>") == 7 and "NORM_03 Art. 2.1: Presentar el plan de izaje" in html
     # alertas con su leyenda
     assert "Dudas internas del evaluador; no se envían al oferente." in html and "tensión disponible" in html
     # pie con modelo, fecha, huella y cantidad de verificaciones y clasificaciones
@@ -57,6 +82,8 @@ def test_dashboard_de_ejemplo_modo_verificacion():
             in html)
     assert "<li>Gerencia de Infraestructura y Vías: Cantidad de apoyos inferior a la exigida (NORM_01 Art. 4.2)</li>" in html
     assert html.count("Antes de la adjudicación</li>") == 0 and "Solicitudes con plazo «Antes de la firma del contrato»: 4." in html
+    # acciones antes de la adjudicación: una línea por riesgo agrupado (la trocha, una sola vez, con sus dos artículos)
+    assert html.count("Tolerancia de trocha superior a la admitida (NORM_01 Art. 2.3; NORM_01 Art. 2.16)</li>") == 1
     assert html.index("Izaje crítico sin plan aprobado (NORM_03") < html.index("Cantidad de apoyos inferior a la exigida (NORM_01")   # por clase
     assert "uficiencia" not in html and "Comentario general: modelo" in html
     # diseño: una sola familia en una variable CSS, sin fuentes descargadas ni emojis, etiquetas rectangulares
@@ -68,6 +95,29 @@ def test_dashboard_de_ejemplo_modo_verificacion():
     # el registro técnico no se muestra y no hay recursos externos
     assert "registro_tecnico" not in html
     assert "<script src" not in html and "<link " not in html
+
+
+def _brecha_minima(**campos):
+    base = {"id": "b", "norma": "NORM_01", "articulo": "1.1", "texto_articulo": "Art. 1.1. X", "marcas": [],
+            "oraciones_texto": {"O1": "Primera oración.", "O2": "El tablero se instala a 12 m del borde.", "O3": "Tercera oración con 12 m también.",
+                                "O4": "Cuarta con 12 m otra vez."},
+            "clasificacion": {"valor_ofertado": "12 m", "medida_ofrecida": None}}
+    base.update(campos)
+    return base
+
+
+def test_la_oferta_dice_solo_oraciones_con_la_medida_o_el_valor_maximo_dos():
+    assert dg.la_oferta_dice([_brecha_minima()]) == ["El tablero se instala a 12 m del borde.", "Tercera oración con 12 m también."]
+    con_medida = _brecha_minima(clasificacion={"valor_ofertado": None, "medida_ofrecida": "Primera oración"})
+    assert dg.la_oferta_dice([con_medida]) == ["Primera oración."]
+
+
+def test_la_oferta_dice_sin_coincidencias_muestra_la_primera_oracion_citada():
+    sin = _brecha_minima(clasificacion={"valor_ofertado": "99 kg", "medida_ofrecida": None})
+    assert dg.la_oferta_dice([sin]) == ["Primera oración."]
+    antiguo = {"id": "x", "cita": "Texto completo de la cita.", "clasificacion": {}}   # resultado sin oraciones_texto
+    assert dg.la_oferta_dice([antiguo]) == ["Texto completo de la cita."]
+    assert dg.la_oferta_dice([]) == []
 
 
 def test_dashboard_sin_rag_muestra_lista_simple_con_leyenda(tmp_path):

@@ -6,6 +6,7 @@ import json
 import os
 import logging
 import datetime
+import unicodedata
 from html import escape
 import base64
 
@@ -56,7 +57,7 @@ CSS = """
         .informe-general p{margin:6px 0;} .informe-general ul{margin:6px 0;padding-left:22px;}
         .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;align-items:start;}
         details.risk-card{background-color:#fdfdfd;border:1px solid #e9ecef;border-radius:8px;padding:0;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left-width:5px;border-left-style:solid;}
-        details.risk-card.alto{border-left-color:#e74c3c;} details.risk-card.medio{border-left-color:#f39c12;} details.risk-card.bajo{border-left-color:#2ecc71;}
+        details.risk-card.alto{border-left-color:#e74c3c;} details.risk-card.medio{border-left-color:#f39c12;}
         details.risk-card[open]{grid-column:1 / -1;}
         details.risk-card summary{cursor:pointer;padding:16px 20px;list-style:none;} details.risk-card summary::-webkit-details-marker{display:none;}
         details.risk-card summary:hover{background:#f7f9fb;}
@@ -64,10 +65,13 @@ CSS = """
         .card-meta{font-size:.85em;color:#555;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
         .risk-detail{padding:4px 20px 18px;border-top:1px dashed #ccc;font-size:.92em;line-height:1.55;}
         .risk-detail p{margin:6px 0;}
-        .lado-a-lado{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0 14px;}
-        .lado{background:#f5f8fb;border:1px solid #d6e0ea;border-radius:2px;padding:10px 14px;}
-        .lado h5{margin:0 0 6px;font-size:.9em;font-weight:400;color:#2c3e50;}
-        .lado .texto{white-space:pre-wrap;max-height:170px;overflow:auto;font-size:.9em;}
+        .lista-compacta{border:1px solid #e9ecef;border-radius:8px;overflow:hidden;}
+        details.risk-linea{border-bottom:1px solid #e9ecef;border-left:5px solid #2ecc71;background:#fdfdfd;}
+        details.risk-linea summary{cursor:pointer;padding:10px 16px;list-style:none;font-size:.92em;} details.risk-linea summary::-webkit-details-marker{display:none;}
+        details.risk-linea summary:hover{background:#f7f9fb;}
+        .articulo{margin:2px 0 8px;} .articulo summary{cursor:pointer;color:#2c3e50;font-size:.9em;}
+        .articulo .texto{background:#f5f8fb;border:1px solid #d6e0ea;border-radius:2px;padding:10px 14px;white-space:pre-wrap;max-height:170px;overflow:auto;font-size:.9em;}
+        .cita-oferta{background:#f5f8fb;border:1px solid #d6e0ea;border-radius:2px;padding:8px 14px;margin:4px 0;}
         .tabla{border-collapse:collapse;width:100%;font-size:.88em;}
         .tabla th{text-align:left;background:#f5f8fb;border-bottom:2px solid #d6e0ea;padding:8px 10px;font-size:.85em;font-weight:700;text-transform:uppercase;}
         .tabla td{border-bottom:1px solid #e9ecef;padding:8px 10px;vertical-align:top;} .tabla td.pedido{white-space:pre-wrap;}
@@ -79,7 +83,7 @@ CSS = """
         .pie-tecnico{margin-top:35px;padding-top:12px;border-top:1px solid #e0e0e0;font-size:.82em;color:#6c757d;text-align:center;}
         .vacio{font-style:italic;color:#6c757d;}
         .dashboard-page-footer{width:100%;text-align:center;padding:25px 0;font-size:.9em;color:#6c757d;margin-top:30px;border-top:1px solid #d0d0d0;}
-        @media (max-width:700px){.lado-a-lado{grid-template-columns:1fr;}.main-dashboard-container{padding:20px;}}
+        @media (max-width:700px){.main-dashboard-container{padding:20px;}}
 """
 
 
@@ -124,7 +128,7 @@ def acciones_previas(solicitudes, riesgos, orden_clases):
     ordenadas por clase, y cantidad de solicitudes con plazo previo a la firma del contrato."""
     titulos = {r.get("id"): r.get("titulo") for r in riesgos}
     rango = {c: i for i, c in enumerate(orden_clases)}
-    previas = sorted((s for s in solicitudes if s.get("plazo") == PLAZO_ADJUDICACION), key=lambda s: rango.get(s.get("clase"), 99))
+    previas = sorted({s.get("riesgo"): s for s in solicitudes if s.get("plazo") == PLAZO_ADJUDICACION}.values(), key=lambda s: rango.get(s.get("clase"), 99))   # una por riesgo agrupado
     lineas = [f"{s.get('responsable') or 'N/D'}: {titulos.get(s.get('riesgo')) or 'N/D'} ({_citas_texto(s.get('citas'))})" for s in previas]
     return lineas, sum(1 for s in solicitudes if s.get("plazo") == PLAZO_FIRMA)
 
@@ -155,38 +159,73 @@ def seccion_resumen(resumen, riesgos, solicitudes, orden_clases):
 
 # --- 2. Registro de riesgos ---
 
-def _lado_a_lado(b):
-    oraciones = ", ".join(b.get("oraciones") or []) or "—"
-    return f'''
-        <div class="lado-a-lado">
-            <div class="lado"><h5>Oferta — sección {_e(b.get("seccion_oferta"))} (oraciones {escape(oraciones)})</h5><div class="texto">{_e(b.get("cita"))}</div></div>
-            <div class="lado"><h5>Requisito — {_e(b.get("norma"))} Art. {_e(b.get("articulo"))}</h5><div class="texto">{_e(b.get("texto_articulo"))}</div></div>
-        </div>'''
+def _alnum(texto):
+    return "".join(c for c in unicodedata.normalize("NFD", str(texto or "").casefold()) if c.isalnum())
+
+
+def _oraciones_citadas(componentes):
+    """[(clave, texto)] de las oraciones citadas por los componentes, sin repetir. Si la brecha no trae el texto de cada oración
+    (resultados anteriores), la cita completa cuenta como una sola."""
+    vistas = {}
+    for b in componentes:
+        if b.get("oraciones_texto"):
+            vistas.update({i: t for i, t in b["oraciones_texto"].items() if i not in vistas})
+        elif b.get("cita"):
+            vistas.setdefault(("cita", b.get("id")), b["cita"])
+    return sorted(vistas.items(), key=lambda x: (isinstance(x[0], tuple), len(str(x[0])), str(x[0])))
+
+
+def la_oferta_dice(componentes):
+    """Solo las oraciones citadas que contienen la medida ofrecida o el valor ofertado, como máximo 2; si no hay ninguna, la primera citada."""
+    items = _oraciones_citadas(componentes)
+    claves = [_alnum(v) for b in componentes for v in ((b.get("clasificacion") or {}).get("medida_ofrecida"), (b.get("clasificacion") or {}).get("valor_ofertado")) if v]
+    coinciden = [t for _, t in items if any(k and k in _alnum(t) for k in claves)][:2]
+    return coinciden or ([items[0][1]] if items else [])
+
+
+def _bloque_norma_exige(b):
+    c = b.get("clasificacion") or {}
+    valor = " ".join(str(x) for x in (c.get("valor_exigido"), c.get("unidad")) if x)
+    explicacion = (b.get("verificacion_previa") or {}).get("explicacion")
+    texto = ". ".join(x for x in (valor, explicacion) if x)
+    return (f'<p><span class="detail-label">{_e(b.get("norma"))} Art. {_e(b.get("articulo"))}:</span> {_e(texto)}</p>'
+            f'<details class="articulo"><summary>Ver artículo</summary><div class="texto">{_e(b.get("texto_articulo"))}</div></details>')
+
+
+def detalle_riesgo(r, brechas_por_id):
+    """Detalle del riesgo, en este orden y nada más: la oferta dice, la norma exige, qué se pide, una línea de datos y las marcas."""
+    componentes = [brechas_por_id[i] for i in r.get("brechas", []) if i in brechas_por_id]
+    dice = "".join(f'<div class="cita-oferta">{_e(t)}</div>' for t in la_oferta_dice(componentes)) or '<p class="vacio">N/D</p>'
+    pedidos = list(dict.fromkeys(b.get("solicitud_oferente") for b in componentes if b.get("solicitud_oferente")))
+    pide = "".join(f"<p>{escape(p)}</p>" for p in pedidos) or "<p>N/D</p>"
+    fuente = FUENTE_TEXTO.get(r.get("fuente"), _e(r.get("fuente")))
+    datos = (f'<p><span class="detail-label">Fuente:</span> {escape(fuente)} · <span class="detail-label">Clase:</span> {_e(r.get("clase"))} (regla {_e(r.get("regla"))}) · '
+             f'<span class="detail-label">P × I = Nivel:</span> {_e(r.get("probabilidad"))} × {_e(r.get("impacto"))} = {_badge(r.get("nivel"), NIVEL_CSS)} · '
+             f'<span class="detail-label">Estrategia:</span> {_e(r.get("estrategia"))} · <span class="detail-label">Norma y artículo:</span> {escape(_citas_texto(r.get("citas")))}</p>')
+    marcas = list(dict.fromkeys(m for b in componentes for m in b.get("marcas", [])))
+    marcas_html = f'<p><span class="detail-label">Marcas del sistema:</span> {" ".join(f"<span class=marca>{escape(str(m))}</span>" for m in marcas)}</p>' if marcas else ""
+    return (f'<div class="risk-detail"><p class="subtitulo">La oferta dice</p>{dice}<p class="subtitulo">La norma exige</p>'
+            f'{"".join(_bloque_norma_exige(b) for b in componentes)}<p class="subtitulo">Qué se pide al oferente</p>{pide}{datos}{marcas_html}</div>')
 
 
 def tarjeta_riesgo(r, brechas_por_id):
-    componentes = [brechas_por_id[i] for i in r.get("brechas", []) if i in brechas_por_id]
-    marcas = list(dict.fromkeys(m for b in componentes for m in b.get("marcas", [])))
-    marcas_html = f'<p><span class="detail-label">Marcas del sistema:</span> {" ".join(f"<span class=marca>{escape(str(m))}</span>" for m in marcas)}</p>' if marcas else ""
-    fuente = FUENTE_TEXTO.get(r.get("fuente"), _e(r.get("fuente")))
+    """Tarjeta de los riesgos de nivel Alto y Medio."""
     return f'''
-        <details class="risk-card {NIVEL_CSS.get(r.get("nivel"), "bajo")}" id="{escape(str(r.get("id", "")))}">
+        <details class="risk-card {NIVEL_CSS.get(r.get("nivel"), "medio")}" id="{escape(str(r.get("id", "")))}">
             <summary>
                 <span class="card-title">{_e(r.get("titulo"))}</span>
                 <span class="card-meta">{_badge(r.get("clase"), CLASE_CSS)} <span><span class="detail-label">Responsable:</span> {_e(r.get("responsable"))}</span></span>
             </summary>
-            <div class="risk-detail">
-                {"".join(_lado_a_lado(b) for b in componentes)}
-                <p><span class="detail-label">Enunciado:</span> {_e(r.get("enunciado"))}</p>
-                <p><span class="detail-label">Categoría RBS:</span> {_e(r.get("rbs"))}</p>
-                <p><span class="detail-label">Fuente:</span> {escape(fuente)} · <span class="detail-label">Clase:</span> {_e(r.get("clase"))} (regla {_e(r.get("regla"))} de los criterios)</p>
-                <p><span class="detail-label">Probabilidad × impacto = nivel:</span> {_e(r.get("probabilidad"))} × {_e(r.get("impacto"))} = {_badge(r.get("nivel"), NIVEL_CSS)} · <span class="detail-label">Dimensión del impacto:</span> {_e(r.get("dimension_impacto"))}</p>
-                <p><span class="detail-label">Estrategia:</span> {_e(r.get("estrategia"))}</p>
-                <p><span class="detail-label">Acción de mitigación:</span> {_e(r.get("accion"))}</p>
-                <p><span class="detail-label">Umbral:</span> {_e(r.get("umbral"))}</p>
-                <p><span class="detail-label">Responsable:</span> {_e(r.get("responsable"))}</p>
-                {marcas_html}
-            </div>
+            {detalle_riesgo(r, brechas_por_id)}
+        </details>'''
+
+
+def linea_riesgo(r, brechas_por_id):
+    """Riesgos de nivel Bajo: una línea (título · clase · responsable · norma y artículo) que al abrirse muestra el mismo detalle."""
+    return f'''
+        <details class="risk-linea" id="{escape(str(r.get("id", "")))}">
+            <summary>{_e(r.get("titulo"))} · {_badge(r.get("clase"), CLASE_CSS)} · {_e(r.get("responsable"))} · {escape(_citas_texto(r.get("citas")))}</summary>
+            {detalle_riesgo(r, brechas_por_id)}
         </details>'''
 
 
@@ -198,9 +237,13 @@ def seccion_registro(riesgos, brechas, orden_clases):
     secciones = []
     for nivel, titulo in SECCIONES_NIVEL:
         items = sorted((r for r in riesgos if r.get("nivel") == nivel), key=lambda x: (-(x.get("impacto") or 0), rango.get(x.get("clase"), 99)))
-        if items:   # una sección sin riesgos no se muestra
-            secciones.append(f'<div class="risk-section"><h3 class="risk-section-title">{titulo} ({len(items)})</h3>'
-                             f'<div class="dashboard-grid">{"".join(tarjeta_riesgo(r, por_id) for r in items)}</div></div>')
+        if not items:   # una sección sin riesgos no se muestra
+            continue
+        if nivel == "Bajo":
+            cuerpo = f'<div class="lista-compacta">{"".join(linea_riesgo(r, por_id) for r in items)}</div>'
+        else:
+            cuerpo = f'<div class="dashboard-grid">{"".join(tarjeta_riesgo(r, por_id) for r in items)}</div>'
+        secciones.append(f'<div class="risk-section"><h3 class="risk-section-title">{titulo} ({len(items)})</h3>{cuerpo}</div>')
     return f'<div class="risk-section"><h3 class="risk-section-title">Registro de riesgos ({len(riesgos)})</h3></div>{"".join(secciones)}'
 
 

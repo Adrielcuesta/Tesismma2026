@@ -34,7 +34,7 @@ def test_comentario_valido_se_acepta():
     # el modelo recibe solo la decisión, los conteos y el registro
     entrada = cadena.entradas[0]
     assert set(entrada) == {"decision", "conteo_nivel", "conteo_clase", "registro"} and entrada["decision"] == "No aceptable"
-    assert entrada["conteo_nivel"] == "Alto: 2; Medio: 1; Bajo: 3"
+    assert entrada["conteo_nivel"] == "Alto: 2; Medio: 2; Bajo: 3"
     assert "Izaje crítico sin plan aprobado | Crítico | Alto | Gerencia de Seguridad Operacional y Salud Ocupacional | NORM_03 Art. 2.1; NORM_03 Art. 2.4" in entrada["registro"]
 
 
@@ -68,7 +68,7 @@ def test_falla_del_modelo_usa_la_plantilla():
 
 def test_plantilla_con_decision_conteos_y_areas_de_clase_alta():
     t = comentario.plantilla(RESUMEN, RIESGOS)
-    assert "No aceptable" in t and "Alto: 2; Medio: 1; Bajo: 3" in t and "Crítico: 1; Mayor: 2; Menor: 3" in t
+    assert "No aceptable" in t and "Alto: 2; Medio: 2; Bajo: 3" in t and "Crítico: 1; Mayor: 3; Menor: 3" in t
     areas = t.split("se concentran en: ")[1]
     assert "Gerencia de Seguridad Operacional y Salud Ocupacional" in areas and "Gerencia de Infraestructura y Vías" in areas
     assert "Material Rodante" not in areas      # esa área solo tiene riesgos Menor

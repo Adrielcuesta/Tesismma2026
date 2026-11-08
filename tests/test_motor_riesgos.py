@@ -180,6 +180,43 @@ def test_agrupar_mismas_oraciones_toma_clase_maxima_y_su_responsable():
     assert [c["norma"] for c in r["citas"]] == ["NORM_01", "NORM_03"]
 
 
+def _b(id_, seccion, oraciones, valor=None, norma="NORM_01", articulo="1.1", clase="Mayor", nivel="Medio"):
+    return {"id": id_, "seccion": seccion, "oraciones": oraciones, "clasificacion": {"valor_ofertado": valor}, "clase": clase, "nivel": nivel,
+            "norma": norma, "articulo": articulo, "impacto": 3, "probabilidad": 4, "titulo": id_, "rbs": "RBS-1", "responsable": "G", "fuente": "DESVIO",
+            "regla": "3.3.a", "enunciado": "", "accion": ""}
+
+
+def test_agrupar_trocha_duplicada_comparte_el_valor_ofertado():
+    """La misma tolerancia aparecía dos veces (Art. 2.3 y 2.16) en oraciones distintas: un solo riesgo con la clase y el nivel más altos."""
+    a = _b("a", "9", ["O1"], "±3 mm", articulo="2.3", clase="Mayor", nivel="Medio")
+    b = _b("b", "9", ["O2"], "± 3 mm", articulo="2.16", clase="Menor", nivel="Bajo")
+    riesgos = m.agrupar([a, b], C)
+    assert len(riesgos) == 1
+    r = riesgos[0]
+    assert (r["clase"], r["nivel"], r["brechas"]) == ("Mayor", "Medio", ["a", "b"])
+    assert [c["articulo"] for c in r["citas"]] == ["2.3", "2.16"] and r["oraciones"] == ["O1", "O2"]
+
+
+def test_agrupar_6_1_une_por_oracion_o_por_valor_solo_dentro_de_la_seccion_y_es_transitivo():
+    # misma oración -> un riesgo; mismo valor en otra sección -> no se une; valor distinto y oraciones distintas -> no se une
+    assert len(m.agrupar([_b("a", "1", ["O1", "O2"]), _b("b", "1", ["O2"])], C)) == 1
+    assert len(m.agrupar([_b("a", "1", ["O1"], "3 mm"), _b("b", "2", ["O1"], "3 mm")], C)) == 2
+    assert len(m.agrupar([_b("a", "1", ["O1"], "3 mm"), _b("b", "1", ["O2"], "4 mm")], C)) == 2
+    assert len(m.agrupar([_b("a", "1", ["O1"]), _b("b", "1", ["O2"])], C)) == 2        # sin valor ofertado, el vacío no une
+    # a-b por la oración, b-c por el valor: los tres forman un riesgo
+    assert len(m.agrupar([_b("a", "1", ["O1"]), _b("c", "1", ["O3"], "5 mm"), _b("b", "1", ["O1", "O2"], "5 mm")], C)) == 1
+
+
+def test_agrupar_por_valor_solo_si_tiene_unidad_o_tres_caracteres_significativos():
+    uno = [_b("a", "1", ["O1"], "1", articulo="1.1"), _b("b", "1", ["O2"], "1", articulo="1.2")]
+    assert len(m.agrupar(uno, C)) == 2                                   # «1» suelto no agrupa
+    assert len(m.agrupar([_b("a", "1", ["O1"], "10"), _b("b", "1", ["O2"], "10")], C)) == 2    # dos dígitos sin unidad tampoco
+    assert len(m.agrupar([_b("a", "1", ["O1"], "± 1"), _b("b", "1", ["O2"], "±1")], C)) == 2   # los signos y espacios no cuentan
+    assert len(m.agrupar([_b("a", "1", ["O1"], "1 m"), _b("b", "1", ["O2"], "1m")], C)) == 1   # con unidad, agrupa
+    assert len(m.agrupar([_b("a", "1", ["O1"], "125"), _b("b", "1", ["O2"], "125")], C)) == 1  # tres caracteres significativos
+    assert len(m.agrupar([_b("a", "1", ["O1"], "1"), _b("b", "1", ["O1"], "1")], C)) == 1      # la misma oración sigue agrupando
+
+
 def test_agrupar_aclaraciones_menores_por_categoria_rbs():
     brechas = [
         _brecha("B1", "1", ["O1"], "NORM_01", "4.2", "Menor", "Bajo", 2, titulo="uno"),

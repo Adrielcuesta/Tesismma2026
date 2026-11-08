@@ -251,16 +251,40 @@ def _fusionar(brechas, criterios, **extra):
     return riesgo
 
 
+def _valor_ofertado_normalizado(b):
+    """Valor ofertado sin espacios y con punto decimal; vacío si no sirve para agrupar: hace falta una unidad (alguna letra) o al menos
+    3 caracteres significativos (letras y dígitos, sin espacios ni signos). Un '1' suelto no agrupa."""
+    v = (b.get("clasificacion") or {}).get("valor_ofertado")
+    if not v:
+        return ""
+    significativos = [c for c in str(v) if c.isalnum()]
+    if len(significativos) < 3 and not any(c.isalpha() for c in significativos):
+        return ""
+    return str(v).casefold().replace(" ", "").replace(",", ".")
+
+
+def _grupos_6_1(brechas):
+    """Art. 6.1: componentes conexos de las brechas de una misma sección unidas por compartir al menos una oración citada o el mismo
+    valor_ofertado normalizado (la unión es transitiva). Cada grupo conserva el orden original; los grupos, el de su primera brecha."""
+    grupos = []
+    for i, b in enumerate(brechas):
+        nuevo = {"seccion": b.get("seccion"), "oraciones": set(b.get("oraciones", [])), "valores": {_valor_ofertado_normalizado(b)} - {""}, "items": [(i, b)]}
+        for g in [g for g in grupos if g["seccion"] == nuevo["seccion"] and (g["oraciones"] & nuevo["oraciones"] or g["valores"] & nuevo["valores"])]:
+            nuevo["oraciones"] |= g["oraciones"]
+            nuevo["valores"] |= g["valores"]
+            nuevo["items"] += g["items"]
+            grupos.remove(g)
+        grupos.append(nuevo)
+    return [[b for _, b in sorted(g["items"], key=lambda x: x[0])] for g in sorted(grupos, key=lambda g: min(i for i, _ in g["items"]))]
+
+
 def agrupar(brechas, criterios):
     """Art. 6.1 y 6.2. No modifica `brechas` (el registro sin agrupar se conserva completo).
-    6.1: las brechas de una misma sección que citan las mismas oraciones forman un riesgo.
+    6.1: las brechas de una misma sección que comparten al menos una oración citada, o el mismo valor ofertado, forman un riesgo.
     6.2: los riesgos de clase Menor (incluidas las consultas técnicas Menores) de una misma categoría RBS que no quedaron
     agrupados en otro riesgo se juntan en un ítem 'Aclaraciones menores: <categoría>' (solo si son dos o más).
     Los de otra clase (p. ej. información faltante Mayor) quedan como riesgo individual."""
-    grupos = {}
-    for b in brechas:
-        grupos.setdefault((b.get("seccion"), tuple(sorted(b.get("oraciones", [])))), []).append(b)
-    riesgos = [_fusionar(g, criterios) for g in grupos.values()]
+    riesgos = [_fusionar(g, criterios) for g in _grupos_6_1(brechas)]
 
     menor = list(criterios["rango_impacto_por_clase"]["valores"])[-1]
     sueltos = {}

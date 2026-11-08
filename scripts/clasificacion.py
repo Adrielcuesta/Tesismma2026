@@ -120,7 +120,7 @@ def procesar_clasificacion(c: ClasificacionRiesgo, *, id_sec: str, seccion_ofert
     tipo_solicitud, plazo = motor_riesgos.solicitud(fuente, clase, criterios)
     return {"tipo": "brecha", "brecha": {
         "id": f"{id_sec}|{norma}|{articulo}" + (f"#{parte}" if parte > 1 else ""), "seccion": id_sec, "seccion_oferta": seccion_oferta, "norma": norma, "articulo": articulo,
-        "oraciones": oraciones, "cita": cita, "texto_articulo": texto_articulo, "verificacion_previa": verificacion,
+        "oraciones": oraciones, "oraciones_texto": {i: textos[i] for i in oraciones}, "cita": cita, "texto_articulo": texto_articulo, "verificacion_previa": verificacion,
         "clasificacion": c.model_dump(), "fuente": fuente, "brecha_relativa": brecha, "condicion_critico": condicion,
         "clase": clase, "regla": regla, "marcas": marcas,
         "probabilidad": prob, "impacto": impacto, "dimension_impacto": c.dimension_impacto,

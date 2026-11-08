@@ -452,6 +452,122 @@
       "accion": "Acción de mitigación inventada para el ejemplo.",
       "solicitud_oferente": "Prever la reserva de espacio exigida en los tableros.",
       "motivo": "Motivo del evaluador."
+    },
+    {
+      "id": "9|NORM_01|2.3",
+      "seccion": "9",
+      "seccion_oferta": "9.1 Montaje de vía",
+      "norma": "NORM_01",
+      "articulo": "2.3",
+      "oraciones": [
+        "O1"
+      ],
+      "cita": "La tolerancia de trocha de la vía será de ±3 mm.",
+      "texto_articulo": "Art. 2.3. TROCHA\nLa tolerancia de trocha será como máximo de ±2 mm.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "La tolerancia ofertada es mayor que la admitida.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "objeto_requisito": "CUANTITATIVO_TECNICO",
+        "valor_ofertado": "±3 mm",
+        "valor_exigido": "±2 mm",
+        "unidad": "mm",
+        "tipo_limite": "TOLERANCIA",
+        "dimension_impacto": "Seguridad de personas",
+        "impacto": 3,
+        "titulo": "Tolerancia de trocha superior a la admitida",
+        "enunciado": "Sin el gálibo informado no se puede confirmar el paso seguro del material rodante.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Ofrecer una tolerancia de trocha no mayor que ±2 mm.",
+        "medida_ofrecida": "La tolerancia de trocha de la vía será de ±3 mm."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": 0.5,
+      "clase": "Mayor",
+      "regla": "3.3.a",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 3,
+      "dimension_impacto": "Integridad del equipo u obra civil",
+      "nivel_tabla": "Medio",
+      "nivel": "Medio",
+      "estrategia": "Mitigar",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "umbral": "NORM_01, Art. 2.3",
+      "tipo_solicitud": "Solicitud de modificación de la oferta",
+      "plazo": "Antes de la adjudicación",
+      "titulo": "Tolerancia de trocha superior a la admitida",
+      "enunciado": "Sin el gálibo informado no se puede confirmar el paso seguro del material rodante.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Ofrecer una tolerancia de trocha no mayor que ±2 mm.",
+      "motivo": "Motivo del evaluador.",
+      "oraciones_texto": {
+        "O1": "La tolerancia de trocha de la vía será de ±3 mm."
+      },
+      "condicion_critico": null
+    },
+    {
+      "id": "9|NORM_01|2.16",
+      "seccion": "9",
+      "seccion_oferta": "9.1 Montaje de vía",
+      "norma": "NORM_01",
+      "articulo": "2.16",
+      "oraciones": [
+        "O2"
+      ],
+      "cita": "La trocha admite una variación de ±3 mm en todo el recorrido.",
+      "texto_articulo": "Art. 2.16. VARIACIÓN DE TROCHA\nLa variación de trocha en el recorrido será como máximo de ±2,5 mm.",
+      "verificacion_previa": {
+        "veredicto": "Incumple",
+        "explicacion": "La tolerancia ofertada es mayor que la admitida.",
+        "discrepancia_numerica": false
+      },
+      "clasificacion": {
+        "motivo": "Motivo del evaluador.",
+        "veredicto": "DESVIO",
+        "objeto_requisito": "CUANTITATIVO_TECNICO",
+        "valor_ofertado": "±3 mm",
+        "valor_exigido": "±2,5 mm",
+        "unidad": "mm",
+        "tipo_limite": "TOLERANCIA",
+        "dimension_impacto": "Seguridad de personas",
+        "impacto": 2,
+        "titulo": "Variación de trocha superior a la admitida",
+        "enunciado": "Sin el gálibo informado no se puede confirmar el paso seguro del material rodante.",
+        "accion": "Acción de mitigación inventada para el ejemplo.",
+        "solicitud_oferente": "Ofrecer una variación de trocha no mayor que ±2,5 mm.",
+        "medida_ofrecida": "La trocha admite una variación de ±3 mm en todo el recorrido."
+      },
+      "fuente": "DESVIO",
+      "brecha_relativa": 0.2,
+      "clase": "Menor",
+      "regla": "3.4.a",
+      "marcas": [],
+      "probabilidad": 4,
+      "impacto": 2,
+      "dimension_impacto": "Integridad del equipo u obra civil",
+      "nivel_tabla": "Bajo",
+      "nivel": "Bajo",
+      "estrategia": "Aceptar",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "umbral": "NORM_01, Art. 2.16",
+      "tipo_solicitud": "Nota aclaratoria o ajuste",
+      "plazo": "Antes de la firma del contrato",
+      "titulo": "Variación de trocha superior a la admitida",
+      "enunciado": "Sin el gálibo informado no se puede confirmar el paso seguro del material rodante.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "solicitud_oferente": "Ofrecer una variación de trocha no mayor que ±2,5 mm.",
+      "motivo": "Motivo del evaluador.",
+      "oraciones_texto": {
+        "O2": "La trocha admite una variación de ±3 mm en todo el recorrido."
+      },
+      "condicion_critico": null
     }
   ],
   "riesgos": [
@@ -647,6 +763,42 @@
       "estrategia": "Aceptar",
       "agrupado_6_2": true,
       "id": "R6"
+    },
+    {
+      "seccion": "9",
+      "oraciones": [
+        "O1",
+        "O2"
+      ],
+      "brechas": [
+        "9|NORM_01|2.3",
+        "9|NORM_01|2.16"
+      ],
+      "citas": [
+        {
+          "norma": "NORM_01",
+          "articulo": "2.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.16"
+        }
+      ],
+      "clase": "Mayor",
+      "nivel": "Medio",
+      "impacto": 3,
+      "probabilidad": 4,
+      "fuente": "DESVIO",
+      "dimension_impacto": "Integridad del equipo u obra civil",
+      "regla": "3.3.a",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "titulo": "Tolerancia de trocha superior a la admitida",
+      "enunciado": "Sin el gálibo informado no se puede confirmar el paso seguro del material rodante.",
+      "accion": "Acción de mitigación inventada para el ejemplo.",
+      "umbral": "NORM_01, Art. 2.3; NORM_01, Art. 2.16",
+      "estrategia": "Mitigar",
+      "id": "R7"
     }
   ],
   "solicitudes": [
@@ -716,6 +868,31 @@
       "numero": 3
     },
     {
+      "riesgo": "R7",
+      "tipo": "Solicitud de modificación de la oferta",
+      "plazo": "Antes de la adjudicación",
+      "citas": [
+        {
+          "norma": "NORM_01",
+          "articulo": "2.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.16"
+        }
+      ],
+      "oraciones": [
+        "O1",
+        "O2"
+      ],
+      "cita_oferta": "La tolerancia de trocha de la vía será de ±3 mm. La trocha admite una variación de ±3 mm en todo el recorrido.",
+      "pedido": "NORM_01 Art. 2.3: Ofrecer una tolerancia de trocha no mayor que ±2 mm.\nNORM_01 Art. 2.16: Ofrecer una variación de trocha no mayor que ±2,5 mm.",
+      "clase": "Mayor",
+      "responsable": "Gerencia de Infraestructura y Vías",
+      "rbs": "RBS-1 Obra civil y fundaciones",
+      "numero": 4
+    },
+    {
       "riesgo": "R6",
       "tipo": "Nota aclaratoria o ajuste",
       "plazo": "Antes de la firma del contrato",
@@ -738,7 +915,7 @@
       "clase": "Menor",
       "responsable": "Gerencia de Infraestructura y Vías",
       "rbs": "RBS-1 Obra civil y fundaciones",
-      "numero": 4
+      "numero": 5
     },
     {
       "riesgo": "R5",
@@ -758,7 +935,7 @@
       "clase": "Menor",
       "responsable": "Gerencia de Energía e Instalaciones Electromecánicas",
       "rbs": "RBS-2 Instalación eléctrica y puesta a tierra",
-      "numero": 5
+      "numero": 6
     },
     {
       "riesgo": "R4",
@@ -778,7 +955,7 @@
       "clase": "Menor",
       "responsable": "Gerencia de Material Rodante y Equipamiento de Talleres",
       "rbs": "RBS-5 Montaje mecánico, hidráulico y tolerancias",
-      "numero": 6
+      "numero": 7
     }
   ],
   "alertas": [
@@ -798,12 +975,12 @@
     "decision": "No aceptable",
     "por_nivel": {
       "Alto": 2,
-      "Medio": 1,
+      "Medio": 2,
       "Bajo": 3
     },
     "por_clase": {
       "Crítico": 1,
-      "Mayor": 2,
+      "Mayor": 3,
       "Menor": 3
     },
     "comentario_general": "La oferta resulta No aceptable, principalmente por el izaje crítico sin plan aprobado (NORM_03 Art. 2.1) y por la cantidad de apoyos inferior a la exigida (NORM_01 Art. 4.2). Los riesgos de clase Crítico y Mayor se concentran en la Gerencia de Seguridad Operacional y Salud Ocupacional y en la Gerencia de Infraestructura y Vías. Antes de la adjudicación el oferente debe presentar el plan de izaje aprobado, ajustar los apoyos e informar el gálibo de diseño.",
