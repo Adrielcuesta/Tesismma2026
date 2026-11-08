@@ -7,7 +7,8 @@ import pytest
 from langchain_core.messages import AIMessage
 
 from scripts import config, nube, rag_components
-from scripts.main import LlamadaFallida
+from scripts.main import LlamadaFallida, _parsear_respuesta_llm, normalizar_tipos_vacios, normalizaciones_formato
+from scripts.schemas import ClasificacionRiesgo, VerificacionArticulo
 
 with open(os.path.join(os.path.dirname(__file__), "fixtures", "criterios_empresa.json"), encoding="utf-8") as f:
     C = json.load(f)
@@ -126,7 +127,7 @@ def test_los_pares_verificados_son_identicos_a_los_del_json_y_en_el_mismo_orden(
     assert [d.page_content for d in docs["S1"]] == ["Art. 5.1. texto", "Art. 4.2. texto"] and docs["S2"] == []
     llm = LLMFalso()
     cliente = nube.ClienteNube(llm, nube.Gasto(PRECIOS, 4.0))
-    resultados = nube.ejecutar_secciones([_seccion(1), _seccion(2), _seccion(3)], docs, cliente, LIN, concurrencia=8)
+    resultados = nube.ejecutar_secciones([_seccion(1), _seccion(2), _seccion(3)], docs, cliente, cliente, LIN, concurrencia=8)
     verificados = [(r["seccion"], r["norma"], r["articulo"]) for _, res in resultados for r in res["registro"] if not r.get("etapa")]
     assert verificados == nube.pares_de_json(LOCAL) and [i for i, _ in resultados] == ["S1", "S3"]
     assert llm.llamadas == 4
@@ -152,7 +153,7 @@ def test_max_pares_se_queda_con_los_primeros_n_en_orden():
 
 def test_al_alcanzar_el_presupuesto_las_secciones_quedan_incompletas_y_se_informa():
     g = nube.Gasto(PRECIOS, 0.0005)    # la primera llamada (0,0012 USD) ya lo supera
-    resultados = nube.ejecutar_secciones([_seccion(1), _seccion(3)], _docs(), nube.ClienteNube(LLMFalso(), g), LIN, concurrencia=1)
+    resultados = nube.ejecutar_secciones([_seccion(1), _seccion(3)], _docs(), nube.ClienteNube(LLMFalso(), g), nube.ClienteNube(LLMFalso(), g), LIN, concurrencia=1)
     assert [r["incompleta"] for _, r in resultados] == [True, True]      # la 1.ª llamada pasa el tope: la 2.ª de S1 y todo S3 se frenan
     assert resultados[1][1]["registro"][0]["estado"] == "presupuesto_agotado"
 
@@ -166,6 +167,64 @@ def test_resumen_de_humo_cuenta_json_bien_parseado():
 def test_sufijo_del_archivo_lleva_el_proveedor_y_el_modelo():
     assert nube.sufijo_modelo("deepinfra", "Qwen/Qwen3-32B") == "deepinfra-qwen3-32b"
     assert nube.sufijo_modelo("deepinfra", "Qwen/Qwen3-235B-A22B-Instruct-2507") == "deepinfra-qwen3-235b-a22b-instruct-2507"
+
+
+def test_con_esquema_el_cliente_pide_json_schema_estricto_igual_que_el_format_de_ollama(monkeypatch):
+    monkeypatch.setenv("DEEPINFRA_API_KEY", "clave-falsa")
+    for esquema in (VerificacionArticulo, ClasificacionRiesgo):
+        rf = rag_components.get_llm_openai_compatible("deepinfra", "Qwen/Qwen3-32B", esquema=esquema).model_kwargs["response_format"]
+        assert rf == {"type": "json_schema", "json_schema": {"name": esquema.__name__, "schema": esquema.model_json_schema(), "strict": True}}
+
+
+def _error_400():
+    return openai.BadRequestError("json_schema no soportado", response=httpx.Response(400, request=httpx.Request("POST", "http://x")), body=None)
+
+
+def test_si_el_proveedor_rechaza_json_schema_cae_a_json_object_y_lo_avisa(caplog):
+    g = nube.Gasto(PRECIOS, 4.0)
+    primario, respaldo = LLMFalso(error=_error_400()), LLMFalso()
+    c = nube.ClienteNube(primario, g, respaldo=respaldo, nombre="VerificacionArticulo")
+    assert c.formato == "json_schema"
+    with caplog.at_level("WARNING"):
+        c.invocar("x")
+        c.invocar("y")
+    assert c.formato == "json_object (respaldo)" and primario.llamadas == 1 and respaldo.llamadas == 2    # el rechazo se prueba una sola vez
+    assert sum("json_schema" in r.message for r in caplog.records) == 1
+
+
+def test_si_tambien_falla_el_respaldo_no_se_cambia_de_formato():
+    c = nube.ClienteNube(LLMFalso(error=_error_400()), nube.Gasto(PRECIOS, 4.0), respaldo=LLMFalso(error=_error_400()))
+    with pytest.raises(openai.BadRequestError):
+        c.invocar("x")
+    assert c.formato == "json_schema"
+
+
+# --- Normalización de tipos vacíos (red de seguridad) ---
+
+VALIDA = {"oraciones": ["O1"], "dato_oferta": "dice 5", "requisitos": ["r"], "valor_oferta": 5, "valor_norma": 10, "operador": ">=", "unidad": "mm",
+          "explicacion": "e", "veredicto": "Incumple", "motivo_duda": None}
+
+
+def test_normalizar_es_un_no_op_con_una_respuesta_valida():
+    for esquema, datos in ((VerificacionArticulo, VALIDA), (VerificacionArticulo, {**VALIDA, "valor_oferta": None, "valor_norma": None, "operador": None, "unidad": ""}),
+                           (ClasificacionRiesgo, {"motivo": "m", "veredicto": "CUMPLE", "valor_ofertado": None, "impacto": None})):
+        salida, n = normalizar_tipos_vacios(datos, esquema)
+        assert salida == datos and n == 0
+    antes = normalizaciones_formato()
+    r = _parsear_respuesta_llm(json.dumps(VALIDA), None, VerificacionArticulo)
+    assert r.veredicto == "Incumple" and r.valor_oferta == 5 and normalizaciones_formato() == antes
+
+
+def test_normalizar_vacios_de_los_campos_opcionales_y_nulos_de_los_de_texto_obligatorio():
+    roto = {**VALIDA, "dato_oferta": None, "explicacion": None, "valor_oferta": "", "valor_norma": " ", "operador": "", "unidad": ""}
+    salida, n = normalizar_tipos_vacios(roto, VerificacionArticulo)
+    assert n == 5 and salida["dato_oferta"] == "" and salida["explicacion"] == "" and salida["valor_oferta"] is None and salida["operador"] is None and salida["unidad"] == ""
+    assert roto["valor_oferta"] == ""      # no modifica la entrada
+    antes = normalizaciones_formato()
+    r = _parsear_respuesta_llm(json.dumps(roto), None, VerificacionArticulo)    # sin la normalización esto es un ValidationError
+    assert (r.dato_oferta, r.valor_oferta, r.operador, r.veredicto) == ("", None, None, "Incumple") and normalizaciones_formato() == antes + 5
+    c, n = normalizar_tipos_vacios({"motivo": "m", "veredicto": "DESVIO", "impacto": "", "tipo_limite": "", "valor_ofertado": ""}, ClasificacionRiesgo)
+    assert n == 2 and c["impacto"] is None and c["tipo_limite"] is None and c["valor_ofertado"] == ""
 
 
 def test_un_modelo_sin_precio_no_arranca(capsys):

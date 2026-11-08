@@ -6,9 +6,10 @@ import json
 import re
 import time
 import datetime
+import threading
 import httpx
 from pydantic import ValidationError
-from typing import Optional
+from typing import Literal, Optional, Union, get_args, get_origin
 
 from . import config, document_utils, vector_db_manager, rag_components, report_utils, dashboard_generator, lineamientos, motor_riesgos, clasificacion, comentario, costo
 from .schemas import RiskReport, SourceChunk, LLMResponse, RiskItem, SeccionInforme, FragmentoRecuperado, FuenteNorma, VerificacionArticulo, ClasificacionRiesgo
@@ -56,10 +57,47 @@ def _extraer_json(texto: str) -> str:
     return texto[inicio:fin + 1] if inicio != -1 and fin > inicio else texto
 
 
+_normalizaciones = {"n": 0}
+_lock_normalizaciones = threading.Lock()
+
+
+def normalizaciones_formato() -> int:
+    """Cantidad de valores vacíos o nulos de tipo incorrecto que se normalizaron antes de validar (desde el arranque del proceso)."""
+    return _normalizaciones["n"]
+
+
+def normalizar_tipos_vacios(datos, esquema):
+    """Red de seguridad antes de validar con pydantic: en campos opcionales numéricos o literales, '' -> null; en campos de texto obligatorios,
+    null -> ''. Se guía por las anotaciones del esquema. Con una respuesta ya válida no cambia nada. Devuelve (datos, cantidad de cambios)."""
+    if not isinstance(datos, dict):
+        return datos, 0
+    salida, cambios = dict(datos), 0
+    for nombre, campo in esquema.model_fields.items():
+        if nombre not in salida:
+            continue
+        args = get_args(campo.annotation) if get_origin(campo.annotation) is Union else (campo.annotation,)
+        base = [a for a in args if a is not type(None)]
+        admite_none = len(base) < len(args)
+        valor = salida[nombre]
+        if admite_none and isinstance(valor, str) and not valor.strip() and any(a in (int, float) or get_origin(a) is Literal for a in base):
+            salida[nombre], cambios = None, cambios + 1
+        elif valor is None and not admite_none and base == [str]:
+            salida[nombre], cambios = "", cambios + 1
+    return salida, cambios
+
+
+def _validar_normalizando(texto: str, esquema):
+    datos, n = normalizar_tipos_vacios(json.loads(_extraer_json(texto)), esquema)
+    if n:
+        with _lock_normalizaciones:
+            _normalizaciones["n"] += n
+    return esquema.model_validate(datos)
+
+
 def _parsear_respuesta_llm(raw: str, llm, esquema=LLMResponse):
     """Parsea y valida la respuesta del LLM contra `esquema`. Si falla, hace UN reintento mostrándole el error."""
     try:
-        return esquema.model_validate(json.loads(_extraer_json(raw)))
+        return _validar_normalizando(raw, esquema)
     except (json.JSONDecodeError, ValidationError) as e:
         logger.warning(f"Respuesta del LLM inválida, se reintenta una vez con el error: {e}")
         prompt_reintento = (
@@ -71,7 +109,7 @@ def _parsear_respuesta_llm(raw: str, llm, esquema=LLMResponse):
         )
         respuesta = llm.invoke(prompt_reintento)
         raw_reintento = getattr(respuesta, "content", respuesta)
-        return esquema.model_validate(json.loads(_extraer_json(raw_reintento)))
+        return _validar_normalizando(raw_reintento, esquema)
 
 
 def _iniciar_log_de_analisis(directorio_proyecto: Optional[str] = None):
@@ -326,6 +364,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     """Oferta completa (sin truncar) -> secciones -> por sección: recuperación (K -> rerank top N), CRAG informativo y
     generación JSON -> validación de fuentes y citas por código -> unión sin tope de riesgos -> resumen final."""
     t_total = time.perf_counter()
+    normalizaciones_al_inicio = normalizaciones_formato()
     tiempos = {}
     condicion = "sin_rag" if not usar_rag else ("rag_seccion" if config.USE_RERANKER else "rag_seccion_sin_reranker")
     # sin_rag no tiene artículos que verificar: siempre genera la lista de riesgos
@@ -497,6 +536,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     tiempos["total"] = _segundos(t_total)
     hardware = costo.detectar_hardware()
     costo_computacional = costo.resumen_costo(llamadas.detalle, tiempos["total"], selected_llm_model_id, hardware)
+    costo_computacional["normalizaciones_formato"] = normalizaciones_formato() - normalizaciones_al_inicio
 
     reporte = RiskReport(
         riesgos_identificados=riesgos_unidos,

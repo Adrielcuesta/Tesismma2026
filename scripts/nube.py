@@ -25,8 +25,8 @@ from langchain_core.documents import Document
 from langchain_core.runnables import RunnableLambda
 
 from . import clasificacion, comentario, config, costo, document_utils, lineamientos, rag_components
-from .main import AnalisisError, Llamadas, LlamadaFallida, _guardar_y_generar_dashboard, _verificar_seccion, _estadisticas_tokens
-from .schemas import LLMResponse, RiskReport, SeccionInforme, SourceChunk
+from .main import AnalisisError, Llamadas, LlamadaFallida, _guardar_y_generar_dashboard, _verificar_seccion, _estadisticas_tokens, normalizaciones_formato
+from .schemas import ClasificacionRiesgo, LLMResponse, RiskReport, SeccionInforme, SourceChunk, VerificacionArticulo
 
 logger = logging.getLogger(__name__)
 CADA_N_LLAMADAS = 50
@@ -65,13 +65,29 @@ class ClienteNube:
     """Envuelve el cliente del modelo: corta si se agotó el presupuesto, cuenta los tokens de `usage` y los deja en response_metadata con los nombres
     que ya lee main._invocar (prompt_eval_count, eval_count, done_reason). Un 429, un 5xx o un corte de conexión que el cliente no pudo resolver tras sus
     reintentos se informa como LlamadaFallida: el par queda como alerta «tiempo_agotado» (sin un reintento más, el cliente ya reintentó)."""
-    def __init__(self, llm, gasto: Gasto):
-        self.llm, self.gasto = llm, gasto
+    def __init__(self, llm, gasto: Gasto, respaldo=None, nombre: str = ""):
+        """respaldo: cliente con json_object, al que se cae (y se avisa) si el proveedor rechaza el json_schema con un 400 o 422."""
+        self.llm, self.gasto, self.respaldo, self.nombre, self.usa_respaldo = llm, gasto, respaldo, nombre, False
+
+    @property
+    def formato(self) -> str:
+        return "json_object (respaldo)" if self.usa_respaldo else ("json_schema" if self.respaldo is not None else "json_object")
+
+    def _llamar(self, entrada):
+        if self.usa_respaldo or self.respaldo is None:
+            return (self.respaldo if self.usa_respaldo else self.llm).invoke(entrada)
+        try:
+            return self.llm.invoke(entrada)
+        except (openai.BadRequestError, openai.UnprocessableEntityError) as e:
+            mensaje = self.respaldo.invoke(entrada)      # si también falla, el error del respaldo sube y no se cambia de formato
+            self.usa_respaldo = True
+            logger.warning(f"El proveedor rechazó json_schema para {self.nombre or 'el esquema'} ({type(e).__name__}: {str(e)[:150]}): se sigue con json_object.")
+            return mensaje
 
     def invocar(self, entrada, config=None):
         self.gasto.verificar()
         try:
-            mensaje = self.llm.invoke(entrada)
+            mensaje = self._llamar(entrada)
         except (openai.RateLimitError, openai.InternalServerError, openai.APIConnectionError) as e:
             raise LlamadaFallida(f"{type(e).__name__}: {str(e)[:120]}") from e
         meta = dict(getattr(mensaje, "response_metadata", None) or {})
@@ -133,23 +149,23 @@ def _abrir_chroma():
 
 # --- Ejecución por secciones ---
 
-def _correr_seccion(seccion, docs, cadena_verif, cadena_clasif, cliente, lin):
+def _correr_seccion(seccion, docs, cadena_verif, cadena_clasif, cliente_verif, cliente_clasif, lin):
     llamadas, t_sec = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0}), {"id": seccion["id"]}
     try:
-        brechas, alertas, registro = _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, cliente, cliente, lin, t_sec, llamadas)
+        brechas, alertas, registro = _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, cliente_verif, cliente_clasif, lin, t_sec, llamadas)
         return {"brechas": brechas, "alertas": alertas, "registro": registro, "llamadas": llamadas, "t_sec": t_sec, "incompleta": False}
     except PresupuestoAgotado:
         registro = [{"seccion": seccion["id"], "etapa": "verificacion", "estado": "presupuesto_agotado", "motivo": "la corrida se detuvo al alcanzar el presupuesto"}]
         return {"brechas": [], "alertas": [], "registro": registro, "llamadas": llamadas, "t_sec": t_sec, "incompleta": True}
 
 
-def ejecutar_secciones(secciones, docs_por_seccion, cliente, lin, concurrencia) -> list:
+def ejecutar_secciones(secciones, docs_por_seccion, cliente_verif, cliente_clasif, lin, concurrencia) -> list:
     """Corre las secciones en paralelo y devuelve los resultados en el orden de `secciones` (igual que la corrida secuencial)."""
-    cadena_verif = rag_components.crear_cadena_verificacion(cliente.runnable())
-    cadena_clasif = rag_components.crear_cadena_clasificacion(cliente.runnable())
+    cadena_verif = rag_components.crear_cadena_verificacion(cliente_verif.runnable())
+    cadena_clasif = rag_components.crear_cadena_clasificacion(cliente_clasif.runnable())
     pendientes = [(s, docs_por_seccion[s["id"]]) for s in secciones if docs_por_seccion.get(s["id"])]
     with ThreadPoolExecutor(max_workers=max(1, concurrencia)) as pool:
-        futuros = [pool.submit(_correr_seccion, s, docs, cadena_verif, cadena_clasif, cliente, lin) for s, docs in pendientes]
+        futuros = [pool.submit(_correr_seccion, s, docs, cadena_verif, cadena_clasif, cliente_verif, cliente_clasif, lin) for s, docs in pendientes]
         return [(s["id"], f.result()) for (s, _), f in zip(pendientes, futuros)]
 
 
@@ -191,7 +207,8 @@ def _unir_llamadas(resultados: list) -> Llamadas:
     return total
 
 
-def armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, proveedor, concurrencia, gasto_oferta, tiempo_total, thinking, max_pares, detenida) -> RiskReport:
+def armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, proveedor, concurrencia, gasto_oferta, tiempo_total, thinking, max_pares, detenida,
+                  normalizaciones=0, formatos=None) -> RiskReport:
     brechas = [b for _, r in resultados for b in r["brechas"]]
     alertas = [a for _, r in resultados for a in r["alertas"]]
     registro = [x for _, r in resultados for x in r["registro"]]
@@ -202,7 +219,8 @@ def armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, p
     hardware = {"gpu": None, "vram": None}
     costo_comp = costo.resumen_costo(llamadas.detalle, tiempo_total, f"{proveedor}:{modelo}", hardware)
     costo_comp.update(proveedor=proveedor, concurrencia=concurrencia, costo_usd=round(gasto_oferta["usd"], 6), tokens_cacheados=gasto_oferta["cacheados"],
-                      llamadas_cobradas=gasto_oferta["llamadas"], presupuesto_usd=config.PRESUPUESTO_USD, detenida_por_presupuesto=detenida)
+                      llamadas_cobradas=gasto_oferta["llamadas"], presupuesto_usd=config.PRESUPUESTO_USD, detenida_por_presupuesto=detenida,
+                      normalizaciones_formato=normalizaciones, formato_respuesta=formatos or {})
     fragmentos = {}
     for docs in docs_por_seccion.values():
         for d in docs:
@@ -230,7 +248,7 @@ def buscar_pdf(nombre: str):
     return None
 
 
-def correr_oferta(ruta_local, ruta_pdf, cliente, gasto, lin, indice, proveedor, modelo, concurrencia, thinking, max_pares) -> dict:
+def correr_oferta(ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, lin, indice, proveedor, modelo, concurrencia, thinking, max_pares) -> dict:
     with open(ruta_local, encoding="utf-8") as f:
         local = json.load(f)
     pdf = ruta_pdf or buscar_pdf(local.get("nombre_archivo_original") or "")
@@ -245,14 +263,14 @@ def correr_oferta(ruta_local, ruta_pdf, cliente, gasto, lin, indice, proveedor, 
     docs_por_seccion = limitar_pares(docs_por_seccion, [s["id"] for s in secciones], max_pares)
     if avisos:
         logger.warning(f"{len(avisos)} artículos con varias partes: el JSON local no dice cuál se verificó, se usa la primera.")
-    antes = gasto.foto()
-    detenida = False
-    resultados = ejecutar_secciones(secciones, docs_por_seccion, cliente, lin, concurrencia)
+    antes, normalizaciones_antes = gasto.foto(), normalizaciones_formato()
+    resultados = ejecutar_secciones(secciones, docs_por_seccion, cliente_verif, cliente_clasif, lin, concurrencia)
     detenida = any(r["incompleta"] for _, r in resultados)
     despues = gasto.foto()
     gasto_oferta = {k: despues[k] - antes[k] for k in ("entrada", "salida", "cacheados", "llamadas", "usd")}
     reporte = armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, proveedor, concurrencia, gasto_oferta, time.perf_counter() - t0,
-                            thinking, max_pares, detenida)
+                            thinking, max_pares, detenida, normalizaciones_formato() - normalizaciones_antes,
+                            {"verificacion": cliente_verif.formato, "clasificacion": cliente_clasif.formato})
     sufijo = sufijo_modelo(proveedor, modelo) + (f"-humo{max_pares}" if max_pares else "")
     marca = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{sufijo}"
     ruta_html = _guardar_y_generar_dashboard(reporte, os.path.basename(pdf), marca)
@@ -279,18 +297,20 @@ def main(argv=None) -> int:
         print("--pdf tiene que traer una oferta por cada JSON de --reusar-recuperacion.", file=sys.stderr)
         return 2
     try:
-        llm = rag_components.get_llm_openai_compatible(a.proveedor, a.modelo, razonamiento=a.thinking)
+        def cliente_de(esquema):    # json_schema estricto como el format= de Ollama; si el proveedor lo rechaza, cae a json_object
+            def llm(e): return rag_components.get_llm_openai_compatible(a.proveedor, a.modelo, razonamiento=a.thinking, esquema=e)
+            return ClienteNube(llm(esquema), gasto, respaldo=llm(None), nombre=esquema.__name__)
         lin = lineamientos.cargar_lineamientos(config.DIRECTORIO_LINEAMIENTOS)
         config.THINKING_VERIFICACION = a.thinking
         gasto = Gasto(config.PRECIOS_NUBE[a.modelo], config.PRESUPUESTO_USD)
-        cliente = ClienteNube(llm, gasto)
+        cliente_verif, cliente_clasif = cliente_de(VerificacionArticulo), cliente_de(ClasificacionRiesgo)
         indice = indice_de_articulos(_abrir_chroma().get(include=["documents", "metadatas"]))
         salidas = []
         for i, ruta in enumerate(a.reusar_recuperacion):
             if salidas and salidas[-1]["detenida"]:
                 break
             logger.info(f"--- {os.path.basename(ruta)} con {a.proveedor}:{a.modelo} (concurrencia {a.concurrencia}) ---")
-            salidas.append(correr_oferta(ruta, a.pdf[i] if a.pdf else None, cliente, gasto, lin, indice, a.proveedor, a.modelo, a.concurrencia, a.thinking, a.max_pares))
+            salidas.append(correr_oferta(ruta, a.pdf[i] if a.pdf else None, cliente_verif, cliente_clasif, gasto, lin, indice, a.proveedor, a.modelo, a.concurrencia, a.thinking, a.max_pares))
     except (AnalisisError, ValueError, lineamientos.LineamientosError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1

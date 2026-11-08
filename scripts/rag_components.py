@@ -688,9 +688,10 @@ def get_llm_instance(model_id: str, formato: Optional[dict] = None, razonamiento
         return None
 
 
-def get_llm_openai_compatible(proveedor: str, modelo: str, razonamiento: bool = False):
+def get_llm_openai_compatible(proveedor: str, modelo: str, razonamiento: bool = False, esquema=None):
     """Cliente del proveedor genérico openai_compatible (perfil en config.PERFILES_NUBE, clave desde el .env). Temperatura 0 (0,6 con razonamiento),
-    seed fija, salida JSON y razonamiento desactivado salvo `razonamiento`. Los 429 y 5xx los reintenta el cliente (hasta NUBE_MAX_REINTENTOS) respetando retry-after."""
+    seed fija y razonamiento desactivado salvo `razonamiento`. Salida: con `esquema` (modelo pydantic) response_format json_schema estricto, igual que
+    el format=<json schema> de Ollama; sin esquema, json_object. Los 429 y 5xx los reintenta el cliente (hasta NUBE_MAX_REINTENTOS) respetando retry-after."""
     perfil = config.PERFILES_NUBE.get(proveedor)
     if not perfil:
         raise ValueError(f"Proveedor desconocido: {proveedor!r} (perfiles: {', '.join(config.PERFILES_NUBE)})")
@@ -703,7 +704,8 @@ def get_llm_openai_compatible(proveedor: str, modelo: str, razonamiento: bool = 
         temperature=config.VERIF_TEMPERATURE if razonamiento else 0,
         max_tokens=config.NUBE_MAX_TOKENS_THINKING if razonamiento else config.NUBE_MAX_TOKENS,
         max_retries=config.NUBE_MAX_REINTENTOS, timeout=config.NUBE_TIMEOUT_S,
-        model_kwargs={"response_format": {"type": "json_object"}},
+        model_kwargs={"response_format": {"type": "json_schema", "json_schema": {"name": esquema.__name__, "schema": esquema.model_json_schema(), "strict": True}}
+                      if esquema is not None else {"type": "json_object"}},
         extra_body={"chat_template_kwargs": {"enable_thinking": bool(razonamiento)}})
 
 
