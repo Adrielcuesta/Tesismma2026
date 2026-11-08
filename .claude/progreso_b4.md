@@ -29,3 +29,6 @@
 - Ejemplo: tests/fixtures/resultado_ejemplo.json -> tests/salida/dashboard_ejemplo.html (tests/salida/ en .gitignore).
 - Ajuste Etapa 4: registro dividido por nivel (Altos/Medios/Bajos, borde rojo/ámbar/verde), RBS en el detalle; top 5 eliminado (dashboard, resumen_ejecutivo, motor_riesgos.top5 y sus tests). 194 tests pasan.
 - Ajuste Etapa 4 (diseño): una sola familia tipográfica en --fuente, sin emojis, títulos en mayúsculas y negrita, etiquetas rectangulares; barra de color en las secciones por nivel. Resumen del informe: comentario general (LLM con validación + plantilla, scripts/comentario.py) y acciones antes de la adjudicación (código). Prompt del comentario en docs/prompts y test de igualdad extendido.
+
+## Etapa 5 — evaluar.py (hecha)
+- evaluacion/evaluar.py + tests/test_evaluar.py (modo brechas, modo lista, --revision, --comparar; ground truth como salida = 100 %, vacía = 0 %). 215 tests pasan.
