@@ -14,14 +14,21 @@ Recuperación densa contra híbrida (BM25 + densa con RRF), trampa por trampa, s
 Dónde se pierde el artículo (K de la densa, top por subsección y tope por sección), también sobre P1 y P2 y sin LLM:
 
     python -m scripts.diagnostico_recuperacion recorte --oferta P1=<oferta_P1.pdf|docx> --oferta P2=<oferta_P2.pdf|docx> [--csv ruta]
+
+La primera corrida guarda diagnostico_cache.json (30 candidatos densos con sus puntajes y el del reranker, por consulta); con --usar-cache
+las configuraciones se derivan de ahí, sin cargar el índice ni el reranker.
 """
 import argparse
 import csv
+import hashlib
 import json
 import os
 import re
 import sys
 import time
+from collections import namedtuple
+
+from langchain_core.documents import Document
 
 from . import config, document_utils, vector_db_manager, rag_components
 
@@ -136,10 +143,17 @@ def informe_hibrida(densa: list, hibrida: list) -> str:
 
 # --- Dónde se pierde el artículo: K, top por subsección y tope por sección ---
 
-# (nombre, K de la densa, top por subsección tras el reranker, tope por sección); la primera es la actual del pipeline
-CONFIGURACIONES = (("actual", 10, 5, 15), ("media", 20, 8, 25), ("amplia", 30, 10, 40))
-K_MAXIMO = max(c[1] for c in CONFIGURACIONES)
-MEJORA_MINIMA = 6   # trampas (20 puntos de 30) sobre la configuración actual
+# modo "reranker": los k primeros de la densa -> los `top` de mayor puntaje del reranker (como el pipeline).
+# modo "densa": los `top` primeros de la densa por su puntaje denso, sin reranker.
+# modo "union": los `top` primeros de la densa ∪ los `top` del reranker (sobre los k primeros), ordenados por puntaje del reranker.
+Config = namedtuple("Config", "nombre k top tope modo")
+CONFIGURACIONES = (Config("actual", 10, 5, 15, "reranker"), Config("media", 20, 8, 25, "reranker"), Config("amplia", 30, 10, 40, "reranker"),
+                   Config("densa_sin_reranker", 10, 5, 15, "densa"), Config("union", 10, 5, 25, "union"))
+K_MAXIMO = 30
+FACTOR_MAXIMO_PARES = 2   # tope de la regla de adopción: el doble de los pares a verificar de la configuración actual
+Cand = namedtuple("Cand", "doc densa reranker")   # densa: -distancia (más alto, mejor); reranker: puntaje normalizado
+RE_ENCABEZADO = re.compile(r"(?m)^\s*Art\.\s+(\d+\.\d+)\.\s+[A-ZÁÉÍÓÚÑ]{2}")
+ARCHIVO_CACHE = "diagnostico_cache.json"
 
 
 def consultas_de_seccion(seccion: dict) -> list:
@@ -148,30 +162,56 @@ def consultas_de_seccion(seccion: dict) -> list:
     return consultas or [seccion["texto"][:config.SECTION_QUERY_MAX_CHARS]]
 
 
-def candidatos_con_puntaje(vector_db, consultas: list, puntuar, k: int = K_MAXIMO) -> list:
-    """Por consulta, [(doc, puntaje)] de los k candidatos de la densa en su orden. El reranker corre UNA vez sobre los k: el puntaje de
-    un candidato no depende de los demás, así que las configuraciones menores se derivan de estos mismos puntajes. puntuar(consulta, docs) -> [float]."""
+def _clave(norma, articulo) -> str:
+    return f"{norma}|{_base(articulo)}"
+
+
+def _hash(consulta: str) -> str:
+    return hashlib.sha1(consulta.encode("utf-8")).hexdigest()[:12]
+
+
+def datos_de_consultas(vector_db, consultas: list, puntuar, total: int, k: int = K_MAXIMO) -> list:
+    """Por consulta {'candidatos': [Cand], 'ranking': [clave]}: los k primeros de la densa (con su puntaje denso y el del reranker) y el ranking de
+    TODOS los artículos del índice (sin repetir, en el orden de la densa). El reranker corre UNA vez sobre los k: el puntaje de un candidato no depende
+    de los demás, así que todas las configuraciones se derivan de estos mismos puntajes. puntuar(consulta, docs) -> [float]; total: fragmentos del índice."""
     resultado = []
     for consulta in consultas:
-        docs = vector_db.as_retriever(search_kwargs={"k": k}).invoke(consulta)
-        resultado.append(list(zip(docs, puntuar(consulta, docs))) if docs else [])
+        todos = vector_db.similarity_search_with_score(consulta, k=total)
+        primeros = todos[:k]
+        reranker = puntuar(consulta, [d for d, _ in primeros]) if primeros else []
+        resultado.append({"candidatos": [Cand(d, -float(dist), float(r)) for (d, dist), r in zip(primeros, reranker)],
+                          "ranking": list(dict.fromkeys(_clave(d.metadata.get("norma"), d.metadata.get("articulo", "")) for d, _ in todos))})
     return resultado
 
 
-def seleccion_final(por_consulta: list, k: int, top_n: int, tope: int) -> list:
-    """Documentos que se verificarían en la sección con (k, top_n, tope), igual que recuperar_seccion(sin_preambulo=True):
-    por consulta, los k primeros de la densa -> los top_n de mayor puntaje -> sin preámbulos; unión por (norma, artículo) con el mayor
-    puntaje y los `tope` mejores."""
+def _elegidos(candidatos: list, cfg) -> list:
+    """[(doc, puntaje)] que quedan de UNA consulta con la configuración cfg."""
+    primeros = candidatos[:cfg.k]
+    por_reranker = sorted(primeros, key=lambda c: c.reranker, reverse=True)[:cfg.top]
+    if cfg.modo == "reranker":
+        return [(c.doc, c.reranker) for c in por_reranker]
+    if cfg.modo == "densa":
+        return [(c.doc, c.densa) for c in primeros[:cfg.top]]
+    vistos, resultado = set(), []
+    for c in primeros[:cfg.top] + por_reranker:
+        if id(c) not in vistos:
+            vistos.add(id(c))
+            resultado.append((c.doc, c.reranker))
+    return resultado
+
+
+def seleccion_final(por_consulta: list, cfg) -> list:
+    """Documentos que se verificarían en la sección con la configuración cfg, igual que recuperar_seccion(sin_preambulo=True): por consulta los
+    elegidos sin preámbulos; unión por (norma, artículo) con el mayor puntaje y los `cfg.tope` mejores. por_consulta: [[Cand]]."""
     mejores = {}
     for candidatos in por_consulta:
-        top = sorted(candidatos[:k], key=lambda x: x[1], reverse=True)[:top_n]
-        for d, puntaje in top:
+        for d, puntaje in _elegidos(candidatos, cfg):
             if d.metadata.get("articulo") == "preambulo":
                 continue
             clave = (d.metadata.get("norma"), d.metadata.get("articulo"))
             if clave not in mejores or puntaje > mejores[clave][1]:
                 mejores[clave] = (d, puntaje)
-    return [d for d, _ in sorted(mejores.values(), key=lambda x: x[1], reverse=True)[:tope]]
+    return [d for d, _ in sorted(mejores.values(), key=lambda x: x[1], reverse=True)[:cfg.tope]]
 
 
 def _mejor_puesto(listas: list, pares: set):
@@ -180,91 +220,198 @@ def _mejor_puesto(listas: list, pares: set):
     return min(puestos) if puestos else None
 
 
-def analizar_recorte(oferta: str, trampas: list, secciones: list, candidatos_por_seccion: list) -> tuple:
-    """(filas, pares): una fila por trampa con el mejor puesto de su artículo (o equivalente) en la densa (k máximo) y tras el reranker, y si entra
-    con cada configuración; pares = {configuración: total de artículos a verificar en la oferta}."""
+def analizar_recorte(oferta: str, trampas: list, secciones: list, datos_por_seccion: list) -> tuple:
+    """(filas, pares): una fila por trampa con el mejor puesto de su artículo (o equivalente) en la densa (k máximo), tras el reranker y en todo el índice,
+    y si entra con cada configuración; pares = {configuración: total de artículos a verificar en la oferta}. datos_por_seccion: salida de datos_de_consultas."""
     from evaluacion.evaluar import pares_trampa
     filas = []
     for t in trampas:
         i = seccion_de_trampa(t, secciones)
         pares_t = {(n, _base(a)) for n, a in pares_trampa(t)}
         fila = {"id": t["id"], "oferta": oferta, "seccion": secciones[i]["id"] if i is not None else None, "articulo": f"{t['norma']} {_base(t['articulo'])}",
-                "puesto_densa": None, "puesto_reranker": None, "entra": {nombre: False for nombre, *_ in CONFIGURACIONES}}
+                "clave_principal": _clave(t["norma"], t["articulo"]), "puesto_densa": None, "puesto_reranker": None, "puestos_indice": {_clave(*p): None for p in pares_t},
+                "entra": {c.nombre: False for c in CONFIGURACIONES}}
         if i is not None:
-            por_consulta = candidatos_por_seccion[i]
-            fila["puesto_densa"] = _mejor_puesto([[d for d, _ in c] for c in por_consulta], pares_t)
-            fila["puesto_reranker"] = _mejor_puesto([[d for d, _ in sorted(c, key=lambda x: x[1], reverse=True)] for c in por_consulta], pares_t)
-            for nombre, k, top_n, tope in CONFIGURACIONES:
-                fila["entra"][nombre] = _mejor_puesto([seleccion_final(por_consulta, k, top_n, tope)], pares_t) is not None
+            consultas = datos_por_seccion[i]
+            por_consulta = [q["candidatos"] for q in consultas]
+            fila["puesto_densa"] = _mejor_puesto([[c.doc for c in cs] for cs in por_consulta], pares_t)
+            fila["puesto_reranker"] = _mejor_puesto([[c.doc for c in sorted(cs, key=lambda c: c.reranker, reverse=True)] for cs in por_consulta], pares_t)
+            for cfg in CONFIGURACIONES:
+                fila["entra"][cfg.nombre] = _mejor_puesto([seleccion_final(por_consulta, cfg)], pares_t) is not None
+            for clave in fila["puestos_indice"]:
+                puestos = [q["ranking"].index(clave) + 1 for q in consultas if clave in q["ranking"]]
+                fila["puestos_indice"][clave] = min(puestos) if puestos else None
         filas.append(fila)
-    pares = {nombre: sum(len(seleccion_final(c, k, top_n, tope)) for c in candidatos_por_seccion) for nombre, k, top_n, tope in CONFIGURACIONES}
+    pares = {c.nombre: sum(len(seleccion_final([q["candidatos"] for q in qs], c)) for qs in datos_por_seccion) for c in CONFIGURACIONES}
     return filas, pares
 
 
-def decision_recorte(filas: list) -> dict:
-    """Regla fijada de antemano: se adopta la configuración más chica que suba el Recall@artículo en al menos MEJORA_MINIMA trampas sobre la actual;
-    si ninguna lo logra queda la actual y el techo se reporta como limitación."""
-    recall = {nombre: sum(f["entra"][nombre] for f in filas) for nombre, *_ in CONFIGURACIONES}
-    base = CONFIGURACIONES[0][0]
-    elegida = next((nombre for nombre, *_ in CONFIGURACIONES[1:] if recall[nombre] - recall[base] >= MEJORA_MINIMA), None)
-    return {"n": len(filas), "recall": recall, "adopta": elegida}
+def decision_recorte(filas: list, pares_por_oferta: dict) -> dict:
+    """Regla fijada de antemano: se adopta la configuración con mayor Recall@artículo cuyo total de pares a verificar no supere el doble del de la actual;
+    si empatan, la de menos pares. Si la mejor es la actual, se mantiene y el techo se reporta como limitación."""
+    recall = {c.nombre: sum(f["entra"][c.nombre] for f in filas) for c in CONFIGURACIONES}
+    pares = {c.nombre: sum(p[c.nombre] for p in pares_por_oferta.values()) for c in CONFIGURACIONES}
+    base = CONFIGURACIONES[0].nombre
+    limite = FACTOR_MAXIMO_PARES * pares[base]
+    elegibles = [c.nombre for c in CONFIGURACIONES if pares[c.nombre] <= limite]
+    mejor = max(elegibles, key=lambda n: (recall[n], -pares[n]))
+    return {"n": len(filas), "recall": recall, "pares": pares, "limite": limite, "elegibles": elegibles, "adopta": None if mejor == base else mejor}
 
 
-def informe_recorte(filas: list, pares_por_oferta: dict) -> str:
-    nombres = [c[0] for c in CONFIGURACIONES]
+# --- Caché: los 30 candidatos densos con sus puntajes, por consulta, para derivar las configuraciones sin recalcular ---
+
+def a_cache(secciones_por_oferta: dict, datos_por_oferta: dict, fragmentos: dict) -> dict:
+    """Estructura JSON: por oferta y sección, una entrada por consulta con el hash de su texto, los candidatos (norma, artículo, puntajes) y el ranking completo."""
+    ofertas = {}
+    for oferta, secciones in secciones_por_oferta.items():
+        ofertas[oferta] = {s["id"]: [{"hash": _hash(c), "ranking": q["ranking"],
+                                      "candidatos": [{"norma": x.doc.metadata.get("norma"), "articulo": x.doc.metadata.get("articulo"), "densa": x.densa, "reranker": x.reranker}
+                                                     for x in q["candidatos"]]}
+                                     for c, q in zip(consultas_de_seccion(s), datos)]
+                           for s, datos in zip(secciones, datos_por_oferta[oferta])}
+    return {"version": 1, "ofertas": ofertas, "fragmentos": fragmentos}
+
+
+def datos_desde_cache(cache: dict, oferta: str, secciones: list) -> list:
+    """Inverso de a_cache para una oferta. Falla si la oferta cambió desde que se armó la caché (el hash de alguna consulta no coincide)."""
+    guardadas = (cache.get("ofertas") or {}).get(oferta)
+    if guardadas is None:
+        raise ValueError(f"La caché no tiene la oferta {oferta}")
+    resultado = []
+    for s in secciones:
+        consultas, entradas = consultas_de_seccion(s), guardadas.get(str(s["id"]))
+        if entradas is None or len(entradas) != len(consultas) or any(e["hash"] != _hash(c) for c, e in zip(consultas, entradas)):
+            raise ValueError(f"La caché no corresponde a la oferta {oferta} (sección {s['id']}); volvé a correr sin --usar-cache")
+        resultado.append([{"ranking": e["ranking"], "candidatos": [Cand(Document(page_content="", metadata={"norma": c["norma"], "articulo": c["articulo"]}),
+                                                                      c["densa"], c["reranker"]) for c in e["candidatos"]]} for e in entradas])
+    return resultado
+
+
+def describir_fragmento(texto: str) -> dict:
+    """Largo, encabezados 'Art. X.Y. TÍTULO' que trae el texto (con su posición) y con cuál empieza (en los primeros 80 caracteres)."""
+    encabezados = [(m.group(1), m.start()) for m in RE_ENCABEZADO.finditer(texto)]
+    return {"caracteres": len(texto), "encabezados": [list(e) for e in encabezados],
+            "empieza_con": encabezados[0][0] if encabezados and encabezados[0][1] <= 80 else None}
+
+
+def info_fragmentos(datos_chroma: dict, claves: set) -> dict:
+    """{clave 'NORM|art': [descripción de cada fragmento (parte) con esa (norma, artículo)]} a partir de vector_db.get(include=documents+metadatas)."""
+    resultado = {c: [] for c in claves}
+    for texto, meta in zip(datos_chroma.get("documents") or [], datos_chroma.get("metadatas") or []):
+        clave = _clave((meta or {}).get("norma"), (meta or {}).get("articulo", ""))
+        if clave in resultado:
+            resultado[clave].append({"articulo": (meta or {}).get("articulo"), "parte": (meta or {}).get("parte"), **describir_fragmento(texto)})
+    return resultado
+
+
+# --- Informe ---
+
+def _texto_fragmentos(fragmentos: list, clave: str) -> str:
+    if not fragmentos:
+        return "NO existe un fragmento con esa (norma, artículo) en el índice"
+    partes = []
+    for f in fragmentos:
+        pegados = [e for e, _ in f["encabezados"] if e != clave.split("|")[1]]
+        partes.append(f"{f['caracteres']} caracteres, empieza con " + (f"Art. {f['empieza_con']}" if f["empieza_con"] else "otra cosa (sin encabezado de artículo)")
+                      + (f", trae pegado: {', '.join('Art. ' + e for e in pegados)}" if pegados else ", sin otro artículo pegado"))
+    return f"{len(fragmentos)} fragmento(s): " + " | ".join(partes)
+
+
+def informe_recorte(filas: list, pares_por_oferta: dict, fragmentos: dict = None) -> str:
+    nombres = [c.nombre for c in CONFIGURACIONES]
     texto = lambda v: str(v) if v is not None else "fuera"
-    L = [f"{'Trampa':<9} {'Artículo':<22} {'Sec.':<6} {'Densa K=' + str(K_MAXIMO):>11} {'Reranker':>9}  " + "  ".join(f"{n:<6}" for n in nombres)]
+    L = [f"{'Trampa':<9} {'Artículo':<22} {'Sec.':<5} {'Densa K=' + str(K_MAXIMO):>10} {'Reranker':>9}  " + "  ".join(f"{n:<{len(n)}}" for n in nombres)]
     for f in filas:
-        L.append(f"{f['id']:<9} {f['articulo']:<22} {str(f['seccion']):<6} {texto(f['puesto_densa']):>11} {texto(f['puesto_reranker']):>9}  "
-                 + "  ".join(f"{'sí' if f['entra'][n] else 'no':<6}" for n in nombres))
-    d = decision_recorte(filas)
-    L += ["", "Recall@artículo por configuración (K, top por subsección, tope por sección):"]
-    L += [f"  {n:<7} ({k}, {top}, {tope}): {d['recall'][n]}/{d['n']} ({d['recall'][n] / d['n']:.0%})" for n, k, top, tope in CONFIGURACIONES]
-    L += ["", "Artículos a verificar por oferta (determina el tiempo de corrida):"]
-    for oferta, pares in pares_por_oferta.items():
-        L.append(f"  {oferta}: " + ", ".join(f"{n} {pares[n]}" for n in nombres))
-    L.append("  total: " + ", ".join(f"{n} {sum(p[n] for p in pares_por_oferta.values())}" for n in nombres))
-    L += ["", "Decisión: " + (f"ADOPTAR la configuración «{d['adopta']}» (la más chica que sube el Recall@artículo en al menos {MEJORA_MINIMA} trampas)."
-                            if d["adopta"] else f"MANTENER la actual; ninguna sube el Recall@artículo en {MEJORA_MINIMA} trampas y el techo se reporta como limitación.")]
+        L.append(f"{f['id']:<9} {f['articulo']:<22} {str(f['seccion']):<5} {texto(f['puesto_densa']):>10} {texto(f['puesto_reranker']):>9}  "
+                 + "  ".join(f"{'sí' if f['entra'][n] else 'no':<{len(n)}}" for n in nombres))
+    d = decision_recorte(filas, pares_por_oferta)
+    L += ["", "Recall@artículo por configuración (K, top por subsección, tope por sección) y artículos a verificar (determinan el tiempo de corrida):"]
+    for c in CONFIGURACIONES:
+        L.append(f"  {c.nombre:<19} ({c.k}, {c.top}, {c.tope}): {d['recall'][c.nombre]}/{d['n']} ({d['recall'][c.nombre] / d['n']:.0%})  |  pares: "
+                 + ", ".join(f"{o} {p[c.nombre]}" for o, p in pares_por_oferta.items()) + f", total {d['pares'][c.nombre]}"
+                 + ("" if c.nombre in d["elegibles"] else "  (supera el límite)"))
+    L += [f"  límite de pares: {d['limite']} (el doble de la actual)", "",
+          "Decisión: " + (f"ADOPTAR «{d['adopta']}» (mayor Recall@artículo dentro del límite de pares; a igual recall, la de menos pares)."
+                          if d["adopta"] else "MANTENER la actual; ninguna configuración dentro del límite de pares la supera y el techo se reporta como limitación.")]
+    fuera = [f for f in filas if f["puesto_densa"] is None]
+    if fuera:
+        L += ["", f"Trampas cuyo artículo no está en los {K_MAXIMO} primeros de la densa:"]
+        for f in fuera:
+            if f["seccion"] is None:
+                L.append(f"  {f['id']}: la trampa no se ubicó en ninguna sección de la oferta")
+                continue
+            L.append(f"  {f['id']} (sección {f['seccion']}):")
+            for clave, puesto in f["puestos_indice"].items():
+                etiqueta = "artículo de la trampa" if clave == f["clave_principal"] else "equivalente"
+                L.append(f"    {clave.replace('|', ' ')} ({etiqueta}): puesto en toda la densa (artículos distintos) "
+                         + (str(puesto) if puesto else "no aparece") + "; "
+                         + (_texto_fragmentos((fragmentos or {}).get(clave), clave) if fragmentos is not None else "sin datos del índice"))
     return "\n".join(L)
 
 
 def main_recorte(argv=None) -> int:
-    from evaluacion.evaluar import cargar_gt
+    from evaluacion.evaluar import cargar_gt, pares_trampa
     p = argparse.ArgumentParser(prog="diagnostico_recuperacion recorte", description="Dónde se pierde el artículo: K, top y tope (sin LLM).")
     p.add_argument("--oferta", action="append", required=True, metavar="P1=ruta", help="oferta y su archivo (P1 y P2); repetible")
     p.add_argument("--csv", help="Ruta donde guardar el detalle por trampa")
+    p.add_argument("--cache", default=ARCHIVO_CACHE, help=f"Archivo de caché (por defecto {ARCHIVO_CACHE})")
+    p.add_argument("--usar-cache", action="store_true", help="Deriva las configuraciones de la caché, sin cargar el índice ni el reranker")
     args = p.parse_args(argv)
     rutas = dict(x.split("=", 1) for x in args.oferta)
     if set(rutas) != set(OFERTAS_DIAGNOSTICO) or not all(os.path.isfile(r) for r in rutas.values()):
         print("Hacen falta --oferta P1=<archivo> y --oferta P2=<archivo>, y los archivos tienen que existir.", file=sys.stderr)
         return 1
-    embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
-    vector_db = vector_db_manager.crear_o_cargar_chroma_db(
-        chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
-        embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP,
-        recrear_db_flag=False, collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True) if embedding_function else None
-    if not vector_db:
-        print("No se pudo cargar el índice de la KB por artículos.", file=sys.stderr)
+    if args.usar_cache and not os.path.isfile(args.cache):
+        print(f"No existe la caché {args.cache}: corré primero sin --usar-cache.", file=sys.stderr)
         return 1
 
-    modelo = rag_components._get_reranker_model(rag_components.RERANKER_MODEL_NAME)
-    puntuar = lambda consulta, docs: [rag_components._normalizar_score(s) for s in modelo.score([(consulta, d.page_content) for d in docs])]
-    filas, pares_por_oferta = [], {}
+    secciones_por_oferta = {}
     for oferta in OFERTAS_DIAGNOSTICO:
         secciones = document_utils.dividir_en_secciones(document_utils.extraer_texto_oferta(rutas[oferta]))
-        if config.EXCLUIR_INTRODUCCION:
-            secciones = [s for s in secciones if not document_utils.es_introduccion(s)]
-        candidatos = [candidatos_con_puntaje(vector_db, consultas_de_seccion(s), puntuar) for s in secciones]
-        f, pares_por_oferta[oferta] = analizar_recorte(oferta, cargar_gt(oferta), secciones, candidatos)
+        secciones_por_oferta[oferta] = [s for s in secciones if not (config.EXCLUIR_INTRODUCCION and document_utils.es_introduccion(s))]
+    trampas = {o: cargar_gt(o) for o in OFERTAS_DIAGNOSTICO}
+
+    if args.usar_cache:
+        with open(args.cache, encoding="utf-8") as f:
+            cache = json.load(f)
+        try:
+            datos = {o: datos_desde_cache(cache, o, secciones_por_oferta[o]) for o in OFERTAS_DIAGNOSTICO}
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            return 1
+        fragmentos = cache.get("fragmentos") or {}
+    else:
+        embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
+        vector_db = vector_db_manager.crear_o_cargar_chroma_db(
+            chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
+            embedding_function=embedding_function, chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP,
+            recrear_db_flag=False, collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True) if embedding_function else None
+        if not vector_db:
+            print("No se pudo cargar el índice de la KB por artículos.", file=sys.stderr)
+            return 1
+        modelo = rag_components._get_reranker_model(rag_components.RERANKER_MODEL_NAME)
+        puntuar = lambda consulta, docs: [rag_components._normalizar_score(s) for s in modelo.score([(consulta, d.page_content) for d in docs])]
+        en_chroma = vector_db.get(include=["documents", "metadatas"])
+        total = len(en_chroma["ids"])
+        datos = {o: [datos_de_consultas(vector_db, consultas_de_seccion(s), puntuar, total) for s in secciones_por_oferta[o]] for o in OFERTAS_DIAGNOSTICO}
+        claves = {_clave(n, a) for o in OFERTAS_DIAGNOSTICO for t in trampas[o] for n, a in pares_trampa(t)}
+        fragmentos = info_fragmentos(en_chroma, claves)
+        with open(args.cache, "w", encoding="utf-8") as f:
+            json.dump(a_cache(secciones_por_oferta, datos, fragmentos), f, ensure_ascii=False)
+        print(f"Caché guardada en {args.cache}")
+
+    filas, pares_por_oferta = [], {}
+    for oferta in OFERTAS_DIAGNOSTICO:
+        f, pares_por_oferta[oferta] = analizar_recorte(oferta, trampas[oferta], secciones_por_oferta[oferta], datos[oferta])
         filas += f
-    print(informe_recorte(filas, pares_por_oferta))
+    print(informe_recorte(filas, pares_por_oferta, fragmentos))
     if args.csv:
-        nombres = [c[0] for c in CONFIGURACIONES]
+        nombres = [c.nombre for c in CONFIGURACIONES]
         with open(args.csv, "w", newline="", encoding="utf-8-sig") as f:
             w = csv.writer(f, delimiter=";")
-            w.writerow(["trampa", "oferta", "seccion", "articulo", "puesto_densa", "puesto_reranker"] + nombres)
-            w.writerows([[x["id"], x["oferta"], x["seccion"], x["articulo"], x["puesto_densa"] or "", x["puesto_reranker"] or ""] + [int(x["entra"][n]) for n in nombres] for x in filas])
+            w.writerow(["trampa", "oferta", "seccion", "articulo", "puesto_densa", "puesto_reranker", "puesto_indice_completo"] + nombres)
+            w.writerows([[x["id"], x["oferta"], x["seccion"], x["articulo"], x["puesto_densa"] or "", x["puesto_reranker"] or "",
+                          min((v for v in x["puestos_indice"].values() if v), default="")] + [int(x["entra"][n]) for n in nombres] for x in filas])
         print(f"CSV: {args.csv}")
     return 0
 
