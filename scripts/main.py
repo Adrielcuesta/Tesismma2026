@@ -371,6 +371,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         for i, s in enumerate(solicitudes, 1):
             s["numero"] = i
         resumen_ejecutivo = motor_riesgos.resumen_ejecutivo(riesgos_agrupados, lin["criterios"])
+        t_com = time.perf_counter()
         cadena_comentario = None
         if riesgos_agrupados:
             try:   # temperatura 0 y seed fija; sin formato JSON (devuelve texto)
@@ -378,6 +379,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             except Exception as e_llm:
                 logger.warning(f"No se pudo inicializar el modelo para el comentario general, se usa la plantilla: {e_llm}")
         com = comentario.generar_comentario(resumen_ejecutivo, riesgos_agrupados, cadena_comentario)
+        tiempos["comentario"] = _segundos(t_com)
         llamadas["comentario"] += int(com["llamo"])
         resumen_ejecutivo.update(comentario_general=com["texto"], origen_comentario=com["origen"])
         logger.info(f"Comentario general: origen {com['origen']}" + (f" ({com['motivo']})" if com["motivo"] else ""))
