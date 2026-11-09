@@ -116,6 +116,16 @@ USAR_CRAG = False
 MODO_GENERACION = "verificacion"
 # Máximo de fragmentos que se verifican por sección (sin preámbulos)
 VERIFICAR_TOPE = 25
+# Perfiles de recuperación del modo verificación (scripts.recuperar --perfil-recuperacion). "local" es la configuración de arriba (la del pipeline, sin cambios);
+# "amplio" es union_k20_oraciones_cifras_N2 del diagnóstico (scripts.diagnostico_recuperacion recorte): K=20, 5 de la densa + 8 del reranker, tope 30, oraciones
+# con cifras N=2 y cupo 10. Experimento "sin límite de hardware": solo se usa para generar la recuperación que luego se verifica en la nube.
+PERFIL_RECUPERACION_DEFECTO = "local"
+PERFILES_RECUPERACION = {
+    "local": {"K_SUBSECCION": K_SUBSECCION, "TOP_DENSA_SUBSECCION": TOP_DENSA_SUBSECCION, "TOP_N_SUBSECCION": TOP_N_SUBSECCION, "VERIFICAR_TOPE": VERIFICAR_TOPE,
+              "ORACIONES_CIFRAS": ORACIONES_CIFRAS, "ORACIONES_N": ORACIONES_N, "ORACIONES_CUPO": ORACIONES_CUPO},
+    "amplio": {"K_SUBSECCION": 20, "TOP_DENSA_SUBSECCION": 5, "TOP_N_SUBSECCION": 8, "VERIFICAR_TOPE": 30,
+               "ORACIONES_CIFRAS": True, "ORACIONES_N": 2, "ORACIONES_CUPO": 10},
+}
 # Líneas más cortas que esto (normalizadas, sin dígitos) no se quitan como encabezado/pie en la oferta:
 # "Página 3 de 9" (9) sí se quita; unidades de tablas como "1.600 mm" (4) se conservan
 MIN_LARGO_ENCABEZADO_OFERTA = 6
@@ -177,7 +187,7 @@ PRECIOS_NUBE = {
     "Qwen/Qwen3-235B-A22B-Instruct-2507": {"entrada": 0.09, "salida": 0.55},
     "qwen/qwen3.8-27b": {"entrada": 0.80, "salida": 4.00},
 }
-PRESUPUESTO_USD = 4.0          # tope de gasto acumulado de una corrida: al alcanzarlo se guarda lo hecho y se detiene
+PRESUPUESTO_USD = 4.0         # tope de gasto acumulado de una corrida: al alcanzarlo se guarda lo hecho y se detiene
 
 # --- Configuración de LLMs ---
 LLM_MODELS = {

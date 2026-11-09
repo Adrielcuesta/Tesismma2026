@@ -144,9 +144,13 @@ def documentos_de_seccion(fragmentos: list, indice: dict, avisos: list = None) -
             raise AnalisisError(f"{clave[0]} Art. {clave[1]} no está en la base ChromaDB (¿se reindexó la KB después de la corrida local?)")
         k = vistos[clave]
         vistos[clave] += 1
-        if len(partes) > 1 and k == 0 and avisos is not None:
-            avisos.append(clave)
-        d = partes[min(k, len(partes) - 1)]
+        exacta = [p for p in partes if f.get("parte") is not None and (p.metadata.get("parte") or 1) == f["parte"]]
+        if exacta:      # el JSON dice qué parte se recuperó
+            d = exacta[0]
+        else:
+            if len(partes) > 1 and k == 0 and avisos is not None:
+                avisos.append(clave)
+            d = partes[min(k, len(partes) - 1)]
         docs.append(Document(page_content=d.page_content, metadata=dict(d.metadata)))
     return docs
 
@@ -287,7 +291,7 @@ def correr_oferta(ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, li
     reporte = armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, proveedor, concurrencia, gasto_oferta, time.perf_counter() - t0,
                             thinking, max_pares, detenida, normalizaciones_formato() - normalizaciones_antes,
                             {"verificacion": cliente_verif.formato, "clasificacion": cliente_clasif.formato})
-    sufijo = sufijo_modelo(proveedor, modelo) + (f"-humo{max_pares}" if max_pares else "")
+    sufijo = sufijo_modelo(proveedor, modelo) + ("-thinking" if thinking else "") + (f"-humo{max_pares}" if max_pares else "")
     marca = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{sufijo}"
     ruta_html = _guardar_y_generar_dashboard(reporte, os.path.basename(pdf), marca)
     return {"oferta": os.path.basename(pdf), "html": ruta_html, "gasto": gasto_oferta, "detenida": detenida,

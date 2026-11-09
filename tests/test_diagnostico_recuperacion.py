@@ -565,3 +565,50 @@ def test_solo_las_oraciones_con_cifras_se_buscan_en_el_pipeline(monkeypatch):
     datos = rc.consultar_oraciones(db, todas)
     assert [d["con_cifras"] for d in datos] == [any(c.isdigit() for c in o) for o in todas] and not all(d["con_cifras"] for d in datos)
     assert rc.articulos_de_oraciones(datos, True, 2) != rc.articulos_de_oraciones(datos, False, 2)
+
+
+# --- Perfiles de recuperación (scripts.recuperar) ---
+
+def _selecciones(monkeypatch, perfil, variante):
+    from scripts import recuperar
+    modelo = _preparar_pipeline(monkeypatch)
+    for nombre in cfg_pipeline.PERFILES_RECUPERACION["local"]:       # el monkeypatch restaura lo que aplicar_perfil cambie en config
+        monkeypatch.setattr(cfg_pipeline, nombre, getattr(cfg_pipeline, nombre))
+    recuperar.aplicar_perfil(perfil)
+    db = DbSintetica()
+    informe = recuperar.recuperar_secciones(db, [{**SECCION_SINTETICA, "titulos": ["7 Montaje"]}])
+    puntuar = lambda consulta, docs: [rc._normalizar_score(s) for s in modelo.score([(consulta, d.page_content) for d in docs])]
+    datos = dr.datos_de_consultas(db, dr.consultas_de_seccion(SECCION_SINTETICA), puntuar, total=60)
+    oraciones = dr.datos_de_oraciones(db, dr.oraciones_de_seccion(SECCION_SINTETICA))
+    esperado = dr.seleccion_final([q["candidatos"] for q in datos], CFG[variante], oraciones)
+    return informe[0], esperado
+
+
+def test_perfil_amplio_elige_los_mismos_articulos_que_union_k20_oraciones_cifras_N2(monkeypatch):
+    seccion, esperado = _selecciones(monkeypatch, "amplio", "union_k20_oraciones_cifras_N2")
+    assert [(f.norma, f.articulo) for f in seccion.fragmentos] == _claves(esperado) and all(f.parte == 1 for f in seccion.fragmentos)
+    c = CFG["union_k20_oraciones_cifras_N2"]
+    assert (c.k, c.top, c.top_rr, c.tope, c.oraciones, c.cupo_oraciones) == (20, 5, 8, 30, (True, 2), 10)
+    assert {k: v for k, v in cfg_pipeline.PERFILES_RECUPERACION["amplio"].items()} == {
+        "K_SUBSECCION": 20, "TOP_DENSA_SUBSECCION": 5, "TOP_N_SUBSECCION": 8, "VERIFICAR_TOPE": 30, "ORACIONES_CIFRAS": True, "ORACIONES_N": 2, "ORACIONES_CUPO": 10}
+
+
+def test_perfil_local_es_la_configuracion_actual_y_elige_lo_mismo_que_la_variante_cupo8(monkeypatch):
+    seccion, esperado = _selecciones(monkeypatch, "local", "union_oraciones_cifras_N2_cupo8")
+    assert [(f.norma, f.articulo) for f in seccion.fragmentos] == _claves(esperado)
+    assert cfg_pipeline.PERFIL_RECUPERACION_DEFECTO == "local"
+    assert cfg_pipeline.PERFILES_RECUPERACION["local"] == {"K_SUBSECCION": 10, "TOP_DENSA_SUBSECCION": 5, "TOP_N_SUBSECCION": 5, "VERIFICAR_TOPE": 25,
+                                                           "ORACIONES_CIFRAS": True, "ORACIONES_N": 2, "ORACIONES_CUPO": 8}
+
+
+def test_json_de_solo_recuperacion_lo_puede_leer_nube_con_la_parte(monkeypatch):
+    from scripts import nube, recuperar
+    seccion, _ = _selecciones(monkeypatch, "amplio", "union_k20_oraciones_cifras_N2")
+    datos = recuperar.armar_json("oferta.pdf", [seccion], "amplio", cfg_pipeline.PERFILES_RECUPERACION["amplio"])
+    cfg = datos["configuracion_analisis"]
+    assert (cfg["modo"], cfg["perfil_recuperacion"], len(cfg["huella_recuperacion"])) == ("solo_recuperacion", "amplio", 64)
+    assert cfg["huella_recuperacion"] != recuperar.huella_de("local", cfg_pipeline.PERFILES_RECUPERACION["local"])
+    pares = nube.pares_de_json(datos)
+    assert len(pares) == len(seccion.fragmentos) and datos["secciones"][0]["fragmentos"][0]["parte"] == 1
+    with pytest.raises(ValueError):
+        recuperar.aplicar_perfil("inexistente")

@@ -278,3 +278,10 @@ def test_normalizar_vacios_de_los_campos_opcionales_y_nulos_de_los_de_texto_obli
 def test_un_modelo_sin_precio_no_arranca(capsys):
     assert nube.main(["--reusar-recuperacion", "x.json", "--modelo", "otro/modelo"]) == 2
     assert "PRECIOS_NUBE" in capsys.readouterr().err
+
+
+def test_si_el_json_trae_la_parte_se_usa_esa_y_no_hay_aviso():
+    indice = nube.indice_de_articulos({"documents": ["p1", "p2"], "metadatas": [{"norma": "N", "articulo": "1", "parte": 1}, {"norma": "N", "articulo": "1", "parte": 2}]})
+    avisos = []
+    docs = nube.documentos_de_seccion([{"norma": "N", "articulo": "1", "parte": 2}], indice, avisos)
+    assert [d.page_content for d in docs] == ["p2"] and avisos == []

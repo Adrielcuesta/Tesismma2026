@@ -495,7 +495,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         informe_secciones.append(SeccionInforme(
             id=id_sec, titulos=seccion["titulos"], clasificacion_crag=clasificacion,
             candidatos=[FuenteNorma(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", ""))) for d in candidatos] if usar_rag else None,
-            fragmentos=[FragmentoRecuperado(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", "")), score=d.metadata.get("relevance_score")) for d in docs]))
+            fragmentos=[FragmentoRecuperado(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", "")), score=d.metadata.get("relevance_score"), parte=d.metadata.get("parte")) for d in docs]))
         por_seccion.append(t_sec)
     for etapa in ("recuperacion", "crag", "generacion", "verificacion", "clasificacion", "validacion"):
         tiempos[etapa] = round(sum(t.get(etapa, 0) for t in por_seccion), 2)

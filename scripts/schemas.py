@@ -241,6 +241,7 @@ class FragmentoRecuperado(BaseModel):
     norma: str
     articulo: str
     score: Optional[float] = None
+    parte: Optional[int] = Field(default=None, description="Parte del artículo recuperada (los artículos largos se indexan en varias partes).")
 
 class SeccionInforme(BaseModel):
     """Qué se recuperó y cómo se clasificó la evidencia en cada sección de la oferta."""
