@@ -112,6 +112,48 @@ def test_juez_calcula_los_extras_sin_que_evaluar_haya_corrido(tmp_path):
     assert [f["norma"] for f in filas] == ["NORM_02", "NORM_03"] and list(filas[0])[:8] == juez.COLUMNAS_EXTRAS     # la trampa no es un extra
 
 
+# --- control del juez sobre espejos ---
+
+def _con_espejo(tmp_path, nombre="analisis_esp.json"):
+    """JSON con una trampa, un extra, una brecha sobre el espejo (misma frase y artículo), la misma frase con otro artículo y una descartada sobre el espejo."""
+    frase = "La cantidad de apoyos cumple con dos unidades."
+    resultado = {**RESULTADO, "registro_brechas": RESULTADO["registro_brechas"][:2] + [
+        _brecha(frase, "NORM_01", "4.3", "3 Sección"), _brecha(frase, "NORM_02", "9.9"), {**_brecha(frase, "NORM_01", "4.3"), "estado": ev.ESTADO_DESCARTADA_CALCULO}]}
+    ruta = tmp_path / nombre
+    ruta.write_text(json.dumps(resultado), encoding="utf-8")
+    return str(ruta)
+
+
+def test_brechas_sobre_espejos_solo_la_misma_frase_y_articulo_sin_descartadas(tmp_path):
+    resultado = json.loads(open(_con_espejo(tmp_path), encoding="utf-8").read())
+    b = juez.brechas_sobre_espejos(resultado, [dict(r) for r in ESPEJOS])
+    assert [(x["norma"], x["articulo"]) for x in b] == [("NORM_01", "4.3")]
+    assert juez.brechas_sobre_espejos(RESULTADO, [dict(r) for r in ESPEJOS]) == []
+
+
+def test_control_del_juez_escribe_csv_y_cuenta_no_valida(tmp_path):
+    ruta = _con_espejo(tmp_path)
+    cliente = ClienteFalso([_ok("NO_VALIDA")])
+    s = juez.procesar_espejos(ruta, "P9", cliente, None, 1, espejos=[dict(r) for r in ESPEJOS])
+    assert s["csv"] == ev.ruta_juez_espejos(ruta) and s["csv"].endswith("analisis_esp_juez_espejos.csv")
+    assert (s["items"], s["juzgados"], s["no_valida"], s["sin_veredicto"]) == (1, 1, 1, 0) and _leer(s["csv"])[0]["juez_veredicto"] == "NO_VALIDA"
+    assert not os.path.exists(ev.ruta_juez(ruta))                      # el CSV del juez normal no se toca
+    otra = ClienteFalso([])
+    assert juez.procesar_espejos(ruta, "P9", otra, None, 1, espejos=[dict(r) for r in ESPEJOS])["juzgados"] == 1 and otra.llamadas == 0     # no repite lo juzgado
+    s = juez.procesar_espejos(ruta, "P9", ClienteFalso([_ok("VALIDA")]), None, 1, rehacer=True, espejos=[dict(r) for r in ESPEJOS])
+    assert s["no_valida"] == 0 and s["juzgados"] == 1
+
+
+def test_control_del_juez_en_la_tabla_y_n_d_sin_csv(tmp_path):
+    ruta = _con_espejo(tmp_path)
+    juez.procesar_espejos(ruta, "P9", ClienteFalso([_ok("NO_VALIDA")]), None, 1, espejos=[dict(r) for r in ESPEJOS])
+    con = ev.evaluar_archivo(ruta, "P9", [dict(r) for r in GT], [dict(r) for r in ESPEJOS])
+    sin = ev.evaluar_archivo(_con_espejo(tmp_path, "otro.json"), "P9", [dict(r) for r in GT], [dict(r) for r in ESPEJOS])
+    assert con["control_juez"] == {"n": 1, "no_valida": 1} and sin["control_juez"] is None
+    md = tc.tabla_md(tc.calcular_filas({"c": {"P9": con}, "d": {"P9": sin}}, {"P9 solo": ["P9"]}))
+    assert "Control del juez" in md and "1/1 (100%)" in md
+
+
 # --- nombres de los CSV por JSON ---
 
 def test_nombres_de_csv_por_json(tmp_path):
@@ -326,6 +368,7 @@ def test_script_cerrar_evaluacion_es_ascii_y_llama_a_los_modulos_en_orden():
     texto = crudo.decode("ascii")
     assert texto.index("evaluacion.evaluar") < texto.index("evaluacion.juez") < texto.index("evaluacion.tabla_comparativa") and "--max-items" in texto and "-SoloHumo" in texto
     assert "return" not in texto
+    assert texto.index("evaluacion.juez") < texto.index('"--espejos"') < texto.index("evaluacion.tabla_comparativa")      # el control corre después del juez normal
 
 
 # --- tabla comparativa ---

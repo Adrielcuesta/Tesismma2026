@@ -93,6 +93,7 @@ def metricas(evs: list) -> dict:
         "falsas_ic": E.wilson(t["falsas_alarmas"], t["n_espejos"]),
         "brechas_por_oferta": t["n_riesgo"] / len(evs), "riesgos_agrupados_por_oferta": t["volumen"].get("riesgos agrupados", 0) / len(evs),
         "precision_juez_estricta": j["estricta"] / j["n"] if j else None, "precision_juez_amplia": j["amplia"] / j["n"] if j else None,
+        "control_juez_n": t["control_juez"]["n"] if t["control_juez"] else None, "control_juez_no_valida": t["control_juez"]["no_valida"] if t["control_juez"] else None,
         "kappa_clase": E.kappa_ponderado_cuadratico(t["confusion"]), "criticos_n": criticos[0], "criticos_encontrados": criticos[1],
         "tiempo_s": suma("tiempo_total_s"), "costo_usd": suma("costo_usd"), "tokens_entrada": suma("tokens_entrada_total"), "tokens_salida": suma("tokens_salida_total"),
         "perdidas": {k: sum(x["perdida"] == k for x in t["trampas"]) for k in COLORES_PERDIDA}, "sin_registro": no_registro}
@@ -134,14 +135,20 @@ def _miles(v) -> str:
 
 
 ENCABEZADO = ["Configuración", "Recall estricto (IC 95 %)", "Recall@artículo", "Falsas alarmas", "Brechas / oferta", "Riesgos agrupados / oferta", "Precisión juez estricta",
-              "Precisión juez amplia", "Kappa de clase", "Recall de Críticos", "Tiempo (h:mm:ss)", "Costo USD", "Tokens entrada", "Tokens salida"]
+              "Precisión juez amplia", "Control del juez (espejos NO_VALIDA)", "Kappa de clase", "Recall de Críticos", "Tiempo (h:mm:ss)", "Costo USD", "Tokens entrada", "Tokens salida"]
+
+
+def _control_juez(f: dict) -> str:
+    """Especificidad del juez sobre los espejos conformes (falsos positivos conocidos): NO_VALIDA / juzgados."""
+    n = f["control_juez_n"]
+    return "n/d" if not n else f"{f['control_juez_no_valida']}/{n} ({f['control_juez_no_valida'] / n:.0%})"
 
 
 def fila_texto(f: dict) -> list:
     return [f["configuracion"], _ic(f["encontradas"], f["trampas"], f["recall_ic"]),
             "n/d" if f["recall_articulo"] is None else f"{f['recall_articulo']}/{f['trampas']} ({f['recall_articulo'] / f['trampas']:.0%})",
             _ic(f["falsas_alarmas"], f["espejos"], f["falsas_ic"]), _num(f["brechas_por_oferta"], "{:.1f}"), _num(f["riesgos_agrupados_por_oferta"], "{:.1f}"),
-            _pc(f["precision_juez_estricta"]), _pc(f["precision_juez_amplia"]), _num(f["kappa_clase"]),
+            _pc(f["precision_juez_estricta"]), _pc(f["precision_juez_amplia"]), _control_juez(f), _num(f["kappa_clase"]),
             f"{f['criticos_encontrados']}/{f['criticos_n']}" if f["criticos_n"] else "n/d", _tiempo(f["tiempo_s"]), _num(f["costo_usd"]),
             _miles(f["tokens_entrada"]), _miles(f["tokens_salida"])]
 
@@ -152,14 +159,15 @@ def tabla_md(filas: list) -> str:
         L += [f"## {conjunto}", "", "| " + " | ".join(ENCABEZADO) + " |", "|" + "---|" * len(ENCABEZADO)]
         L += ["| " + " | ".join(fila_texto(f)) + " |" for f in filas if f["conjunto"] == conjunto] + [""]
     L += ["Recall estricto: trampa encontrada con su frase y su artículo (o uno equivalente); IC de Wilson al 95 %. Precisión según el juez: (trampas encontradas + extras válidos) / brechas; "
-          "estricta cuenta DUDOSA como no válida, amplia como válida; n/d si faltan veredictos. Costo USD: 0 en la corrida local. Kappa de clase: ponderado cuadrático, sobre las trampas encontradas."]
+          "estricta cuenta DUDOSA como no válida, amplia como válida; n/d si faltan veredictos. Control del juez: de las brechas que caen sobre espejos conformes "
+          "(falsos positivos conocidos), cuántas marcó NO_VALIDA (especificidad); n/d si no se corrió «juez --espejos». Costo USD: 0 en la corrida local. Kappa de clase: ponderado cuadrático, sobre las trampas encontradas."]
     return "\n".join(L)
 
 
 def guardar_csv(filas: list, ruta: str):
     campos = ["configuracion", "conjunto", "ofertas", "trampas", "encontradas", "recall", "recall_ic_inf", "recall_ic_sup", "recall_articulo", "falsas_alarmas", "espejos",
-              "falsas_ic_inf", "falsas_ic_sup", "brechas_por_oferta", "riesgos_agrupados_por_oferta", "precision_juez_estricta", "precision_juez_amplia", "kappa_clase",
-              "criticos_n", "criticos_encontrados", "tiempo_s", "costo_usd", "tokens_entrada", "tokens_salida"] + [f"perdida_{k.replace(' ', '_')}" for k in COLORES_PERDIDA]
+              "falsas_ic_inf", "falsas_ic_sup", "brechas_por_oferta", "riesgos_agrupados_por_oferta", "precision_juez_estricta", "precision_juez_amplia", "control_juez_n", "control_juez_no_valida",
+              "kappa_clase", "criticos_n", "criticos_encontrados", "tiempo_s", "costo_usd", "tokens_entrada", "tokens_salida"] + [f"perdida_{k.replace(' ', '_')}" for k in COLORES_PERDIDA]
     with open(ruta, "w", encoding="utf-8-sig", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=campos, delimiter=";")
         w.writeheader()

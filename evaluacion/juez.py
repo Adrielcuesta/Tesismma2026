@@ -7,7 +7,9 @@ Escribe <json>_juez.csv junto al JSON (oferta, sección, norma, artículo, cita,
 viene de <json>_extras.csv si existe y no se toca. Si el CSV del juez ya existe, las brechas ya juzgadas se conservan (con --rehacer se juzgan de nuevo).
 
 Uso:
-  python -m evaluacion.juez P1=<json> [P2=<json> ...] [--max-items N] [--concurrencia 8] [--rehacer]
+  python -m evaluacion.juez P1=<json> [P2=<json> ...] [--max-items N] [--concurrencia 8] [--rehacer] [--espejos]
+Con --espejos (control del juez) se juzgan, con el mismo prompt y modelo, las brechas que caen sobre frases conformes (espejos de evaluar.py, falsos positivos
+conocidos); se escribe <json>_juez_espejos.csv y se informa cuántas marcó NO_VALIDA (especificidad del juez sobre negativos conocidos).
 La oferta se indica como P#=ruta o se deduce de la ruta (igual que evaluar.py). Clave en el .env: DEEPINFRA_API_KEY."""
 import argparse
 import csv
@@ -25,14 +27,15 @@ from scripts import config, rag_components
 from scripts.main import LlamadaFallida
 from scripts.nube import ClienteNube, Gasto, PresupuestoAgotado
 
-from .evaluar import (ESTADO_DESCARTADA_CALCULO, _clave_extra, _oferta_de_ruta, avisar_si_hay_extras_viejo, cargar_espejos, cargar_gt, evaluar, leer_csv,
-                      ruta_extras, ruta_juez)
+from .evaluar import (ESTADO_DESCARTADA_CALCULO, _articulo, _clave_extra, _frase_espejo, _oferta_de_ruta, avisar_si_hay_extras_viejo, cargar_espejos, cargar_gt,
+                      evaluar, leer_csv, norm, pares_espejo, ruta_extras, ruta_juez, ruta_juez_espejos)
 
 logger = logging.getLogger(__name__)
 PROVEEDOR = "deepinfra"
 MODELO = "deepseek-ai/DeepSeek-V3.2"
 VEREDICTOS = ("VALIDA", "NO_VALIDA", "DUDOSA")
 COLUMNAS_EXTRAS = ["oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase", "valido"]
+COLUMNAS_ESPEJOS = ["oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase"]
 COLUMNAS_JUEZ = ["juez_veredicto", "juez_motivo"]
 
 PROMPT_SISTEMA = (
@@ -136,12 +139,81 @@ def procesar_json(ruta: str, oferta: str, cliente, contenido_minimo, concurrenci
             "cuentas": cuentas, "sin_veredicto": sum(r["juez_veredicto"] not in VEREDICTOS for r in filas), "detenida": detenida}
 
 
+def brechas_sobre_espejos(resultado: dict, espejos: list) -> list:
+    """Brechas del registro que caen sobre un espejo conforme (la misma regla de evaluar.py: frase del espejo en la cita y artículo del espejo). Sin repetidas."""
+    unicas = {}
+    for b in resultado.get("registro_brechas") or []:
+        if b.get("estado") == ESTADO_DESCARTADA_CALCULO:
+            continue
+        cita, par = norm(b.get("cita")), (b.get("norma"), _articulo(b.get("articulo")))
+        if any(_frase_espejo(e) in cita and par in pares_espejo(e) for e in espejos):
+            unicas.setdefault(clave_brecha(b), b)
+    return list(unicas.values())
+
+
+def procesar_espejos(ruta: str, oferta: str, cliente, contenido_minimo, concurrencia: int, max_items=None, rehacer=False, espejos=None) -> dict:
+    """Control del juez: juzga con el mismo prompt las brechas que caen sobre espejos conformes (falsos positivos conocidos) y escribe <json>_juez_espejos.csv.
+    Una brecha marcada NO_VALIDA es un acierto del juez; la especificidad es NO_VALIDA / juzgadas."""
+    archivo = ruta_juez_espejos(ruta)
+    with open(ruta, encoding="utf-8") as f:
+        resultado = json.load(f)
+    brechas = brechas_sobre_espejos(resultado, cargar_espejos(oferta) if espejos is None else espejos)
+    previas = {clave_fila(r): r for r in leer_csv(archivo)} if os.path.isfile(archivo) else {}
+    filas = []
+    for b in brechas:
+        r = {"oferta": oferta, "seccion": b.get("seccion_oferta") or b.get("seccion"), "norma": b.get("norma"), "articulo": b.get("articulo"), "cita": b.get("cita"),
+             "titulo": b.get("titulo"), "clase": b.get("clase")}
+        p = previas.get(clave_fila(r)) or {}
+        r["juez_veredicto"], r["juez_motivo"] = p.get("juez_veredicto", ""), p.get("juez_motivo", "")
+        filas.append(r)
+    pendientes = [(r, b) for r, b in zip(filas, brechas) if rehacer or r["juez_veredicto"] not in VEREDICTOS][:max_items]
+
+    def tarea(par):
+        try:
+            return juzgar(cliente, par[1], contenido_minimo)
+        except PresupuestoAgotado:
+            return None
+    with ThreadPoolExecutor(max_workers=max(1, concurrencia)) as pool:
+        respuestas = list(pool.map(tarea, pendientes))
+    for (r, _), x in zip(pendientes, respuestas):
+        if x:
+            r["juez_veredicto"], r["juez_motivo"] = x["veredicto"], x["motivo"]
+    with open(archivo, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=COLUMNAS_ESPEJOS + COLUMNAS_JUEZ, delimiter=";", extrasaction="ignore")
+        w.writeheader()
+        w.writerows(filas)
+    juzgadas = [r for r in filas if r["juez_veredicto"] in VEREDICTOS]
+    return {"json": ruta, "csv": archivo, "items": len(filas), "juzgados": len(juzgadas), "no_valida": sum(r["juez_veredicto"] == "NO_VALIDA" for r in juzgadas),
+            "sin_veredicto": len(filas) - len(juzgadas), "detenida": any(x is None for x in respuestas)}
+
+
+def _linea_control(juzgados: int, no_valida: int) -> str:
+    esp = f"{no_valida / juzgados:.0%}" if juzgados else "n/d"
+    return f"Control del juez (espejos): {juzgados} juzgados | {no_valida} NO_VALIDA | especificidad {esp}"
+
+
+def main_espejos(a, cliente, contenido_minimo) -> bool:
+    """Corre el control del juez sobre los JSON de a.jsons; True si se detuvo por el freno de gasto."""
+    total_j = total_n = 0
+    for oferta, ruta in [_oferta_de_ruta(r) for r in a.jsons]:
+        s = procesar_espejos(ruta, oferta, cliente, contenido_minimo, a.concurrencia, a.max_items, a.rehacer)
+        total_j, total_n = total_j + s["juzgados"], total_n + s["no_valida"]
+        print(f"\n{os.path.basename(ruta)}: {_linea_control(s['juzgados'], s['no_valida'])} | brechas sobre espejos {s['items']} | sin veredicto {s['sin_veredicto']}")
+        print(f"  CSV: {s['csv']}" + ("\n  DETENIDA: se alcanzó el freno de gasto; volvé a correr el mismo comando para completar." if s["detenida"] else ""))
+        if s["detenida"]:
+            print(f"\nTotal de la configuración: {_linea_control(total_j, total_n)}")
+            return True
+    print(f"\nTotal de la configuración: {_linea_control(total_j, total_n)}")
+    return False
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Juez externo de precisión sobre las brechas que no son trampas")
     p.add_argument("jsons", nargs="+", metavar="P#=JSON", help="JSON(s) de análisis, como P1=ruta (o la ruta, si trae la oferta); el CSV queda junto a cada JSON")
     p.add_argument("--max-items", type=int, help="juzga solo las primeras N brechas pendientes de cada JSON (prueba de humo)")
     p.add_argument("--concurrencia", type=int, default=config.NUBE_CONCURRENCIA)
     p.add_argument("--rehacer", action="store_true", help="vuelve a juzgar las brechas que ya tienen veredicto")
+    p.add_argument("--espejos", action="store_true", help="control del juez: juzga las brechas que caen sobre espejos conformes (falsos positivos conocidos) y escribe <json>_juez_espejos.csv")
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
     if MODELO not in config.PRECIOS_NUBE:
@@ -156,6 +228,10 @@ def main(argv=None) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     detenida = False
+    if a.espejos:
+        main_espejos(a, cliente, contenido_minimo)
+        print(f"\nGasto del juez: {gasto.usd:.4f} USD de {config.PRESUPUESTO_JUEZ_USD} USD ({gasto.entrada} tokens de entrada, {gasto.salida} de salida)")
+        return 0
     for oferta, ruta in [_oferta_de_ruta(r) for r in a.jsons]:
         if detenida:
             break

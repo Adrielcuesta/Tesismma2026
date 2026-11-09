@@ -2,7 +2,8 @@
 # Cierra la evaluacion de todas las configuraciones de un archivo de configuracion (el mismo de evaluacion\tabla_comparativa.py):
 #   Para cada configuracion:
 #     1. evaluar --resultado de cada oferta con JSON (genera <json>_extras.csv).
-#     2. juez externo sobre todas las ofertas de la configuracion (un solo comando, un solo freno de gasto; genera <json>_juez.csv).
+#     2. juez externo sobre todas las ofertas de la configuracion (un solo comando, un solo freno de gasto; genera <json>_juez.csv),
+#        y despues el mismo juez con --espejos (control sobre falsos positivos conocidos; genera <json>_juez_espejos.csv).
 #     3. evaluar --resultado de nuevo (ahora con precision segun el juez, F1/F2 y kappa).
 #   Al final: tabla comparativa y graficos en evaluacion\resultados_finales\.
 #   Las ofertas sin JSON (ruta vacia, inexistente o un "auto" sin resultado todavia) se omiten y queda avisado.
@@ -96,6 +97,9 @@ function Juzgar-Ofertas {
     if ($SoloHumo) { $argumentos += @("--max-items", "5") }
     Ejecutar-Python $argumentos
     if ($script:codigo -ne 0) { Escribir-Log ("FALLO: el juez de {0} termino con codigo {1}; se sigue." -f $Nombre, $script:codigo) }
+    # Control del juez: las brechas que caen sobre espejos conformes (falsos positivos conocidos); la linea "Control del juez" del log es la especificidad.
+    Ejecutar-Python ($argumentos + "--espejos")
+    if ($script:codigo -ne 0) { Escribir-Log ("FALLO: el control del juez (espejos) de {0} termino con codigo {1}; se sigue." -f $Nombre, $script:codigo) }
     Escribir-Log ("Gasto del juez acumulado: {0:N4} USD" -f $script:gastoJuez)
 }
 

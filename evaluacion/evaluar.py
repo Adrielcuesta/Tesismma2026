@@ -260,7 +260,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         "nivel_ok": sum(t["nivel_obtenido"] == t["nivel_esperado"] for t in encontradas),
         "confusion": confusion, "n_espejos": len(espejos), "falsas_alarmas": falsas, "espejos": marcados,
         "extras": extras, "volumen": volumen, "n_riesgo": len(items), "precision": None, "precision_k": None, "precision_n": None,
-        "juez": None, "pares_juez_humano": []}
+        "juez": None, "pares_juez_humano": [], "control_juez": None}
 
 
 def conteo_precision(ev, revision):
@@ -365,6 +365,7 @@ def combinar(evs):
               por_frase_validada=todo("por_frase_validada"), precision_k=todo("precision_k"), precision_n=todo("precision_n"))
     ev["precision"] = ev["precision_k"] / ev["precision_n"] if ev["precision_n"] else None
     ev["juez"] = None if any(e["juez"] is None for e in evs) else {k: sum(e["juez"][k] for e in evs) for k in ("estricta", "amplia", "n")}
+    ev["control_juez"] = None if any(e.get("control_juez") is None for e in evs) else {k: sum(e["control_juez"][k] for e in evs) for k in ("n", "no_valida")}
     ev["pares_juez_humano"] = [x for e in evs for x in e["pares_juez_humano"]]
     return ev
 
@@ -567,6 +568,17 @@ def ruta_juez(ruta_json) -> str:
     return os.path.splitext(os.path.abspath(ruta_json))[0] + "_juez.csv"
 
 
+def ruta_juez_espejos(ruta_json) -> str:
+    """CSV del control del juez (brechas que caen sobre espejos conformes): <json sin extensión>_juez_espejos.csv, junto al JSON."""
+    return os.path.splitext(os.path.abspath(ruta_json))[0] + "_juez_espejos.csv"
+
+
+def asignar_control_juez(ev, filas):
+    """ev['control_juez'] = {'n': espejos con veredicto del juez, 'no_valida': cuántos NO_VALIDA}; None si no hay CSV o no hay ningún veredicto."""
+    juzgadas = [r for r in (filas or []) if r.get("juez_veredicto") in JUEZ_VEREDICTOS]
+    ev["control_juez"] = {"n": len(juzgadas), "no_valida": sum(r["juez_veredicto"] == "NO_VALIDA" for r in juzgadas)} if juzgadas else None
+
+
 def avisar_si_hay_extras_viejo(ruta_json):
     """El extras_revision.csv de nombre fijo (uno por carpeta) puede ser de otra configuración: no se usa, solo se avisa."""
     viejo = os.path.join(os.path.dirname(os.path.abspath(ruta_json)), "extras_revision.csv")
@@ -625,6 +637,8 @@ def evaluar_archivo(ruta, oferta, gt, espejos, revision=None) -> dict:
         rev_rows = revision_con_marcas_juez(rev_rows, juez_rows)
     asignar_precision(ev, rev_rows)
     asignar_juez(ev, juez_rows, rev_rows)
+    archivo_espejos = ruta_juez_espejos(ruta)
+    asignar_control_juez(ev, leer_csv(archivo_espejos) if os.path.isfile(archivo_espejos) else None)
     return ev
 
 
