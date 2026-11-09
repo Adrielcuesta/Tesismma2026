@@ -172,6 +172,21 @@ def _guardar_y_generar_dashboard(reporte: RiskReport, nombre_pdf: str, marca_tie
     return os.path.normpath(os.path.relpath(ruta_html, config.PROJECT_ROOT)).replace("\\", "/")
 
 
+def _guardar_parcial(nombre_pdf: str, marca_tiempo: str, brechas: list, alertas: list, registro_tecnico: list, secciones: list, fragmentos: list, error: Exception) -> None:
+    """Red de seguridad: si falla el cierre del análisis (armado de salidas, comentario, dashboard), guarda un JSON con lo ya calculado (registro_brechas,
+    alertas, registro_tecnico y secciones) con el sufijo _parcial. Nunca levanta: el error original es el que se propaga."""
+    try:
+        nombre_base = "".join(c for c in os.path.splitext(nombre_pdf)[0] if c.isalnum() or c in (' ', '_')).rstrip()
+        carpeta = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base)
+        os.makedirs(carpeta, exist_ok=True)
+        parcial = RiskReport(fragmentos_fuente=fragmentos, registro_brechas=brechas, alertas=alertas, registro_tecnico=registro_tecnico, secciones=secciones,
+                             configuracion_analisis={"parcial": True, "error": f"{type(error).__name__}: {str(error)[:300]}"})
+        ruta = report_utils.formatear_y_guardar_reporte(parcial, nombre_pdf, carpeta, sufijo_nombre=f"_{marca_tiempo}_parcial")
+        logger.error(f"JSON parcial guardado en: {ruta}")
+    except Exception as e_parcial:
+        logger.error(f"No se pudo guardar el JSON parcial: {type(e_parcial).__name__}: {e_parcial}")
+
+
 def _unir_y_deduplicar(riesgos: list) -> list:
     """Deduplica por (norma, artículo principal, cita normalizada), conservando el primero.
     Un riesgo sin cita no se deduplica: la clave quedaría vacía y colapsaría riesgos distintos."""
@@ -439,7 +454,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             informe_secciones.append(SeccionInforme(id=id_sec, titulos=seccion["titulos"]))
             por_seccion.append(t_sec)
             continue
-        docs, candidatos, clasificacion = [], None, None
+        docs, candidatos, clasif_crag = [], None, None
         if usar_rag:
             t0 = time.perf_counter()
             candidatos, docs = rag_components.recuperar_seccion(vector_db, seccion, **({"tope": config.VERIFICAR_TOPE, "sin_preambulo": True, "con_union": True, "con_oraciones": True} if verificacion else {}))
@@ -449,7 +464,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
                 t0 = time.perf_counter()
                 try:
                     respuesta = evaluador.invoke({"context": "\n\n".join(d.page_content for d in docs) or "(sin fragmentos recuperados)", "question": seccion["texto"]})
-                    clasificacion = rag_components.clasificar_evidencia(respuesta)
+                    clasif_crag = rag_components.clasificar_evidencia(respuesta)
                 except Exception as e_crag:
                     logger.warning(f"El evaluador de evidencia falló en {id_sec}, se continúa sin clasificarla: {e_crag}")
                 t_sec["crag"] = _segundos(t0)
@@ -461,7 +476,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
                 if previo is None or (score or 0) > (previo.score_relevancia or 0):
                     fragmentos_unicos[clave] = SourceChunk(contenido=d.page_content, nombre_documento_fuente=m.get("fuente", "Desconocido"),
                                                            numero_pagina=m.get("pagina", -1), score_relevancia=score)
-        logger.info(f"{id_sec} ({', '.join(seccion['titulos'])}): {len(docs)} fragmentos, evidencia {clasificacion}")
+        logger.info(f"{id_sec} ({', '.join(seccion['titulos'])}): {len(docs)} fragmentos, evidencia {clasif_crag}")
 
         if verificacion:
             brechas, alertas, registro = _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, llm_clasif, lin, t_sec, llamadas)
@@ -493,7 +508,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
 
         riesgos_todos.extend(riesgos)
         informe_secciones.append(SeccionInforme(
-            id=id_sec, titulos=seccion["titulos"], clasificacion_crag=clasificacion,
+            id=id_sec, titulos=seccion["titulos"], clasificacion_crag=clasif_crag,
             candidatos=[FuenteNorma(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", ""))) for d in candidatos] if usar_rag else None,
             fragmentos=[FragmentoRecuperado(norma=d.metadata.get("norma", ""), articulo=str(d.metadata.get("articulo", "")), score=d.metadata.get("relevance_score"), parte=d.metadata.get("parte")) for d in docs]))
         por_seccion.append(t_sec)
@@ -502,77 +517,82 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     tiempos["por_seccion"] = por_seccion
     tokens_prompt = {t["id"]: t["tokens_prompt"] for t in por_seccion if t.get("tokens_prompt") is not None}
 
-    t0 = time.perf_counter()
-    riesgos_unidos = _unir_y_deduplicar(riesgos_todos)
-    tiempos["union"] = _segundos(t0)
-    logger.info(f"Unión: {len(riesgos_todos)} riesgos -> {len(riesgos_unidos)} tras deduplicar.")
+    try:   # red de seguridad: si algo falla despues de verificar y clasificar, no se pierde el computo (JSON _parcial)
+        t0 = time.perf_counter()
+        riesgos_unidos = _unir_y_deduplicar(riesgos_todos)
+        tiempos["union"] = _segundos(t0)
+        logger.info(f"Unión: {len(riesgos_todos)} riesgos -> {len(riesgos_unidos)} tras deduplicar.")
 
-    # Modo verificación: agrupamiento, solicitudes y resumen ejecutivo los arma el código (Art. 6, 8.3 y 8.4); sin llamada al LLM
-    t0 = time.perf_counter()
-    riesgos_agrupados, solicitudes, resumen_ejecutivo = [], [], None
-    if verificacion:
-        riesgos_agrupados, solicitudes, resumen_ejecutivo = clasificacion.armar_salidas(brechas_todas, lin["criterios"])
-        t_com = time.perf_counter()
-        cadena_comentario = None
-        if riesgos_agrupados:
-            try:   # temperatura 0 y seed fija; sin formato JSON (devuelve texto)
-                cadena_comentario = rag_components.crear_cadena_comentario(rag_components.get_llm_instance(selected_llm_model_id, num_predict=config.OLLAMA_NUM_PREDICT_COMENTARIO))
-            except Exception as e_llm:
-                logger.warning(f"No se pudo inicializar el modelo para el comentario general, se usa la plantilla: {e_llm}")
-        com = comentario.generar_comentario(resumen_ejecutivo, riesgos_agrupados, cadena_comentario)
-        tiempos["comentario"] = _segundos(t_com)
-        llamadas["comentario"] += int(com["llamo"])
-        if com["llamo"]:
-            llamadas.detalle.append({"tipo": "comentario", "par": None, "etiqueta": "comentario general", "duracion_s": tiempos["comentario"],
-                                     "prompt_eval_count": com.get("prompt_eval_count") or 0, "eval_count": com.get("eval_count") or 0, "intentos": 1,
-                                     "exitosa": com["origen"] == "modelo"})
-        if com.get("eval_count") is not None:
-            llamadas.setdefault("eval_count", {}).setdefault("comentario", []).append(com["eval_count"])
-        resumen_ejecutivo.update(comentario_general=com["texto"], origen_comentario=com["origen"])
-        logger.info(f"Comentario general: origen {com['origen']}" + (f" ({com['motivo']})" if com["motivo"] else ""))
-        logger.info(f"Clasificación: {len(brechas_todas)} brechas -> {len(riesgos_agrupados)} riesgos, {len(solicitudes)} solicitudes, "
-                    f"{len(alertas_todas)} alertas; decisión: {resumen_ejecutivo['decision']}.")
-    tiempos["resumen_final"] = _segundos(t0)
-    tiempos["total"] = _segundos(t_total)
-    hardware = costo.detectar_hardware()
-    costo_computacional = costo.resumen_costo(llamadas.detalle, tiempos["total"], selected_llm_model_id, hardware)
-    costo_computacional["normalizaciones_formato"] = normalizaciones_formato() - normalizaciones_al_inicio
+        # Modo verificación: agrupamiento, solicitudes y resumen ejecutivo los arma el código (Art. 6, 8.3 y 8.4); sin llamada al LLM
+        t0 = time.perf_counter()
+        riesgos_agrupados, solicitudes, resumen_ejecutivo = [], [], None
+        if verificacion:
+            riesgos_agrupados, solicitudes, resumen_ejecutivo = clasificacion.armar_salidas(brechas_todas, lin["criterios"])
+            t_com = time.perf_counter()
+            cadena_comentario = None
+            if riesgos_agrupados:
+                try:   # temperatura 0 y seed fija; sin formato JSON (devuelve texto)
+                    cadena_comentario = rag_components.crear_cadena_comentario(rag_components.get_llm_instance(selected_llm_model_id, num_predict=config.OLLAMA_NUM_PREDICT_COMENTARIO))
+                except Exception as e_llm:
+                    logger.warning(f"No se pudo inicializar el modelo para el comentario general, se usa la plantilla: {e_llm}")
+            com = comentario.generar_comentario(resumen_ejecutivo, riesgos_agrupados, cadena_comentario)
+            tiempos["comentario"] = _segundos(t_com)
+            llamadas["comentario"] += int(com["llamo"])
+            if com["llamo"]:
+                llamadas.detalle.append({"tipo": "comentario", "par": None, "etiqueta": "comentario general", "duracion_s": tiempos["comentario"],
+                                         "prompt_eval_count": com.get("prompt_eval_count") or 0, "eval_count": com.get("eval_count") or 0, "intentos": 1,
+                                         "exitosa": com["origen"] == "modelo"})
+            if com.get("eval_count") is not None:
+                llamadas.setdefault("eval_count", {}).setdefault("comentario", []).append(com["eval_count"])
+            resumen_ejecutivo.update(comentario_general=com["texto"], origen_comentario=com["origen"])
+            logger.info(f"Comentario general: origen {com['origen']}" + (f" ({com['motivo']})" if com["motivo"] else ""))
+            logger.info(f"Clasificación: {len(brechas_todas)} brechas -> {len(riesgos_agrupados)} riesgos, {len(solicitudes)} solicitudes, "
+                        f"{len(alertas_todas)} alertas; decisión: {resumen_ejecutivo['decision']}.")
+        tiempos["resumen_final"] = _segundos(t0)
+        tiempos["total"] = _segundos(t_total)
+        hardware = costo.detectar_hardware()
+        costo_computacional = costo.resumen_costo(llamadas.detalle, tiempos["total"], selected_llm_model_id, hardware)
+        costo_computacional["normalizaciones_formato"] = normalizaciones_formato() - normalizaciones_al_inicio
 
-    reporte = RiskReport(
-        riesgos_identificados=riesgos_unidos,
-        fragmentos_fuente=list(fragmentos_unicos.values()),
-        respuesta_cruda_llm=LLMResponse(riesgos_identificados=riesgos_unidos).model_dump_json(indent=2),
-        registro_brechas=brechas_todas, riesgos=riesgos_agrupados, solicitudes=solicitudes, alertas=alertas_todas,
-        resumen_ejecutivo=resumen_ejecutivo,
-        lineamientos={"huella": lin["huella"], "caracteres_criterios": len(lin["texto_para_el_modelo"]), "documentos": lin["documentos"]} if lin else None,
-        secciones=informe_secciones,
-        registro_tecnico=registro_tecnico,
-        configuracion_analisis={
-            "modelo_llm_usado": selected_llm_model_id, "display_name_modelo": config.LLM_MODELS.get(selected_llm_model_id, {}).get("display_name", "N/A"),
-            "condicion": condicion, "n_secciones": len(secciones), "k_recuperacion": config.K_RECUPERACION if usar_rag else "N/A",
-            "top_n_por_seccion": config.TOP_N_POR_SECCION if usar_rag else "N/A",
-            "reranker_max_length": config.RERANKER_MAX_LENGTH if usar_rag and config.USE_RERANKER else "N/A",
-            "recuperacion_por_subseccion": config.RECUPERACION_POR_SUBSECCION if usar_rag else "N/A",
-            "k_subseccion": config.K_SUBSECCION if usar_rag and config.RECUPERACION_POR_SUBSECCION else "N/A",
-            "top_n_subseccion": config.TOP_N_SUBSECCION if usar_rag and config.RECUPERACION_POR_SUBSECCION else "N/A",
-            "top_densa_subseccion": config.TOP_DENSA_SUBSECCION if usar_rag and verificacion and config.RECUPERACION_POR_SUBSECCION else "N/A",
-            "oraciones_cifras": ({"n": config.ORACIONES_N, "cupo": config.ORACIONES_CUPO} if config.ORACIONES_CIFRAS else False) if usar_rag and verificacion else "N/A",
-            "tope_fragmentos_por_seccion": (config.VERIFICAR_TOPE if verificacion else config.TOPE_FRAGMENTOS_SECCION) if usar_rag else "N/A",
-            "modo_generacion": modo, "usar_crag": usar_crag,
-            "temperature": 0 if config.LLM_MODELS.get(selected_llm_model_id, {}).get("provider") == "ollama" else "N/A",
-            "seed": config.OLLAMA_SEED if config.LLM_MODELS.get(selected_llm_model_id, {}).get("provider") == "ollama" else "N/A",
-            "thinking_verificacion": config.THINKING_VERIFICACION if verificacion else "N/A",
-            "verif_temperature": config.VERIF_TEMPERATURE if verificacion and config.THINKING_VERIFICACION else "N/A",
-            "verif_top_p": config.VERIF_TOP_P if verificacion and config.THINKING_VERIFICACION else "N/A",
-            "verif_top_k": config.VERIF_TOP_K if verificacion and config.THINKING_VERIFICACION else "N/A",
-            "llamadas_llm": {k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario")} if verificacion else {"lista": llamadas["lista"]},
-            "llamadas_fallidas": llamadas.get("fallidas", 0),
-            "costo_computacional": costo_computacional, "hardware": hardware, "llamadas_detalle": llamadas.detalle,
-            "tokens_generados_por_tipo": _estadisticas_tokens(llamadas),
-            "excluir_introduccion": config.EXCLUIR_INTRODUCCION, "calcular_respaldo": config.CALCULAR_RESPALDO, "tiempos_s": tiempos,
-            "tokens_prompt_por_seccion": tokens_prompt,
-        })
-    return _guardar_y_generar_dashboard(reporte, nombre_pdf, marca_tiempo)
+        reporte = RiskReport(
+            riesgos_identificados=riesgos_unidos,
+            fragmentos_fuente=list(fragmentos_unicos.values()),
+            respuesta_cruda_llm=LLMResponse(riesgos_identificados=riesgos_unidos).model_dump_json(indent=2),
+            registro_brechas=brechas_todas, riesgos=riesgos_agrupados, solicitudes=solicitudes, alertas=alertas_todas,
+            resumen_ejecutivo=resumen_ejecutivo,
+            lineamientos={"huella": lin["huella"], "caracteres_criterios": len(lin["texto_para_el_modelo"]), "documentos": lin["documentos"]} if lin else None,
+            secciones=informe_secciones,
+            registro_tecnico=registro_tecnico,
+            configuracion_analisis={
+                "modelo_llm_usado": selected_llm_model_id, "display_name_modelo": config.LLM_MODELS.get(selected_llm_model_id, {}).get("display_name", "N/A"),
+                "condicion": condicion, "n_secciones": len(secciones), "k_recuperacion": config.K_RECUPERACION if usar_rag else "N/A",
+                "top_n_por_seccion": config.TOP_N_POR_SECCION if usar_rag else "N/A",
+                "reranker_max_length": config.RERANKER_MAX_LENGTH if usar_rag and config.USE_RERANKER else "N/A",
+                "recuperacion_por_subseccion": config.RECUPERACION_POR_SUBSECCION if usar_rag else "N/A",
+                "k_subseccion": config.K_SUBSECCION if usar_rag and config.RECUPERACION_POR_SUBSECCION else "N/A",
+                "top_n_subseccion": config.TOP_N_SUBSECCION if usar_rag and config.RECUPERACION_POR_SUBSECCION else "N/A",
+                "top_densa_subseccion": config.TOP_DENSA_SUBSECCION if usar_rag and verificacion and config.RECUPERACION_POR_SUBSECCION else "N/A",
+                "oraciones_cifras": ({"n": config.ORACIONES_N, "cupo": config.ORACIONES_CUPO} if config.ORACIONES_CIFRAS else False) if usar_rag and verificacion else "N/A",
+                "tope_fragmentos_por_seccion": (config.VERIFICAR_TOPE if verificacion else config.TOPE_FRAGMENTOS_SECCION) if usar_rag else "N/A",
+                "modo_generacion": modo, "usar_crag": usar_crag,
+                "temperature": 0 if config.LLM_MODELS.get(selected_llm_model_id, {}).get("provider") == "ollama" else "N/A",
+                "seed": config.OLLAMA_SEED if config.LLM_MODELS.get(selected_llm_model_id, {}).get("provider") == "ollama" else "N/A",
+                "thinking_verificacion": config.THINKING_VERIFICACION if verificacion else "N/A",
+                "verif_temperature": config.VERIF_TEMPERATURE if verificacion and config.THINKING_VERIFICACION else "N/A",
+                "verif_top_p": config.VERIF_TOP_P if verificacion and config.THINKING_VERIFICACION else "N/A",
+                "verif_top_k": config.VERIF_TOP_K if verificacion and config.THINKING_VERIFICACION else "N/A",
+                "llamadas_llm": {k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario")} if verificacion else {"lista": llamadas["lista"]},
+                "llamadas_fallidas": llamadas.get("fallidas", 0),
+                "costo_computacional": costo_computacional, "hardware": hardware, "llamadas_detalle": llamadas.detalle,
+                "tokens_generados_por_tipo": _estadisticas_tokens(llamadas),
+                "excluir_introduccion": config.EXCLUIR_INTRODUCCION, "calcular_respaldo": config.CALCULAR_RESPALDO, "tiempos_s": tiempos,
+                "tokens_prompt_por_seccion": tokens_prompt,
+            })
+        return _guardar_y_generar_dashboard(reporte, nombre_pdf, marca_tiempo)
+    except Exception as e_cierre:
+        logger.error(f"Fallo al cerrar el analisis ({type(e_cierre).__name__}: {e_cierre}); se guarda igual un JSON parcial con las brechas y el registro tecnico.")
+        _guardar_parcial(nombre_pdf, marca_tiempo, brechas_todas, alertas_todas, registro_tecnico, informe_secciones, list(fragmentos_unicos.values()), e_cierre)
+        raise
 
 
 def _run_analysis_impl(
