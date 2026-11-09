@@ -1,0 +1,33 @@
+{
+  "configuraciones": {
+    "8B local": {
+      "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261109_163337.json",
+      "P2": "COMPLETAR: ruta del JSON de P2 (8B local)",
+      "P3": "",
+      "P4": ""
+    },
+    "32B": {
+      "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261109_020326_deepinfra-qwen3-32b.json",
+      "P2": "COMPLETAR: ruta del JSON de P2 (32B)",
+      "P3": "",
+      "P4": ""
+    },
+    "32B thinking": {
+      "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261109_120344_deepinfra-qwen3-32b-thinking.json",
+      "P2": "COMPLETAR: ruta del JSON de P2 (32B thinking)",
+      "P3": "",
+      "P4": ""
+    },
+    "32B thinking amplio": {
+      "P1": "COMPLETAR: ruta del JSON de P1 (32B thinking, perfil amplio)",
+      "P2": "COMPLETAR: ruta del JSON de P2 (32B thinking, perfil amplio)",
+      "P3": "",
+      "P4": ""
+    }
+  },
+  "conjuntos": {
+    "P1–P2 desarrollo": ["P1", "P2"],
+    "P3–P4 prueba": ["P3", "P4"],
+    "P1–P4 total": ["P1", "P2", "P3", "P4"]
+  }
+}

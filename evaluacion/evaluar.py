@@ -25,6 +25,7 @@ CLASES = ("Crítico", "Mayor", "Menor")   # de mayor a menor, para el kappa pond
 NIVELES = ("Alto", "Medio", "Bajo")
 ESTADO_DESCARTADA_CALCULO = "descartada por cálculo"
 ESTADO_ALERTA_SIN_RESPUESTA = "tiempo_agotado"   # no es una alerta de contradicción: el modelo no respondió
+JUEZ_VEREDICTOS = ("VALIDA", "NO_VALIDA", "DUDOSA")
 NO_EVALUABLE = "no evaluable (sin lineamientos)"
 MARCA_NO_VERIFICADO = "valor no verificado"
 RE_PAR = re.compile(r"(NORM_\d{2})\s+(\d+\.\d+)")
@@ -257,7 +258,8 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         "responsable_ok": sum(t["responsable_obtenido"] == t["responsable_esperado"] for t in encontradas),
         "nivel_ok": sum(t["nivel_obtenido"] == t["nivel_esperado"] for t in encontradas),
         "confusion": confusion, "n_espejos": len(espejos), "falsas_alarmas": falsas, "espejos": marcados,
-        "extras": extras, "volumen": volumen, "n_riesgo": len(items), "precision": None, "precision_k": None, "precision_n": None}
+        "extras": extras, "volumen": volumen, "n_riesgo": len(items), "precision": None, "precision_k": None, "precision_n": None,
+        "juez": None, "pares_juez_humano": []}
 
 
 def conteo_precision(ev, revision):
@@ -285,6 +287,48 @@ def asignar_precision(ev, revision):
     c = conteo_precision(ev, revision) if ev["modo"] == "brechas" else None
     ev["precision_k"], ev["precision_n"] = c if c else (None, None)
     ev["precision"] = c[0] / c[1] if c else None
+
+
+def revision_con_marcas_juez(revision, juez_rows):
+    """Revisión humana de los extras: extras_revision.csv, con las marcas «valido» que se volcaron en extras_revision_juez.csv por encima."""
+    por_clave = {_clave_extra(r.get("seccion"), r.get("norma"), r.get("articulo"), r.get("cita")): r for r in revision or []}
+    for r in juez_rows or []:
+        c = _clave_extra(r.get("seccion"), r.get("norma"), r.get("articulo"), r.get("cita"))
+        if c not in por_clave:
+            por_clave[c] = r
+        elif norm(r.get("valido")) in ("si", "no"):
+            por_clave[c] = {**por_clave[c], "valido": r["valido"]}
+    return list(por_clave.values())
+
+
+def cohen_kappa(pares):
+    """Kappa de Cohen entre dos evaluadores binarios; pares: [(a, b)] de booleanos. None si no hay datos o el acuerdo esperado por azar es 1."""
+    n = len(pares)
+    if not n:
+        return None
+    po = sum(a == b for a, b in pares) / n
+    pa, pb = sum(a for a, _ in pares) / n, sum(b for _, b in pares) / n
+    pe = pa * pb + (1 - pa) * (1 - pb)
+    return None if pe == 1 else (po - pe) / (1 - pe)
+
+
+def asignar_juez(ev, juez_rows, revision):
+    """Precisión según el juez externo: estricta (DUDOSA cuenta como no válida) y amplia (DUDOSA cuenta como válida), siempre (trampas encontradas + extras
+    válidos) / brechas que generan riesgo. `juez` queda en None si algún extra no tiene veredicto. pares_juez_humano: (veredicto, válido según el humano)
+    de los extras marcados por ambos. `revision`: filas con la columna humana 'valido'."""
+    ev["juez"], ev["pares_juez_humano"] = None, []
+    if ev["modo"] != "brechas" or not ev["n_riesgo"]:
+        return
+    clave = lambda r: _clave_extra(r.get("seccion"), r.get("norma"), r.get("articulo"), r.get("cita"))
+    juez = {clave(r): str(r.get("juez_veredicto") or "").strip().upper() for r in juez_rows or []}
+    humano = {clave(r): norm(r.get("valido")) for r in revision or []}
+    claves = [clave(x) for x in ev["extras"]]
+    veredictos = [juez.get(c) for c in claves]
+    ev["pares_juez_humano"] = [(v, humano[c] == "si") for c, v in zip(claves, veredictos) if v in JUEZ_VEREDICTOS and humano.get(c) in ("si", "no")]
+    if any(v not in JUEZ_VEREDICTOS for v in veredictos):
+        return
+    ev["juez"] = {"estricta": ev["encontradas"] + veredictos.count("VALIDA"), "amplia": ev["encontradas"] + veredictos.count("VALIDA") + veredictos.count("DUDOSA"),
+                  "n": ev["n_riesgo"]}
 
 
 def aplicar_revision_sinrag(ev, revision):
@@ -319,6 +363,8 @@ def combinar(evs):
               coincidencias=[x for e in evs for x in e["coincidencias"]], hay_registro=all(e["hay_registro"] for e in evs),
               por_frase_validada=todo("por_frase_validada"), precision_k=todo("precision_k"), precision_n=todo("precision_n"))
     ev["precision"] = ev["precision_k"] / ev["precision_n"] if ev["precision_n"] else None
+    ev["juez"] = None if any(e["juez"] is None for e in evs) else {k: sum(e["juez"][k] for e in evs) for k in ("estricta", "amplia", "n")}
+    ev["pares_juez_humano"] = [x for e in evs for x in e["pares_juez_humano"]]
     return ev
 
 
@@ -459,7 +505,17 @@ def informe_md(ev, comparacion=None) -> str:
             L.append(f"| Precisión | {_con_ic(ev['precision_k'], ev['precision_n'])} |")
         else:
             L.append("| Precisión | precisión pendiente de revisión |")
-        L += [f"| F1 | {_sin_valor(f_beta(ev['precision'], recall, 1))} |", f"| F2 | {_sin_valor(f_beta(ev['precision'], recall, 2))} |",
+        L += [f"| F1 | {_sin_valor(f_beta(ev['precision'], recall, 1))} |", f"| F2 | {_sin_valor(f_beta(ev['precision'], recall, 2))} |"]
+        if ev.get("juez"):
+            for nombre, k in (("estricta (DUDOSA = no válida)", ev["juez"]["estricta"]), ("amplia (DUDOSA = válida)", ev["juez"]["amplia"])):
+                p_juez = k / ev["juez"]["n"]
+                L += [f"| Precisión según el juez, {nombre} | {_con_ic(k, ev['juez']['n'])} |",
+                      f"| F1 / F2 según el juez, {nombre} | {_sin_valor(f_beta(p_juez, recall, 1))} / {_sin_valor(f_beta(p_juez, recall, 2))} |"]
+        if ev.get("pares_juez_humano"):
+            pares = ev["pares_juez_humano"]
+            ke, ka = cohen_kappa([(v == "VALIDA", h) for v, h in pares]), cohen_kappa([(v != "NO_VALIDA", h) for v, h in pares])
+            L.append(f"| Acuerdo juez–humano (kappa de Cohen, {len(pares)} extras marcados por ambos) | estricta {_sin_valor(ke)}; amplia {_sin_valor(ka)} |")
+        L += [
               "| Pereza de verificación (el artículo llegó a la sección y la verificación dio Cumple o No aplica) | "
               + (_pct(ev["perezosas"], n) if ev["hay_registro"] else "n/d") + " |",
               "| Pereza de clasificación (la verificación dio Incumple o Revisar y la clasificación lo pasó a NO_APLICA o CUMPLE) | "
@@ -535,6 +591,19 @@ def _cargar(ruta):
         return json.load(f)
 
 
+def evaluar_archivo(ruta, oferta, gt, espejos, revision=None) -> dict:
+    """Evalúa un JSON y le asigna la precisión humana (extras_revision.csv, `revision`) y la del juez (extras_revision_juez.csv junto al JSON), si existen."""
+    ev = evaluar(_cargar(ruta), gt, espejos, oferta)
+    ruta_juez = os.path.join(os.path.dirname(os.path.abspath(ruta)), "extras_revision_juez.csv")
+    juez_rows = leer_csv(ruta_juez) if os.path.isfile(ruta_juez) else None
+    rev_rows = leer_csv(revision) if revision and os.path.isfile(revision) else None
+    if juez_rows:
+        rev_rows = revision_con_marcas_juez(rev_rows, juez_rows)
+    asignar_precision(ev, rev_rows)
+    asignar_juez(ev, juez_rows, rev_rows)
+    return ev
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Evalúa un resultado contra el ground truth v3 y los espejos conformes")
     p.add_argument("--resultado", help="JSON del resultado")
@@ -559,10 +628,8 @@ def main(argv=None):
         gts[oferta], espejos_por_oferta[oferta] = cargar_gt(oferta, a.ground_truth), cargar_espejos(oferta, a.espejos)
         if not gts[oferta]:
             raise SystemExit(f"No hay trampas de la oferta {oferta} en {a.ground_truth}")
-        ev = evaluar(_cargar(ruta), gts[oferta], espejos_por_oferta[oferta], oferta)
         revision = a.revision if not a.agregado else os.path.join(os.path.dirname(os.path.abspath(ruta)), "extras_revision.csv")
-        asignar_precision(ev, leer_csv(revision) if revision and os.path.isfile(revision) else None)
-        evs.append(ev)
+        evs.append(evaluar_archivo(ruta, oferta, gts[oferta], espejos_por_oferta[oferta], revision))
     total = combinar(evs)
 
     comparacion = None

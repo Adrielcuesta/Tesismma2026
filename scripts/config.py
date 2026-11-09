@@ -186,7 +186,9 @@ PRECIOS_NUBE = {
     "Qwen/Qwen3-32B": {"entrada": 0.08, "salida": 0.28},
     "Qwen/Qwen3-235B-A22B-Instruct-2507": {"entrada": 0.09, "salida": 0.55},
     "qwen/qwen3.8-27b": {"entrada": 0.80, "salida": 4.00},
+    "deepseek-ai/DeepSeek-V3.2": {"entrada": 0.26, "salida": 0.38},     # juez externo de precisión (evaluacion/juez.py)
 }
+PRESUPUESTO_JUEZ_USD = 1.0  # tope de gasto de una corrida del juez
 PRESUPUESTO_USD = 1.5       # tope de gasto acumulado de una corrida: al alcanzarlo se guarda lo hecho y se detiene
 
 # --- Configuración de LLMs ---
