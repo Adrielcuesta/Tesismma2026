@@ -102,10 +102,10 @@ def test_cli_genera_md_csv_y_extras(tmp_path):
     ev.main(["--resultado", str(res), "--oferta", "P9", "--ground-truth", str(tmp_path / "gt.csv"), "--espejos", str(tmp_path / "esp.csv")])
     nombres = os.listdir(tmp_path)
     md = next(n for n in nombres if n.startswith("evaluacion_P9_") and n.endswith(".md"))
-    assert any(n.startswith("evaluacion_P9_") and n.endswith(".csv") for n in nombres) and "extras_revision.csv" in nombres
+    assert any(n.startswith("evaluacion_P9_") and n.endswith(".csv") for n in nombres) and "resultado_extras.csv" in nombres
     texto = (tmp_path / md).read_text(encoding="utf-8")
     assert "precisión pendiente de revisión" in texto and "2/4" in texto and "esperada" in texto
-    with open(tmp_path / "extras_revision.csv", encoding="utf-8-sig", newline="") as f:
+    with open(tmp_path / "resultado_extras.csv", encoding="utf-8-sig", newline="") as f:
         filas = list(csv.DictReader(f, delimiter=";"))
     assert list(filas[0]) == ["oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase", "valido"] and all(x["valido"] == "" for x in filas)
     # con la revisión completa se calcula la precisión

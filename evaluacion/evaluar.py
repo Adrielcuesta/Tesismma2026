@@ -8,7 +8,7 @@ Uso:
   python -m evaluacion.evaluar --agregado <json_P1> <json_P2> ... [--comparar <json_sin_rag_P1> <json_sin_rag_P2> ...]
          [--revision-sinrag <csv> ...]
 La oferta de cada JSON de --agregado y --comparar se toma de su ruta (P1, P2...) o se indica como P2=ruta.
-En --agregado la revisión de extras es el extras_revision.csv que está junto a cada JSON."""
+Los extras de cada JSON van a <json>_extras.csv (la revisión humana, columna 'valido') y el juez a <json>_juez.csv, junto al JSON; con --agregado se leen de ahí."""
 import argparse
 import csv
 import datetime
@@ -16,6 +16,7 @@ import json
 import math
 import os
 import re
+import sys
 import unicodedata
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
@@ -290,7 +291,7 @@ def asignar_precision(ev, revision):
 
 
 def revision_con_marcas_juez(revision, juez_rows):
-    """Revisión humana de los extras: extras_revision.csv, con las marcas «valido» que se volcaron en extras_revision_juez.csv por encima."""
+    """Revisión humana de los extras: <json>_extras.csv, con las marcas «valido» que se volcaron en <json>_juez.csv por encima."""
     por_clave = {_clave_extra(r.get("seccion"), r.get("norma"), r.get("articulo"), r.get("cita")): r for r in revision or []}
     for r in juez_rows or []:
         c = _clave_extra(r.get("seccion"), r.get("norma"), r.get("articulo"), r.get("cita"))
@@ -556,12 +557,32 @@ def guardar_detalle_csv(ev, ruta):
                         t["clase_obtenida"] or "", t["responsable_esperado"], t["responsable_obtenido"] or "", t["nivel_esperado"], t["nivel_obtenido"] or "", int(t["como_alerta"])])
 
 
+def ruta_extras(ruta_json) -> str:
+    """CSV de extras (y de la revisión humana) de un JSON: <json sin extensión>_extras.csv, junto al JSON. Cada JSON tiene el suyo."""
+    return os.path.splitext(os.path.abspath(ruta_json))[0] + "_extras.csv"
+
+
+def ruta_juez(ruta_json) -> str:
+    """CSV del juez externo de un JSON: <json sin extensión>_juez.csv, junto al JSON."""
+    return os.path.splitext(os.path.abspath(ruta_json))[0] + "_juez.csv"
+
+
+def avisar_si_hay_extras_viejo(ruta_json):
+    """El extras_revision.csv de nombre fijo (uno por carpeta) puede ser de otra configuración: no se usa, solo se avisa."""
+    viejo = os.path.join(os.path.dirname(os.path.abspath(ruta_json)), "extras_revision.csv")
+    if os.path.isfile(viejo) and not os.path.isfile(ruta_extras(ruta_json)):
+        print(f"Aviso: existe {viejo} (nombre antiguo, uno por carpeta) pero no {ruta_extras(ruta_json)}: NO se usa. Si es de este JSON, renombralo.", file=sys.stderr)
+
+
 def guardar_extras_csv(ev, ruta):
+    """Escribe los extras; si el archivo ya existe, conserva la marca «valido» de los extras que siguen estando (no se pierde la revisión humana)."""
     columnas = ["oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase", "valido"]
+    marcas = {_clave_extra(r.get("seccion"), r.get("norma"), r.get("articulo"), r.get("cita")): r.get("valido") or "" for r in (leer_csv(ruta) if os.path.isfile(ruta) else [])}
+    filas = [{**x, "valido": marcas.get(_clave_extra(x["seccion"], x["norma"], x["articulo"], x["cita"]), x.get("valido") or "")} for x in ev["extras"]]
     with open(ruta, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=columnas, delimiter=";")
         w.writeheader()
-        w.writerows(ev["extras"])
+        w.writerows(filas)
 
 
 def guardar_coincidencias_sinrag_csv(ev, ruta):
@@ -592,11 +613,14 @@ def _cargar(ruta):
 
 
 def evaluar_archivo(ruta, oferta, gt, espejos, revision=None) -> dict:
-    """Evalúa un JSON y le asigna la precisión humana (extras_revision.csv, `revision`) y la del juez (extras_revision_juez.csv junto al JSON), si existen."""
+    """Evalúa un JSON y le asigna la precisión humana (`revision`, por defecto <json>_extras.csv) y la del juez (<json>_juez.csv), si existen."""
     ev = evaluar(_cargar(ruta), gt, espejos, oferta)
-    ruta_juez = os.path.join(os.path.dirname(os.path.abspath(ruta)), "extras_revision_juez.csv")
-    juez_rows = leer_csv(ruta_juez) if os.path.isfile(ruta_juez) else None
-    rev_rows = leer_csv(revision) if revision and os.path.isfile(revision) else None
+    if not revision:
+        revision = ruta_extras(ruta)
+        avisar_si_hay_extras_viejo(ruta)
+    archivo_juez = ruta_juez(ruta)
+    juez_rows = leer_csv(archivo_juez) if os.path.isfile(archivo_juez) else None
+    rev_rows = leer_csv(revision) if os.path.isfile(revision) else None
     if juez_rows:
         rev_rows = revision_con_marcas_juez(rev_rows, juez_rows)
     asignar_precision(ev, rev_rows)
@@ -609,7 +633,7 @@ def main(argv=None):
     p.add_argument("--resultado", help="JSON del resultado")
     p.add_argument("--oferta", help="P1, P2, P3 o P4 (con --resultado)")
     p.add_argument("--agregado", nargs="+", metavar="JSON", help="JSON de varias ofertas: las métricas se calculan sobre el total de trampas")
-    p.add_argument("--revision", help="extras_revision.csv con la columna 'valido' completa (sí/no)")
+    p.add_argument("--revision", help="CSV de extras con la columna 'valido' completa (sí/no); por defecto <json>_extras.csv")
     p.add_argument("--comparar", nargs="+", metavar="JSON_SIN_RAG", help="resultado(s) sin RAG: agrega la tabla con RAG / sin RAG")
     p.add_argument("--revision-sinrag", nargs="+", metavar="CSV", help="sinrag_coincidencias.csv con 'valido' completo: la fila sin RAG cuenta solo las válidas")
     p.add_argument("--ground-truth", default=GROUND_TRUTH)
@@ -628,8 +652,7 @@ def main(argv=None):
         gts[oferta], espejos_por_oferta[oferta] = cargar_gt(oferta, a.ground_truth), cargar_espejos(oferta, a.espejos)
         if not gts[oferta]:
             raise SystemExit(f"No hay trampas de la oferta {oferta} en {a.ground_truth}")
-        revision = a.revision if not a.agregado else os.path.join(os.path.dirname(os.path.abspath(ruta)), "extras_revision.csv")
-        evs.append(evaluar_archivo(ruta, oferta, gts[oferta], espejos_por_oferta[oferta], revision))
+        evs.append(evaluar_archivo(ruta, oferta, gts[oferta], espejos_por_oferta[oferta], None if a.agregado else a.revision))
     total = combinar(evs)
 
     comparacion = None
@@ -653,7 +676,7 @@ def main(argv=None):
         f.write(informe_md(total, comparacion))
     guardar_detalle_csv(total, os.path.join(carpeta, f"evaluacion_{nombre}_{marca}.csv"))
     if total["modo"] == "brechas" and not a.agregado:
-        guardar_extras_csv(total, os.path.join(carpeta, "extras_revision.csv"))
+        guardar_extras_csv(total, ruta_extras(entradas[0][1]))
     print(f"Evaluación guardada en {ruta_md}")
     if comparacion:
         print(comparacion)

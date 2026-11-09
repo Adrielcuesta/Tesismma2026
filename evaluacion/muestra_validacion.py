@@ -1,12 +1,12 @@
 # evaluacion/muestra_validacion.py
 """Muestra aleatoria estratificada (por configuración y veredicto del juez) de las brechas que no son trampas, para que la persona las marque a mano,
-y modo para volcar esas marcas en los extras_revision_juez.csv de origen. La muestra NO muestra el veredicto del juez (evita el anclaje).
+y modo para volcar esas marcas en el <json>_juez.csv de origen. La muestra NO muestra el veredicto del juez (evita el anclaje).
 
 Uso:
   python -m evaluacion.muestra_validacion --config evaluacion/config_tabla_ejemplo.json [--salida muestra_validacion.csv] [--n 30] [--seed 42]
   # se completa la columna «valido» con 1 (la brecha es real) o 0 (no lo es), y después:
   python -m evaluacion.muestra_validacion --volcar muestra_validacion.csv
-Después de volcar, evaluar.py calcula la precisión humana y el kappa juez–humano (las marcas quedan en la columna «valido» de extras_revision_juez.csv)."""
+Después de volcar, evaluar.py calcula la precisión humana y el kappa juez–humano (las marcas quedan en la columna «valido» de <json>_juez.csv)."""
 import argparse
 import csv
 import json
@@ -14,8 +14,8 @@ import os
 import random
 import sys
 
-from .evaluar import _clave_extra, leer_csv, norm
-from .juez import ARCHIVO_JUEZ, VEREDICTOS, clave_brecha, clave_fila
+from .evaluar import _clave_extra, leer_csv, norm, ruta_juez as ruta_csv_juez
+from .juez import VEREDICTOS, clave_brecha, clave_fila
 from .tabla_comparativa import cargar_config
 
 COLUMNAS = ["id", "configuracion", "oferta", "seccion", "norma", "articulo", "cita", "titulo", "texto_articulo", "valido", "ruta_juez"]
@@ -37,13 +37,13 @@ def cuotas(tamanos: dict, n: int) -> dict:
 
 
 def elegibles(cfg: dict) -> list:
-    """Filas de extras_revision_juez.csv con veredicto, de todas las configuraciones y ofertas, con los datos para mostrarlas."""
+    """Filas de los <json>_juez.csv con veredicto, de todas las configuraciones y ofertas, con los datos para mostrarlas."""
     filas = []
     for nombre, ofertas in cfg["configuraciones"].items():
         for oferta, ruta in ofertas.items():
-            ruta_juez = os.path.join(os.path.dirname(os.path.abspath(ruta)), ARCHIVO_JUEZ) if ruta else ""
+            ruta_juez = ruta_csv_juez(ruta) if ruta else ""
             if not ruta or not os.path.isfile(ruta) or not os.path.isfile(ruta_juez):
-                print(f"Aviso: {nombre} / {oferta}: sin JSON o sin {ARCHIVO_JUEZ}; se omite.", file=sys.stderr)
+                print(f"Aviso: {nombre} / {oferta}: sin JSON o sin {os.path.basename(ruta_juez) or '<json>_juez.csv'}; se omite.", file=sys.stderr)
                 continue
             with open(ruta, encoding="utf-8") as f:
                 brechas = {clave_brecha(b): b for b in json.load(f).get("registro_brechas") or []}
@@ -78,7 +78,7 @@ def marca(valor):
 
 
 def volcar(ruta_muestra: str) -> dict:
-    """Pasa las marcas de la muestra a la columna «valido» de cada extras_revision_juez.csv. Devuelve {'volcadas', 'sin_marca', 'no_encontradas'}."""
+    """Pasa las marcas de la muestra a la columna «valido» de cada <json>_juez.csv. Devuelve {'volcadas', 'sin_marca', 'no_encontradas'}."""
     por_archivo, sin_marca = {}, 0
     for r in leer_csv(ruta_muestra):
         m = marca(r.get("valido"))
@@ -110,7 +110,7 @@ def main(argv=None):
     p.add_argument("--salida", default="muestra_validacion.csv")
     p.add_argument("--n", type=int, default=30)
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--volcar", metavar="CSV", help="muestra con la columna «valido» completa (1/0): vuelca las marcas a los extras_revision_juez.csv")
+    p.add_argument("--volcar", metavar="CSV", help="muestra con la columna «valido» completa (1/0): vuelca las marcas a los <json>_juez.csv")
     a = p.parse_args(argv)
     if a.volcar:
         r = volcar(a.volcar)

@@ -1,6 +1,6 @@
 # evaluacion/tabla_comparativa.py
 """Tabla comparativa final y gráficos. Recalcula todo a partir de los JSON de cada configuración y oferta (con evaluar.py); no lee resultados ya calculados.
-Si junto a un JSON están extras_revision.csv / extras_revision_juez.csv, se usan para la precisión según el juez.
+Si junto a un JSON están <json>_extras.csv / <json>_juez.csv, se usan para la precisión humana y la del juez.
 
 Uso:
   python -m evaluacion.tabla_comparativa --config evaluacion/config_tabla_ejemplo.json [--salida evaluacion/resultados_finales]
@@ -44,8 +44,7 @@ def evaluar_configuraciones(cfg: dict) -> dict:
             gt, esp = E.cargar_gt(oferta), E.cargar_espejos(oferta)
             if not gt:
                 raise SystemExit(f"No hay trampas de la oferta {oferta} en {E.GROUND_TRUTH}")
-            revision = os.path.join(os.path.dirname(os.path.abspath(ruta)), "extras_revision.csv")
-            salida[nombre][oferta] = E.evaluar_archivo(ruta, oferta, gt, esp, revision)
+            salida[nombre][oferta] = E.evaluar_archivo(ruta, oferta, gt, esp)      # lee <json>_extras.csv y <json>_juez.csv
     return salida
 
 

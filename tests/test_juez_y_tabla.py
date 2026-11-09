@@ -49,12 +49,15 @@ def _ok(v, motivo="porque"):
     return json.dumps({"motivo": motivo, "veredicto": v})
 
 
-def _carpeta(tmp_path):
-    """JSON + extras_revision.csv de una oferta con 2 extras, como los deja evaluar.py."""
-    ruta = tmp_path / "analisis.json"
+def _carpeta(tmp_path, nombre="analisis.json"):
+    """JSON de una oferta con 2 extras (sin que evaluar.py haya corrido)."""
+    ruta = tmp_path / nombre
     ruta.write_text(json.dumps(RESULTADO), encoding="utf-8")
-    ev.guardar_extras_csv(_evaluado(), str(tmp_path / "extras_revision.csv"))
     return str(ruta)
+
+
+def _juzgar(ruta, cliente, concurrencia=1, **kw):
+    return juez.procesar_json(ruta, "P9", cliente, None, concurrencia, gt=[dict(r) for r in GT], espejos=[dict(r) for r in ESPEJOS], **kw)
 
 
 def _leer(ruta):
@@ -66,7 +69,7 @@ def _leer(ruta):
 def test_juez_escribe_veredictos_sin_tocar_la_columna_humana(tmp_path):
     ruta = _carpeta(tmp_path)
     cliente = ClienteFalso([_ok("VALIDA"), _ok("DUDOSA")])
-    s = juez.procesar_json(ruta, cliente, ["item"], 2)
+    s = _juzgar(ruta, cliente, 2)
     filas = _leer(s["csv"])
     assert [f["juez_veredicto"] for f in filas] == ["VALIDA", "DUDOSA"] and filas[0]["juez_motivo"] == "porque"
     assert all(f["valido"] == "" for f in filas) and s["cuentas"] == {"VALIDA": 1, "NO_VALIDA": 0, "DUDOSA": 1}
@@ -74,7 +77,7 @@ def test_juez_escribe_veredictos_sin_tocar_la_columna_humana(tmp_path):
 
 def test_juez_no_repite_lo_ya_juzgado_y_conserva_marca_humana(tmp_path):
     ruta = _carpeta(tmp_path)
-    s = juez.procesar_json(ruta, ClienteFalso([_ok("VALIDA"), _ok("NO_VALIDA")]), None, 1)
+    s = _juzgar(ruta, ClienteFalso([_ok("VALIDA"), _ok("NO_VALIDA")]))
     filas = _leer(s["csv"])
     filas[0]["valido"] = "sí"
     with open(s["csv"], "w", encoding="utf-8-sig", newline="") as f:
@@ -82,7 +85,7 @@ def test_juez_no_repite_lo_ya_juzgado_y_conserva_marca_humana(tmp_path):
         w.writeheader()
         w.writerows(filas)
     cliente = ClienteFalso([])
-    s = juez.procesar_json(ruta, cliente, None, 1)
+    s = _juzgar(ruta, cliente)
     assert cliente.llamadas == 0 and s["juzgados"] == 0
     assert _leer(s["csv"])[0]["valido"] == "sí"
 
@@ -90,21 +93,67 @@ def test_juez_no_repite_lo_ya_juzgado_y_conserva_marca_humana(tmp_path):
 def test_juez_max_items_y_reintento_por_respuesta_invalida(tmp_path):
     ruta = _carpeta(tmp_path)
     cliente = ClienteFalso(["no es json", _ok("NO_VALIDA")])
-    s = juez.procesar_json(ruta, cliente, None, 1, max_items=1)
+    s = _juzgar(ruta, cliente, max_items=1)
     filas = _leer(s["csv"])
     assert cliente.llamadas == 2 and filas[0]["juez_veredicto"] == "NO_VALIDA" and filas[1]["juez_veredicto"] == "" and s["sin_veredicto"] == 1
 
 
 def test_juez_se_detiene_si_se_agota_el_presupuesto(tmp_path):
     ruta = _carpeta(tmp_path)
-    s = juez.procesar_json(ruta, ClienteFalso([PresupuestoAgotado("tope"), PresupuestoAgotado("tope")]), None, 1)
+    s = _juzgar(ruta, ClienteFalso([PresupuestoAgotado("tope"), PresupuestoAgotado("tope")]))
     assert s["detenida"] and s["sin_veredicto"] == 2
 
 
-def test_juez_exige_extras_revision(tmp_path):
-    (tmp_path / "a.json").write_text("{}", encoding="utf-8")
-    with pytest.raises(SystemExit):
-        juez.procesar_json(str(tmp_path / "a.json"), ClienteFalso([]), None, 1)
+def test_juez_calcula_los_extras_sin_que_evaluar_haya_corrido(tmp_path):
+    ruta = _carpeta(tmp_path)
+    assert os.listdir(tmp_path) == ["analisis.json"]
+    s = _juzgar(ruta, ClienteFalso([_ok("VALIDA"), _ok("NO_VALIDA")]))
+    filas = _leer(s["csv"])
+    assert [f["norma"] for f in filas] == ["NORM_02", "NORM_03"] and list(filas[0])[:8] == juez.COLUMNAS_EXTRAS     # la trampa no es un extra
+
+
+# --- nombres de los CSV por JSON ---
+
+def test_nombres_de_csv_por_json(tmp_path):
+    assert ev.ruta_extras(tmp_path / "a_32b.json") == str(tmp_path / "a_32b_extras.csv")
+    assert ev.ruta_juez(tmp_path / "a_32b.json") == str(tmp_path / "a_32b_juez.csv")
+
+
+def test_dos_json_en_la_misma_carpeta_no_se_pisan(tmp_path):
+    a, b = _carpeta(tmp_path, "analisis_8b.json"), _carpeta(tmp_path, "analisis_32b.json")
+    ev.guardar_extras_csv(_evaluado(), ev.ruta_extras(a))
+    ev.guardar_extras_csv(_evaluado(), ev.ruta_extras(b))
+    sa = _juzgar(a, ClienteFalso([_ok("VALIDA"), _ok("VALIDA")]))
+    sb = _juzgar(b, ClienteFalso([_ok("NO_VALIDA"), _ok("DUDOSA")]))
+    assert sa["csv"] != sb["csv"] and sorted(os.listdir(tmp_path)) == ["analisis_32b.json", "analisis_32b_extras.csv", "analisis_32b_juez.csv",
+                                                                       "analisis_8b.json", "analisis_8b_extras.csv", "analisis_8b_juez.csv"]
+    assert [f["juez_veredicto"] for f in _leer(sa["csv"])] == ["VALIDA", "VALIDA"] and [f["juez_veredicto"] for f in _leer(sb["csv"])] == ["NO_VALIDA", "DUDOSA"]
+
+
+def test_la_marca_humana_de_extras_pasa_al_csv_del_juez_y_no_se_pierde_al_reevaluar(tmp_path):
+    ruta = _carpeta(tmp_path)
+    ev.guardar_extras_csv(_evaluado(), ev.ruta_extras(ruta))
+    filas = _leer(ev.ruta_extras(ruta))
+    filas[0]["valido"] = "sí"
+    with open(ev.ruta_extras(ruta), "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(filas[0]), delimiter=";")
+        w.writeheader()
+        w.writerows(filas)
+    ev.guardar_extras_csv(_evaluado(), ev.ruta_extras(ruta))              # evaluar de nuevo no borra la revisión
+    assert _leer(ev.ruta_extras(ruta))[0]["valido"] == "sí"
+    assert _leer(_juzgar(ruta, ClienteFalso([_ok("VALIDA"), _ok("VALIDA")]))["csv"])[0]["valido"] == "sí"
+
+
+def test_extras_revision_viejo_no_se_usa_y_se_avisa(tmp_path, capsys):
+    ruta = _carpeta(tmp_path)
+    ev.guardar_extras_csv(_evaluado(), str(tmp_path / "extras_revision.csv"))
+    filas = _leer(str(tmp_path / "extras_revision.csv"))
+    with open(tmp_path / "extras_revision.csv", "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(filas[0]), delimiter=";")
+        w.writeheader()
+        w.writerows([{**x, "valido": "sí"} for x in filas])
+    e = ev.evaluar_archivo(ruta, "P9", [dict(r) for r in GT], [dict(r) for r in ESPEJOS])
+    assert "extras_revision.csv" in capsys.readouterr().err and e["precision"] is None      # sigue pendiente: la revisión vieja se ignora
 
 
 def test_mensajes_del_juez_no_llevan_nada_del_ground_truth():
@@ -169,7 +218,7 @@ def test_muestra_determinista_y_sin_veredicto():
 
 def test_volcar_marcas_en_el_csv_del_juez(tmp_path):
     ruta = _carpeta(tmp_path)
-    s = juez.procesar_json(ruta, ClienteFalso([_ok("VALIDA"), _ok("NO_VALIDA")]), None, 1)
+    s = _juzgar(ruta, ClienteFalso([_ok("VALIDA"), _ok("NO_VALIDA")]))
     filas = _leer(s["csv"])
     muestra = [{"id": i, "configuracion": "c", "oferta": "P9", "seccion": f["seccion"], "norma": f["norma"], "articulo": f["articulo"], "cita": f["cita"], "titulo": "",
                 "texto_articulo": "", "valido": v, "ruta_juez": s["csv"]} for i, (f, v) in enumerate(zip(filas, ["1", ""]))]
@@ -178,6 +227,18 @@ def test_volcar_marcas_en_el_csv_del_juez(tmp_path):
     despues = _leer(s["csv"])
     assert r == {"volcadas": 1, "sin_marca": 1, "no_encontradas": 0} and despues[0]["valido"] == "sí" and despues[1]["valido"] == ""
     assert despues[0]["juez_veredicto"] == "VALIDA"
+
+
+# --- script de cierre ---
+
+def test_script_cerrar_evaluacion_es_ascii_y_llama_a_los_modulos_en_orden():
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts", "cerrar_evaluacion.ps1")
+    with open(ruta, "rb") as f:
+        crudo = f.read()
+    crudo.decode("ascii")
+    texto = crudo.decode("ascii")
+    assert texto.index("evaluacion.evaluar") < texto.index("evaluacion.juez") < texto.index("evaluacion.tabla_comparativa") and "--max-items" in texto and "-SoloHumo" in texto
+    assert "return" not in texto
 
 
 # --- tabla comparativa ---

@@ -1,13 +1,14 @@
 # evaluacion/juez.py
-"""Juez externo de precisión. Para cada brecha del extras_revision.csv de un JSON de análisis (las que no son trampas ni espejos) pregunta a un
-modelo de la nube si es VALIDA, NO_VALIDA o DUDOSA según el artículo de la KB y el contenido mínimo de la oferta (NORM_07 Art. 2.6).
-El juez recibe solo: oraciones citadas, texto del artículo y título/enunciado/motivo del sistema. No ve el ground truth ni los espejos.
-Escribe extras_revision_juez.csv junto al JSON (columnas de extras_revision.csv + juez_veredicto, juez_motivo); la columna humana «valido» no se toca.
-Si el archivo ya existe, las brechas ya juzgadas se conservan (con --rehacer se juzgan de nuevo).
+"""Juez externo de precisión. Para cada brecha extra de un JSON de análisis (las que no son trampas ni espejos; se calculan acá con las mismas funciones
+de evaluar.py, sin depender de que evaluar.py haya corrido antes) pregunta a un modelo de la nube si es VALIDA, NO_VALIDA o DUDOSA según el artículo de la
+KB y el contenido mínimo de la oferta (NORM_07 Art. 2.6). El ground truth y los espejos solo sirven para separar los extras: el juez recibe únicamente
+oraciones citadas, texto del artículo y título/enunciado/motivo del sistema.
+Escribe <json>_juez.csv junto al JSON (oferta, sección, norma, artículo, cita, título, clase, valido, juez_veredicto, juez_motivo). La columna humana «valido»
+viene de <json>_extras.csv si existe y no se toca. Si el CSV del juez ya existe, las brechas ya juzgadas se conservan (con --rehacer se juzgan de nuevo).
 
 Uso:
-  python -m evaluacion.juez <json> [<json> ...] [--max-items N] [--concurrencia 8] [--rehacer]
-Requisito: haber corrido evaluar.py sobre cada JSON (genera extras_revision.csv). Clave en el .env: DEEPINFRA_API_KEY."""
+  python -m evaluacion.juez P1=<json> [P2=<json> ...] [--max-items N] [--concurrencia 8] [--rehacer]
+La oferta se indica como P#=ruta o se deduce de la ruta (igual que evaluar.py). Clave en el .env: DEEPINFRA_API_KEY."""
 import argparse
 import csv
 import json
@@ -24,14 +25,14 @@ from scripts import config, rag_components
 from scripts.main import LlamadaFallida
 from scripts.nube import ClienteNube, Gasto, PresupuestoAgotado
 
-from .evaluar import ESTADO_DESCARTADA_CALCULO, _clave_extra, leer_csv, norm
+from .evaluar import (ESTADO_DESCARTADA_CALCULO, _clave_extra, _oferta_de_ruta, avisar_si_hay_extras_viejo, cargar_espejos, cargar_gt, evaluar, leer_csv,
+                      ruta_extras, ruta_juez)
 
 logger = logging.getLogger(__name__)
 PROVEEDOR = "deepinfra"
 MODELO = "deepseek-ai/DeepSeek-V3.2"
 VEREDICTOS = ("VALIDA", "NO_VALIDA", "DUDOSA")
-ARCHIVO_EXTRAS = "extras_revision.csv"
-ARCHIVO_JUEZ = "extras_revision_juez.csv"
+COLUMNAS_EXTRAS = ["oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase", "valido"]
 COLUMNAS_JUEZ = ["juez_veredicto", "juez_motivo"]
 
 PROMPT_SISTEMA = (
@@ -88,26 +89,27 @@ def juzgar(cliente, b: dict, contenido_minimo) -> dict:
     return {"veredicto": "", "motivo": f"respuesta inválida: {error}"}
 
 
-def procesar_json(ruta: str, cliente, contenido_minimo, concurrencia: int, max_items=None, rehacer=False) -> dict:
-    carpeta = os.path.dirname(os.path.abspath(ruta))
-    ruta_extras, ruta_juez = os.path.join(carpeta, ARCHIVO_EXTRAS), os.path.join(carpeta, ARCHIVO_JUEZ)
-    if not os.path.isfile(ruta_extras):
-        raise SystemExit(f"Falta {ruta_extras}: corré antes evaluar.py sobre {os.path.basename(ruta)}.")
+def procesar_json(ruta: str, oferta: str, cliente, contenido_minimo, concurrencia: int, max_items=None, rehacer=False, gt=None, espejos=None) -> dict:
+    """Juzga los extras de un JSON y escribe <json>_juez.csv. gt y espejos: los de la oferta (por defecto los de evaluacion/)."""
+    archivo_juez = ruta_juez(ruta)
     with open(ruta, encoding="utf-8") as f:
         resultado = json.load(f)
+    gt = cargar_gt(oferta) if gt is None else gt
+    if not gt:
+        raise SystemExit(f"No hay trampas de la oferta {oferta} en el ground truth.")
+    filas = [dict(x) for x in evaluar(resultado, gt, cargar_espejos(oferta) if espejos is None else espejos, oferta)["extras"]]
     brechas = {}
     for b in resultado.get("registro_brechas") or []:
         if b.get("estado") != ESTADO_DESCARTADA_CALCULO:
             brechas.setdefault(clave_brecha(b), b)
-    with open(ruta_extras, encoding="utf-8-sig", newline="") as f:
-        columnas = list(csv.DictReader(f, delimiter=";").fieldnames or [])
-    filas = leer_csv(ruta_extras)
-    previas = {clave_fila(r): r for r in leer_csv(ruta_juez)} if os.path.isfile(ruta_juez) else {}
+    columnas = COLUMNAS_EXTRAS
+    avisar_si_hay_extras_viejo(ruta)
+    humanas = {clave_fila(r): r.get("valido") or "" for r in leer_csv(ruta_extras(ruta))} if os.path.isfile(ruta_extras(ruta)) else {}
+    previas = {clave_fila(r): r for r in leer_csv(archivo_juez)} if os.path.isfile(archivo_juez) else {}
     for r in filas:
         p = previas.get(clave_fila(r)) or {}
         r["juez_veredicto"], r["juez_motivo"] = p.get("juez_veredicto", ""), p.get("juez_motivo", "")
-        if p.get("valido", "").strip():     # la marca humana que se volcó en el CSV del juez no se pierde
-            r["valido"] = p["valido"]
+        r["valido"] = (p.get("valido") or "").strip() or humanas.get(clave_fila(r), "")     # la marca humana no se pierde
     pendientes = [r for r in filas if rehacer or r["juez_veredicto"] not in VEREDICTOS]
     sin_brecha = [r for r in pendientes if clave_fila(r) not in brechas]
     for r in sin_brecha:
@@ -125,18 +127,18 @@ def procesar_json(ruta: str, cliente, contenido_minimo, concurrencia: int, max_i
     for r, x in zip(pendientes, respuestas):
         if x:
             r["juez_veredicto"], r["juez_motivo"] = x["veredicto"], x["motivo"]
-    with open(ruta_juez, "w", encoding="utf-8-sig", newline="") as f:
+    with open(archivo_juez, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=columnas + COLUMNAS_JUEZ, delimiter=";", extrasaction="ignore")
         w.writeheader()
         w.writerows(filas)
     cuentas = {v: sum(r["juez_veredicto"] == v for r in filas) for v in VEREDICTOS}
-    return {"json": ruta, "csv": ruta_juez, "items": len(filas), "juzgados": sum(x is not None for x in respuestas), "sin_brecha": len(sin_brecha),
+    return {"json": ruta, "csv": archivo_juez, "items": len(filas), "juzgados": sum(x is not None for x in respuestas), "sin_brecha": len(sin_brecha),
             "cuentas": cuentas, "sin_veredicto": sum(r["juez_veredicto"] not in VEREDICTOS for r in filas), "detenida": detenida}
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Juez externo de precisión sobre las brechas que no son trampas")
-    p.add_argument("jsons", nargs="+", metavar="JSON", help="JSON(s) de análisis (con extras_revision.csv al lado)")
+    p.add_argument("jsons", nargs="+", metavar="P#=JSON", help="JSON(s) de análisis, como P1=ruta (o la ruta, si trae la oferta); el CSV queda junto a cada JSON")
     p.add_argument("--max-items", type=int, help="juzga solo las primeras N brechas pendientes de cada JSON (prueba de humo)")
     p.add_argument("--concurrencia", type=int, default=config.NUBE_CONCURRENCIA)
     p.add_argument("--rehacer", action="store_true", help="vuelve a juzgar las brechas que ya tienen veredicto")
@@ -154,10 +156,10 @@ def main(argv=None) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     detenida = False
-    for ruta in a.jsons:
+    for oferta, ruta in [_oferta_de_ruta(r) for r in a.jsons]:
         if detenida:
             break
-        s = procesar_json(ruta, cliente, contenido_minimo, a.concurrencia, a.max_items, a.rehacer)
+        s = procesar_json(ruta, oferta, cliente, contenido_minimo, a.concurrencia, a.max_items, a.rehacer)
         detenida = s["detenida"]
         print(f"\n{os.path.basename(ruta)}: {s['items']} brechas | juzgadas ahora {s['juzgados']} | " + " | ".join(f"{k} {v}" for k, v in s["cuentas"].items())
               + f" | sin veredicto {s['sin_veredicto']}" + (f" | no encontradas en el JSON {s['sin_brecha']}" if s["sin_brecha"] else ""))
