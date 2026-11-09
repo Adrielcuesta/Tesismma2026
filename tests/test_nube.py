@@ -112,6 +112,54 @@ def test_429_y_5xx_que_el_cliente_no_resolvio_son_llamada_fallida_y_otros_errore
         nube.ClienteNube(LLMFalso(error=malo), nube.Gasto(PRECIOS, 4.0)).invocar("x")
 
 
+def _error_largo():
+    usage = type("U", (), {"prompt_tokens": 150, "completion_tokens": 1024})()
+    return openai.LengthFinishReasonError(completion=type("C", (), {"usage": usage})())
+
+
+def test_length_finish_reason_error_se_convierte_en_mensaje_cortado_y_cobra_los_tokens():
+    g = nube.Gasto(PRECIOS, 4.0)
+    m = nube.ClienteNube(LLMFalso(error=_error_largo()), g).invocar("x")
+    assert m.response_metadata["done_reason"] == "length" and m.content == ""
+    assert (g.entrada, g.salida) == (150, 1024)
+
+
+def test_un_par_truncado_no_corta_la_corrida_y_queda_registrado_y_contado():
+    llm = LLMFalso(error=_error_largo())
+    cliente = nube.ClienteNube(llm, nube.Gasto(PRECIOS, 4.0))
+    resultados = nube.ejecutar_secciones([_seccion(1), _seccion(3)], _docs(), cliente, cliente, LIN, concurrencia=1)
+    assert [i for i, _ in resultados] == ["S1", "S3"]
+    registro = [r for _, res in resultados for r in res["registro"]]
+    assert len(registro) == 4 and all(r["estado"] == "tiempo_agotado" for r in registro)
+    assert sum(res["llamadas"]["fallidas"] for _, res in resultados) == 8      # 4 pares x 2 intentos
+
+
+def test_reintento_de_formato_truncado_descarta_el_par_y_lo_cuenta_como_fallida():
+    class LLMInvalidoYLargo(LLMFalso):
+        def invoke(self, entrada):
+            self.llamadas += 1
+            if isinstance(entrada, str):        # el reintento de formato (prompt en texto) se corta por largo
+                raise _error_largo()
+            return AIMessage(content="no es json", response_metadata={"finish_reason": "stop"})
+    cliente = nube.ClienteNube(LLMInvalidoYLargo(), nube.Gasto(PRECIOS, 4.0))
+    [(_, res)] = nube.ejecutar_secciones([_seccion(1)], {"S1": _docs()["S1"][:1]}, cliente, cliente, LIN, concurrencia=1)
+    assert res["registro"][0]["estado"] == "descartada" and res["registro"][0]["motivo"].startswith("formato inválido")
+    assert res["llamadas"]["fallidas"] == 1
+
+
+def test_un_error_inesperado_en_una_seccion_la_marca_y_las_demas_siguen():
+    class LLMRoto(LLMFalso):
+        def invoke(self, entrada):
+            if self.llamadas == 0:
+                self.llamadas += 1
+                raise RuntimeError("falla rara")
+            return super().invoke(entrada)
+    cliente = nube.ClienteNube(LLMRoto(), nube.Gasto(PRECIOS, 4.0))
+    resultados = nube.ejecutar_secciones([_seccion(1), _seccion(3)], _docs(), cliente, cliente, LIN, concurrencia=1)
+    assert resultados[0][1]["registro"][0]["estado"] == "seccion_fallida" and resultados[0][1]["incompleta"] is False
+    assert [r["veredicto"] for r in resultados[1][1]["registro"]] == ["No aplica", "No aplica"]
+
+
 def test_sin_presupuesto_no_llama_al_modelo():
     llm = LLMFalso()
     g = nube.Gasto(PRECIOS, 0.0)

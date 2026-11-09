@@ -22,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import openai
 from langchain_core.documents import Document
+from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableLambda
 
 from . import clasificacion, comentario, config, costo, document_utils, lineamientos, rag_components
@@ -90,6 +91,14 @@ class ClienteNube:
             mensaje = self._llamar(entrada)
         except (openai.RateLimitError, openai.InternalServerError, openai.APIConnectionError) as e:
             raise LlamadaFallida(f"{type(e).__name__}: {str(e)[:120]}") from e
+        except openai.LengthFinishReasonError as e:
+            # el modelo agotó max_tokens antes de cerrar el JSON: el SDK levanta en vez de devolver el mensaje. Se devuelve un mensaje vacío con
+            # finish_reason=length para que _invocar lo trate como corte por largo (un reintento y luego LlamadaFallida) y el reintento de formato
+            # lo descarte como formato inválido; se cobran los tokens que informa la excepción.
+            usage = getattr(getattr(e, "completion", None), "usage", None)
+            logger.warning(f"{self.nombre or 'respuesta'} cortada por largo ({type(e).__name__}): se trata como respuesta truncada.")
+            mensaje = AIMessage(content="", response_metadata={"finish_reason": "length", "token_usage": {
+                "prompt_tokens": getattr(usage, "prompt_tokens", 0) or 0, "completion_tokens": getattr(usage, "completion_tokens", 0) or 0}})
         meta = dict(getattr(mensaje, "response_metadata", None) or {})
         uso, uso_meta = getattr(mensaje, "usage_metadata", None) or {}, meta.get("token_usage") or {}
         entrada_tok = uso.get("input_tokens") or uso_meta.get("prompt_tokens") or 0
@@ -153,10 +162,17 @@ def _correr_seccion(seccion, docs, cadena_verif, cadena_clasif, cliente_verif, c
     llamadas, t_sec = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0}), {"id": seccion["id"]}
     try:
         brechas, alertas, registro = _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, cliente_verif, cliente_clasif, lin, t_sec, llamadas)
+        # los pares descartados por formato inválido (tras el reintento de formato) también son llamadas fallidas
+        llamadas["fallidas"] = llamadas.get("fallidas", 0) + sum(1 for r in registro if r.get("estado") in ("descartada", "clasificacion_fallida"))
         return {"brechas": brechas, "alertas": alertas, "registro": registro, "llamadas": llamadas, "t_sec": t_sec, "incompleta": False}
     except PresupuestoAgotado:
         registro = [{"seccion": seccion["id"], "etapa": "verificacion", "estado": "presupuesto_agotado", "motivo": "la corrida se detuvo al alcanzar el presupuesto"}]
         return {"brechas": [], "alertas": [], "registro": registro, "llamadas": llamadas, "t_sec": t_sec, "incompleta": True}
+    except Exception as e:      # imprevisto en la sección: no corta la corrida; se pierde lo de esta sección y queda marcada
+        logger.error(f"{seccion['id']}: error inesperado ({type(e).__name__}: {str(e)[:200]}); la sección queda incompleta y la corrida sigue.")
+        registro = [{"seccion": seccion["id"], "etapa": "verificacion", "estado": "seccion_fallida", "motivo": f"{type(e).__name__}: {str(e)[:200]}"}]
+        llamadas["fallidas"] = llamadas.get("fallidas", 0) + 1
+        return {"brechas": [], "alertas": [], "registro": registro, "llamadas": llamadas, "t_sec": t_sec, "incompleta": False}
 
 
 def ejecutar_secciones(secciones, docs_por_seccion, cliente_verif, cliente_clasif, lin, concurrencia) -> list:
@@ -305,12 +321,18 @@ def main(argv=None) -> int:
         gasto = Gasto(config.PRECIOS_NUBE[a.modelo], config.PRESUPUESTO_USD)
         cliente_verif, cliente_clasif = cliente_de(VerificacionArticulo), cliente_de(ClasificacionRiesgo)
         indice = indice_de_articulos(_abrir_chroma().get(include=["documents", "metadatas"]))
-        salidas = []
+        salidas, fallos = [], []
         for i, ruta in enumerate(a.reusar_recuperacion):
             if salidas and salidas[-1]["detenida"]:
                 break
             logger.info(f"--- {os.path.basename(ruta)} con {a.proveedor}:{a.modelo} (concurrencia {a.concurrencia}) ---")
-            salidas.append(correr_oferta(ruta, a.pdf[i] if a.pdf else None, cliente_verif, cliente_clasif, gasto, lin, indice, a.proveedor, a.modelo, a.concurrencia, a.thinking, a.max_pares))
+            try:
+                salidas.append(correr_oferta(ruta, a.pdf[i] if a.pdf else None, cliente_verif, cliente_clasif, gasto, lin, indice, a.proveedor, a.modelo, a.concurrencia, a.thinking, a.max_pares))
+            except (AnalisisError, ValueError):
+                raise
+            except Exception as e:      # imprevisto al armar o guardar una oferta: se avisa y se sigue con la siguiente
+                logger.exception(f"{os.path.basename(ruta)}: error inesperado, no se guardó esta oferta ({type(e).__name__}: {e})")
+                fallos.append(os.path.basename(ruta))
     except (AnalisisError, ValueError, lineamientos.LineamientosError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
@@ -320,6 +342,9 @@ def main(argv=None) -> int:
         print(f"  tokens: {s['gasto']['entrada']} de entrada ({s['gasto']['cacheados']} cacheados), {s['gasto']['salida']} de salida | costo {s['gasto']['usd']:.4f} USD")
         print(f"  Dashboard: {s['html']}" + ("\n  DETENIDA: se alcanzó el presupuesto; las secciones incompletas figuran como presupuesto_agotado en el registro técnico." if s["detenida"] else ""))
     print(f"\nGasto total de la corrida: {gasto.usd:.4f} USD de {config.PRESUPUESTO_USD} USD")
+    if fallos:
+        print(f"Ofertas que fallaron sin guardarse: {', '.join(fallos)}", file=sys.stderr)
+        return 1
     return 0
 
 
