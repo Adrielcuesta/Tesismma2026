@@ -3,8 +3,8 @@
     "qwen3:8b local": {
       "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261108_151743_reclasificado.json",
       "P2": "datos/Resultados/P2_oferta_PH400/analisis_riesgos_P2_oferta_PH400_20261108_172507_reclasificado.json",
-      "P3": {"auto": {"carpeta": "datos/Resultados/P3_oferta_TV1600", "condicion": "rag_verificacion"}},
-      "P4": {"auto": {"carpeta": "datos/Resultados/P4_oferta_TPE800", "condicion": "rag_verificacion"}}
+      "P3": {"auto": {"carpeta": "datos/Resultados/P3_oferta_TV1600", "condicion": "rag_seccion", "modo_generacion": "verificacion"}},
+      "P4": {"auto": {"carpeta": "datos/Resultados/P4_oferta_TPE800", "condicion": "rag_seccion", "modo_generacion": "verificacion"}}
     },
     "Qwen3-32B": {
       "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261108_233006_deepinfra-qwen3-32b.json",

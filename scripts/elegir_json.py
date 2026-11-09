@@ -3,7 +3,7 @@
 sin mirar el nombre del archivo. Excluye los reclasificados, los parciales y los de la nube (deepinfra).
 
 Uso:
-  python -m scripts.elegir_json <carpeta> [--condicion sin_rag]
+  python -m scripts.elegir_json <carpeta> [--condicion sin_rag] [--modo-generacion verificacion|lista]
 Imprime los candidatos y, al final, "JSON: <ruta>" (o sale con codigo 1 si no hay ninguno)."""
 import argparse
 import glob
@@ -14,17 +14,23 @@ import sys
 EXCLUIDOS = ("reclasificado", "parcial", "deepinfra")
 
 
-def condicion_de(ruta: str):
-    """configuracion_analisis.condicion del JSON; None si no se puede leer."""
+def _campo_de(ruta: str, campo: str):
+    """configuracion_analisis.<campo> del JSON; None si no se puede leer."""
     try:
         with open(ruta, encoding="utf-8") as f:
-            return (json.load(f).get("configuracion_analisis") or {}).get("condicion")
+            return (json.load(f).get("configuracion_analisis") or {}).get(campo)
     except (OSError, ValueError, AttributeError):
         return None
 
 
-def elegir(carpeta: str, condicion: str = "sin_rag") -> tuple:
-    """(elegido o None, lineas): el analisis_riesgos_*.json mas reciente (por fecha de modificacion) con esa condicion, y el detalle de cada candidato."""
+def condicion_de(ruta: str):
+    """configuracion_analisis.condicion del JSON; None si no se puede leer."""
+    return _campo_de(ruta, "condicion")
+
+
+def elegir(carpeta: str, condicion: str = "sin_rag", modo_generacion: str = None) -> tuple:
+    """(elegido o None, lineas): el analisis_riesgos_*.json mas reciente (por fecha de modificacion) con esa condicion, y el detalle de cada candidato.
+    Con `modo_generacion` ('verificacion' o 'lista') exige ademas configuracion_analisis.modo_generacion igual a ese valor."""
     candidatos = sorted(glob.glob(os.path.join(carpeta, "analisis_riesgos_*.json")), key=os.path.getmtime, reverse=True)
     lineas, elegido = [], None
     for ruta in candidatos:
@@ -33,11 +39,12 @@ def elegir(carpeta: str, condicion: str = "sin_rag") -> tuple:
             lineas.append(f"  excluido por el nombre: {nombre}")
             continue
         cond = condicion_de(ruta)
-        if cond == condicion and elegido is None:
+        modo = _campo_de(ruta, "modo_generacion") if modo_generacion else None
+        if cond == condicion and (not modo_generacion or modo == modo_generacion) and elegido is None:
             elegido = ruta
-            lineas.append(f"  ELEGIDO ({cond}): {nombre}")
+            lineas.append(f"  ELEGIDO ({cond}{', ' + str(modo) if modo_generacion else ''}): {nombre}")
         else:
-            lineas.append(f"  {'ilegible' if cond is None else 'condicion ' + str(cond)}: {nombre}")
+            lineas.append(f"  {'ilegible' if cond is None else 'condicion ' + str(cond)}{', modo ' + str(modo) if modo_generacion else ''}: {nombre}")
     return elegido, lineas
 
 
@@ -52,8 +59,9 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Elige el JSON mas reciente de una carpeta con la condicion indicada.")
     p.add_argument("carpeta")
     p.add_argument("--condicion", default="sin_rag")
+    p.add_argument("--modo-generacion", choices=["verificacion", "lista"], help="exige ademas configuracion_analisis.modo_generacion (opcional)")
     a = p.parse_args(argv)
-    elegido, lineas = elegir(a.carpeta, a.condicion)
+    elegido, lineas = elegir(a.carpeta, a.condicion, a.modo_generacion)
     print(f"Candidatos en {a.carpeta} (condicion buscada: {a.condicion}):")
     print("\n".join(lineas) if lineas else "  (ninguno)")
     if not elegido:

@@ -8,7 +8,8 @@ Configuración (JSON): {"configuraciones": {"<nombre>": {"P1": "<ruta json>", "P
                        "conjuntos": {"<nombre>": ["P1", "P2"], ...}}      # «conjuntos» es opcional (por defecto desarrollo, prueba y total)
 Los conjuntos o las ofertas sin JSON (ruta vacía o inexistente) se omiten con un aviso. Rutas relativas a la carpeta desde la que se corre.
 En lugar de una ruta, una oferta puede ser {"auto": {"carpeta": "<carpeta>", "condicion": "<condicion>"}} (el JSON local más reciente con esa condición) o
-{"auto": {"carpeta": "<carpeta>", "sufijo": "<sufijo>"}} (el más reciente que termina en _<sufijo>.json). Otras claves de nivel superior (p. ej. «sin_rag») se ignoran."""
+{"auto": {"carpeta": "<carpeta>", "sufijo": "<sufijo>"}} (el más reciente que termina en _<sufijo>.json). Con «sin_rag»: {"P1": "<ruta>", ...} (JSON en modo lista) se genera comparacion_sin_rag.md: la PRIMERA configuración
+contra el sin RAG, con McNemar, para cada conjunto de 2 o más ofertas completo en ambos lados. «modo_generacion» en un «auto» por condición exige además ese modo."""
 import argparse
 import csv
 import json
@@ -37,14 +38,14 @@ def cargar_config(ruta: str) -> dict:
 
 
 def resolver_ruta(valor, etiqueta: str = "") -> str:
-    """Ruta del JSON de una oferta. «valor» es la ruta (cadena) o {"auto": {"carpeta": ..., "condicion": ...}} (el JSON más reciente de la carpeta con esa
-    configuracion_analisis.condicion, sin deepinfra, reclasificado ni parcial; scripts.elegir_json) o {"auto": {"carpeta": ..., "sufijo": ...}}
+    """Ruta del JSON de una oferta. «valor» es la ruta (cadena) o {"auto": {"carpeta": ..., "condicion": ..., "modo_generacion": ...}} (el JSON más reciente de
+    la carpeta con esa configuracion_analisis.condicion y, si se indica, ese modo_generacion; sin deepinfra, reclasificado ni parcial; scripts.elegir_json) o {"auto": {"carpeta": ..., "sufijo": ...}}
     (el más reciente *_<sufijo>.json). Devuelve "" si no hay ninguno (con aviso)."""
     if not isinstance(valor, dict) or "auto" not in valor:
         return valor or ""
     a = valor["auto"]
     if "condicion" in a:
-        elegido = elegir_json.elegir(a.get("carpeta", ""), a["condicion"])[0]
+        elegido = elegir_json.elegir(a.get("carpeta", ""), a["condicion"], a.get("modo_generacion"))[0]
     elif "sufijo" in a:
         elegido = elegir_json.elegir_por_sufijo(a.get("carpeta", ""), a["sufijo"])
     else:
@@ -263,15 +264,42 @@ def grafico_recall_costo_tiempo(filas: list, ruta: str, conjunto: str):
     plt.close(fig)
 
 
+def comparacion_sin_rag(cfg: dict, evaluadas: dict):
+    """Markdown con la tabla con RAG / sin RAG y el McNemar (las mismas funciones que evaluar --comparar) de la PRIMERA configuración del archivo contra
+    el grupo «sin_rag», para cada conjunto de 2 o más ofertas que tenga JSON en ambos lados. None si no hay nada que comparar."""
+    if not cfg.get("sin_rag"):
+        return None
+    nombre = next(iter(cfg["configuraciones"]))
+    con, sins = evaluadas.get(nombre, {}), {}
+    for oferta, valor in cfg["sin_rag"].items():
+        ruta = resolver_ruta(valor, f"sin RAG / {oferta}")
+        if ruta and os.path.isfile(ruta):
+            sins[oferta] = E.evaluar(E._cargar(ruta), E.cargar_gt(oferta), E.cargar_espejos(oferta), oferta)
+        else:
+            print(f"Aviso: sin RAG / {oferta}: no hay JSON en «{ruta}»; se omite.", file=sys.stderr)
+    L = [f"# Comparación con RAG ({nombre}) frente a sin RAG", ""]
+    for conjunto, ofertas in cfg["conjuntos"].items():
+        if len(ofertas) > 1 and all(o in con and o in sins for o in ofertas):
+            t, s = E.combinar([con[o] for o in ofertas]), E.combinar([sins[o] for o in ofertas])
+            L += [f"## {conjunto}", "", E.tabla_comparacion(t, s, E.comparar_mcnemar(t, s)), ""]
+    return "\n".join(L) if len(L) > 2 else None
+
+
 def generar(cfg: dict, salida: str, graficos: bool = True) -> dict:
     os.makedirs(salida, exist_ok=True)
-    filas = calcular_filas(evaluar_configuraciones(cfg), cfg["conjuntos"])
+    evaluadas = evaluar_configuraciones(cfg)
+    filas = calcular_filas(evaluadas, cfg["conjuntos"])
     if not filas:
         raise SystemExit("No hay ningún conjunto con todos sus JSON: completá las rutas de la configuración.")
     rutas = {"md": os.path.join(salida, "tabla_comparativa.md"), "csv": os.path.join(salida, "tabla_comparativa.csv")}
     with open(rutas["md"], "w", encoding="utf-8") as f:
         f.write(tabla_md(filas))
     guardar_csv(filas, rutas["csv"])
+    comparacion = comparacion_sin_rag(cfg, evaluadas)
+    if comparacion:
+        rutas["sin_rag"] = os.path.join(salida, "comparacion_sin_rag.md")
+        with open(rutas["sin_rag"], "w", encoding="utf-8") as f:
+            f.write(comparacion)
     if graficos:
         nombres = list(cfg["conjuntos"])
         dev, prueba = nombres[0], nombres[1] if len(nombres) > 1 else nombres[0]

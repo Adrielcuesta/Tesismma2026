@@ -280,6 +280,40 @@ def test_config_final_se_carga_y_tiene_las_cuatro_configuraciones_y_los_dos_auto
     assert len(cfg["configuraciones"]) == 4 and set(cfg["sin_rag"]) == {"P1", "P2", "P3", "P4"}
     autos = [(n, o) for n, ofertas in cfg["configuraciones"].items() for o, v in ofertas.items() if isinstance(v, dict)]
     assert autos == [("qwen3:8b local", "P3"), ("qwen3:8b local", "P4"), ("32B con razonamiento + recuperación amplia", "P4")]
+    for oferta in ("P3", "P4"):      # el 8B: condición rag_seccion y, además, modo verificación (no el modo lista)
+        a = cfg["configuraciones"]["qwen3:8b local"][oferta]["auto"]
+        assert a["condicion"] == "rag_seccion" and a["modo_generacion"] == "verificacion"
+
+
+def test_auto_con_modo_generacion_exige_verificacion(tmp_path):
+    def escribir(nombre, modo, mtime):
+        ruta = tmp_path / nombre
+        ruta.write_text(json.dumps({"configuracion_analisis": {"condicion": "rag_seccion", "modo_generacion": modo}}), encoding="utf-8")
+        os.utime(ruta, (mtime, mtime))
+    escribir("analisis_riesgos_P3_a_verif.json", "verificacion", 1000)
+    escribir("analisis_riesgos_P3_b_lista.json", "lista", 2000)           # más reciente, pero en modo lista
+    valor = {"auto": {"carpeta": str(tmp_path), "condicion": "rag_seccion", "modo_generacion": "verificacion"}}
+    assert os.path.basename(tc.resolver_ruta(valor, "x")) == "analisis_riesgos_P3_a_verif.json"
+    sin_filtro = {"auto": {"carpeta": str(tmp_path), "condicion": "rag_seccion"}}
+    assert os.path.basename(tc.resolver_ruta(sin_filtro, "x")) == "analisis_riesgos_P3_b_lista.json"      # el filtro es opcional
+
+
+def test_comparacion_con_rag_frente_a_sin_rag_con_mcnemar(tmp_path, monkeypatch):
+    monkeypatch.setattr(tc.E, "cargar_gt", lambda oferta: [dict(r) for r in GT])
+    monkeypatch.setattr(tc.E, "cargar_espejos", lambda oferta: [dict(r) for r in ESPEJOS])
+    lista = {"configuracion_analisis": {"condicion": "sin_rag"}, "registro_brechas": [], "resumen_ejecutivo": None,
+             "riesgos_identificados_estructurados": [{"descripcion_riesgo": "d", "cita_oferta": "Se indica que la cantidad ofertada es de una unidad."}]}
+    sin = {}
+    for oferta in ("P8", "P9"):
+        ruta = tmp_path / f"sin_{oferta}.json"
+        ruta.write_text(json.dumps(lista), encoding="utf-8")
+        sin[oferta] = str(ruta)
+    ev_con = {o: ev.evaluar(RESULTADO, [dict(r) for r in GT], [dict(r) for r in ESPEJOS], o) for o in ("P8", "P9")}
+    cfg = {"configuraciones": {"8B": {}, "otra": {}}, "sin_rag": {**sin, "P7": ""}, "conjuntos": {"P8–P9": ["P8", "P9"], "solo P9": ["P9"], "con P7": ["P7", "P8"]}}
+    texto = tc.comparacion_sin_rag(cfg, {"8B": ev_con})
+    assert "## P8–P9" in texto and "McNemar" in texto and "Con RAG" in texto and "Sin RAG" in texto
+    assert "## solo P9" not in texto and "## con P7" not in texto            # solo conjuntos de 2 o más ofertas completos en ambos lados
+    assert tc.comparacion_sin_rag({"configuraciones": {"8B": {}}, "conjuntos": {}}, {}) is None
 
 
 # --- script de cierre ---
