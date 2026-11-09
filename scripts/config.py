@@ -187,7 +187,7 @@ PRECIOS_NUBE = {
     "Qwen/Qwen3-235B-A22B-Instruct-2507": {"entrada": 0.09, "salida": 0.55},
     "qwen/qwen3.8-27b": {"entrada": 0.80, "salida": 4.00},
 }
-PRESUPUESTO_USD = 4.0         # tope de gasto acumulado de una corrida: al alcanzarlo se guarda lo hecho y se detiene
+PRESUPUESTO_USD = 1.0        # tope de gasto acumulado de una corrida: al alcanzarlo se guarda lo hecho y se detiene
 
 # --- Configuración de LLMs ---
 LLM_MODELS = {
