@@ -403,3 +403,10 @@ def test_graficos_se_generan(tmp_path):
     tc.grafico_embudo(filas, str(tmp_path / "b.png"), "P9 solo")
     tc.grafico_recall_costo_tiempo(filas, str(tmp_path / "c.png"), "P9 solo")
     assert all(os.path.getsize(tmp_path / n) > 1000 for n in ("a.png", "b.png", "c.png"))
+
+
+def test_etiquetas_cortas_solo_para_graficos_y_la_tabla_conserva_el_nombre_largo():
+    assert [tc._corta(n) for n in ("qwen3:8b local", "Qwen3-32B", "Qwen3-32B con razonamiento", "32B con razonamiento + recuperación amplia")] == [
+        "8B local", "32B", "32B razon.", "32B razon. + amplia"]
+    assert tc._corta("otro nombre") == "otro nombre"
+    assert "8B local" in tc.tabla_md(_filas())  # la tabla usa el nombre de la configuración tal cual

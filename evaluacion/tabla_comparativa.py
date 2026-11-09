@@ -189,6 +189,15 @@ def _plt():
     return plt
 
 
+ETIQUETAS_CORTAS = {"qwen3:8b local": "8B local", "Qwen3-32B": "32B", "Qwen3-32B con razonamiento": "32B razon.",
+                    "32B con razonamiento + recuperación amplia": "32B razon. + amplia"}
+
+
+def _corta(nombre: str) -> str:
+    """Etiqueta corta para los gráficos (la tabla mantiene el nombre largo); lo que no está en el mapa queda igual."""
+    return ETIQUETAS_CORTAS.get(nombre, nombre)
+
+
 def _por_configuracion(filas: list, conjunto: str) -> dict:
     return {f["configuracion"]: f for f in filas if f["conjunto"] == conjunto}
 
@@ -213,7 +222,7 @@ def grafico_recall_falsas(filas: list, ruta: str, dev: str, prueba: str):
             for x, v, techo in zip(xs, vs, errores[1]):
                 eje.text(x, v + techo + 0.01, f"{v:.0%}", ha="center", va="bottom", fontsize=13)
         eje.set_title(titulo, loc="left")
-        eje.set_xticks(range(len(nombres)), [n.replace(" ", "\n", 1) for n in nombres])
+        eje.set_xticks(range(len(nombres)), [_corta(n).replace(" ", "\n", 1) for n in nombres])
         eje.set_ylim(0, 1.15)
         eje.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
         eje.grid(axis="y", color="#e5e5e5")
@@ -231,11 +240,12 @@ def grafico_embudo(filas: list, ruta: str, conjunto: str):
     nombres = [n for n, f in datos.items() if not f["sin_registro"]]
     fig, eje = plt.subplots(figsize=(14, 6.5))
     izq = [0.0] * len(nombres)
+    etiquetas = [_corta(n) for n in nombres]
     for categoria, color in COLORES_PERDIDA.items():
         vs = [datos[n]["perdidas"][categoria] / datos[n]["trampas"] for n in nombres]
         if not any(vs):
             continue
-        eje.barh(nombres, vs, left=izq, color=color, label=categoria, edgecolor="white", linewidth=2)
+        eje.barh(etiquetas, vs, left=izq, color=color, label=categoria, edgecolor="white", linewidth=2)
         for i, v in enumerate(vs):
             if v >= 0.06:
                 eje.text(izq[i] + v / 2, i, f"{v:.0%}", ha="center", va="center", color="white" if color in (AZUL, NARANJA, GRIS) else TINTA, fontsize=14)
@@ -258,13 +268,15 @@ def grafico_recall_costo_tiempo(filas: list, ruta: str, conjunto: str):
                                            (ejes[1], "Recall frente al tiempo", lambda f: f["tiempo_s"] / 60, "Tiempo (minutos)")):
         for i, (n, f) in enumerate(datos.items()):
             eje.scatter(x_de(f), f["recall"], s=260, color=colores[i % len(colores)], edgecolor="white", linewidth=2, zorder=3)
-            eje.annotate(n, (x_de(f), f["recall"]), textcoords="offset points", xytext=(12, 8), fontsize=14)
+            eje.annotate(_corta(n), (x_de(f), f["recall"]), textcoords="offset points", xytext=(12, 8 if i % 2 == 0 else -20), fontsize=14)
+        xs = [x_de(f) for f in datos.values()]
+        ancho = (max(xs) - min(xs)) or max(xs) or 1
+        eje.set_xlim(min(xs) - 0.1 * ancho, max(xs) + 0.7 * ancho)
         eje.set_title(f"{titulo} ({conjunto})", loc="left", fontsize=16)
         eje.set_xlabel(etiqueta_x)
         eje.set_ylabel("Recall estricto")
         eje.set_ylim(0, 1)
         eje.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
-        eje.margins(x=0.25)
         eje.grid(color="#e5e5e5")
         eje.set_axisbelow(True)
     fig.tight_layout()
@@ -317,7 +329,7 @@ def generar(cfg: dict, salida: str, graficos: bool = True) -> dict:
         amplio = _conjunto_amplio(filas)
         rutas["b"], rutas["c"] = os.path.join(salida, "grafico_b_embudo.png"), os.path.join(salida, "grafico_c_recall_costo_tiempo.png")
         grafico_embudo(filas, rutas["b"], amplio)
-        grafico_recall_costo_tiempo(filas, rutas["c"], amplio)
+        grafico_recall_costo_tiempo(filas, rutas["c"], prueba if any(f["conjunto"] == prueba for f in filas) else amplio)
     return {"filas": filas, "rutas": rutas}
 
 
