@@ -1,0 +1,39 @@
+{
+  "configuraciones": {
+    "qwen3:8b local": {
+      "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261108_151743_reclasificado.json",
+      "P2": "datos/Resultados/P2_oferta_PH400/analisis_riesgos_P2_oferta_PH400_20261108_172507_reclasificado.json",
+      "P3": {"auto": {"carpeta": "datos/Resultados/P3_oferta_TV1600", "condicion": "rag_verificacion"}},
+      "P4": {"auto": {"carpeta": "datos/Resultados/P4_oferta_TPE800", "condicion": "rag_verificacion"}}
+    },
+    "Qwen3-32B": {
+      "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261108_233006_deepinfra-qwen3-32b.json",
+      "P2": "datos/Resultados/P2_oferta_PH400/analisis_riesgos_P2_oferta_PH400_20261108_234255_deepinfra-qwen3-32b.json",
+      "P3": "datos/Resultados/P3_oferta_TV1600/analisis_riesgos_P3_oferta_TV1600_20261109_142124_deepinfra-qwen3-32b-local.json",
+      "P4": "datos/Resultados/P4_oferta_TPE800/analisis_riesgos_P4_oferta_TPE800_20261109_143303_deepinfra-qwen3-32b-local.json"
+    },
+    "Qwen3-32B con razonamiento": {
+      "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261109_020326_deepinfra-qwen3-32b.json",
+      "P2": "datos/Resultados/P2_oferta_PH400/analisis_riesgos_P2_oferta_PH400_20261109_024612_deepinfra-qwen3-32b.json",
+      "P3": "datos/Resultados/P3_oferta_TV1600/analisis_riesgos_P3_oferta_TV1600_20261109_153030_deepinfra-qwen3-32b-thinking-local.json",
+      "P4": "datos/Resultados/P4_oferta_TPE800/analisis_riesgos_P4_oferta_TPE800_20261109_162024_deepinfra-qwen3-32b-thinking-local.json"
+    },
+    "32B con razonamiento + recuperación amplia": {
+      "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261109_120344_deepinfra-qwen3-32b-thinking.json",
+      "P2": "datos/Resultados/P2_oferta_PH400/analisis_riesgos_P2_oferta_PH400_20261109_123806_deepinfra-qwen3-32b-thinking.json",
+      "P3": "datos/Resultados/P3_oferta_TV1600/analisis_riesgos_P3_oferta_TV1600_20261109_172647_deepinfra-qwen3-32b-thinking-amplio.json",
+      "P4": {"auto": {"carpeta": "datos/Resultados/P4_oferta_TPE800", "sufijo": "deepinfra-qwen3-32b-thinking-amplio"}}
+    }
+  },
+  "sin_rag": {
+    "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261109_163337.json",
+    "P2": "datos/Resultados/P2_oferta_PH400/analisis_riesgos_P2_oferta_PH400_20261109_164727.json",
+    "P3": "datos/Resultados/P3_oferta_TV1600/analisis_riesgos_P3_oferta_TV1600_20261109_165721.json",
+    "P4": "datos/Resultados/P4_oferta_TPE800/analisis_riesgos_P4_oferta_TPE800_20261109_170812.json"
+  },
+  "conjuntos": {
+    "P1–P2 desarrollo": ["P1", "P2"],
+    "P3–P4 prueba": ["P3", "P4"],
+    "P1–P4 total": ["P1", "P2", "P3", "P4"]
+  }
+}

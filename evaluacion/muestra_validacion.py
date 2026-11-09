@@ -16,7 +16,7 @@ import sys
 
 from .evaluar import _clave_extra, leer_csv, norm, ruta_juez as ruta_csv_juez
 from .juez import VEREDICTOS, clave_brecha, clave_fila
-from .tabla_comparativa import cargar_config
+from .tabla_comparativa import cargar_config, resolver_config
 
 COLUMNAS = ["id", "configuracion", "oferta", "seccion", "norma", "articulo", "cita", "titulo", "texto_articulo", "valido", "ruta_juez"]
 
@@ -39,7 +39,7 @@ def cuotas(tamanos: dict, n: int) -> dict:
 def elegibles(cfg: dict) -> list:
     """Filas de los <json>_juez.csv con veredicto, de todas las configuraciones y ofertas, con los datos para mostrarlas."""
     filas = []
-    for nombre, ofertas in cfg["configuraciones"].items():
+    for nombre, ofertas in resolver_config(cfg).items():
         for oferta, ruta in ofertas.items():
             ruta_juez = ruta_csv_juez(ruta) if ruta else ""
             if not ruta or not os.path.isfile(ruta) or not os.path.isfile(ruta_juez):

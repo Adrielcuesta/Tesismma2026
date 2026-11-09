@@ -6,12 +6,16 @@ Uso:
   python -m evaluacion.tabla_comparativa --config evaluacion/config_tabla_ejemplo.json [--salida evaluacion/resultados_finales]
 Configuración (JSON): {"configuraciones": {"<nombre>": {"P1": "<ruta json>", "P2": "..."}, ...},
                        "conjuntos": {"<nombre>": ["P1", "P2"], ...}}      # «conjuntos» es opcional (por defecto desarrollo, prueba y total)
-Los conjuntos o las ofertas sin JSON (ruta vacía o inexistente) se omiten con un aviso. Rutas relativas a la carpeta desde la que se corre."""
+Los conjuntos o las ofertas sin JSON (ruta vacía o inexistente) se omiten con un aviso. Rutas relativas a la carpeta desde la que se corre.
+En lugar de una ruta, una oferta puede ser {"auto": {"carpeta": "<carpeta>", "condicion": "<condicion>"}} (el JSON local más reciente con esa condición) o
+{"auto": {"carpeta": "<carpeta>", "sufijo": "<sufijo>"}} (el más reciente que termina en _<sufijo>.json). Otras claves de nivel superior (p. ej. «sin_rag») se ignoran."""
 import argparse
 import csv
 import json
 import os
 import sys
+
+from scripts import elegir_json
 
 from . import evaluar as E
 
@@ -32,10 +36,35 @@ def cargar_config(ruta: str) -> dict:
     return cfg
 
 
+def resolver_ruta(valor, etiqueta: str = "") -> str:
+    """Ruta del JSON de una oferta. «valor» es la ruta (cadena) o {"auto": {"carpeta": ..., "condicion": ...}} (el JSON más reciente de la carpeta con esa
+    configuracion_analisis.condicion, sin deepinfra, reclasificado ni parcial; scripts.elegir_json) o {"auto": {"carpeta": ..., "sufijo": ...}}
+    (el más reciente *_<sufijo>.json). Devuelve "" si no hay ninguno (con aviso)."""
+    if not isinstance(valor, dict) or "auto" not in valor:
+        return valor or ""
+    a = valor["auto"]
+    if "condicion" in a:
+        elegido = elegir_json.elegir(a.get("carpeta", ""), a["condicion"])[0]
+    elif "sufijo" in a:
+        elegido = elegir_json.elegir_por_sufijo(a.get("carpeta", ""), a["sufijo"])
+    else:
+        raise SystemExit(f"{etiqueta}: «auto» necesita «condicion» o «sufijo»: {a}")
+    if not elegido:
+        print(f"Aviso: {etiqueta}: no hay JSON todavía para {a}; se omite.", file=sys.stderr)
+        return ""
+    print(f"Auto: {etiqueta} -> {elegido}", file=sys.stderr)
+    return elegido
+
+
+def resolver_config(cfg: dict) -> dict:
+    """{configuración: {oferta: ruta o ""}} con los «auto» ya resueltos."""
+    return {nombre: {oferta: resolver_ruta(v, f"{nombre} / {oferta}") for oferta, v in ofertas.items()} for nombre, ofertas in cfg["configuraciones"].items()}
+
+
 def evaluar_configuraciones(cfg: dict) -> dict:
     """{configuración: {oferta: ev}} con las ofertas cuyo JSON existe."""
     salida = {}
-    for nombre, ofertas in cfg["configuraciones"].items():
+    for nombre, ofertas in resolver_config(cfg).items():
         salida[nombre] = {}
         for oferta, ruta in ofertas.items():
             if not ruta or not os.path.isfile(ruta):
@@ -261,7 +290,11 @@ def main(argv=None):
     p.add_argument("--config", required=True, help="JSON con las rutas de cada configuración y oferta")
     p.add_argument("--salida", default=SALIDA)
     p.add_argument("--sin-graficos", action="store_true")
+    p.add_argument("--resolver", action="store_true", help="solo imprime la configuración con los «auto» resueltos (JSON en ASCII) y sale; lo usa cerrar_evaluacion.ps1")
     a = p.parse_args(argv)
+    if a.resolver:
+        print(json.dumps({"configuraciones": resolver_config(cargar_config(a.config))}, ensure_ascii=True))
+        return None
     r = generar(cargar_config(a.config), a.salida, not a.sin_graficos)
     for ruta in r["rutas"].values():
         print(f"Guardado: {ruta}")

@@ -5,7 +5,7 @@
 #     2. juez externo sobre todas las ofertas de la configuracion (un solo comando, un solo freno de gasto; genera <json>_juez.csv).
 #     3. evaluar --resultado de nuevo (ahora con precision segun el juez, F1/F2 y kappa).
 #   Al final: tabla comparativa y graficos en evaluacion\resultados_finales\.
-#   Las ofertas sin JSON (ruta vacia o inexistente) se omiten y queda avisado.
+#   Las ofertas sin JSON (ruta vacia, inexistente o un "auto" sin resultado todavia) se omiten y queda avisado.
 #
 # Uso, desde la raiz del repositorio:
 #   powershell -ExecutionPolicy Bypass -File .\scripts\cerrar_evaluacion.ps1 -Config evaluacion\config_tabla.json [-SoloHumo]
@@ -106,7 +106,8 @@ if (-not $Config -or -not (Test-Path $Config)) {
     Escribir-Log ("FALLO: indica -Config <json> con una ruta que exista (recibido: '{0}')." -f $Config)
 }
 else {
-    $cfg = Get-Content -Raw -Encoding UTF8 $Config | ConvertFrom-Json
+    # La configuracion se resuelve en Python (los "auto" = el JSON mas reciente de la carpeta); la salida es JSON ASCII, los avisos van a la consola.
+    $cfg = (& $script:python -m evaluacion.tabla_comparativa --config $Config --resolver | Out-String) | ConvertFrom-Json
     foreach ($c in $cfg.configuraciones.PSObject.Properties) {
         $nombre = $c.Name
         Jsons-De-Configuracion $nombre $c.Value

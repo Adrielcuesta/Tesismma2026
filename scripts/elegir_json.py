@@ -41,6 +41,13 @@ def elegir(carpeta: str, condicion: str = "sin_rag") -> tuple:
     return elegido, lineas
 
 
+def elegir_por_sufijo(carpeta: str, sufijo: str):
+    """El analisis_riesgos_*_<sufijo>.json mas reciente (por fecha de modificacion) de la carpeta, o None. El sufijo es el final exacto del nombre,
+    sin la extension (por ejemplo 'deepinfra-qwen3-32b-thinking-amplio'): un '-humo10' detras no coincide."""
+    candidatos = sorted(glob.glob(os.path.join(carpeta, f"analisis_riesgos_*_{sufijo}.json")), key=os.path.getmtime, reverse=True)
+    return candidatos[0] if candidatos else None
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Elige el JSON mas reciente de una carpeta con la condicion indicada.")
     p.add_argument("carpeta")

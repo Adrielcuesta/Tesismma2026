@@ -229,6 +229,59 @@ def test_volcar_marcas_en_el_csv_del_juez(tmp_path):
     assert despues[0]["juez_veredicto"] == "VALIDA"
 
 
+# --- modo "auto" de la configuración ---
+
+def _json_con_condicion(carpeta, nombre, condicion, mtime):
+    ruta = carpeta / nombre
+    ruta.write_text(json.dumps({"configuracion_analisis": {"condicion": condicion}}), encoding="utf-8")
+    os.utime(ruta, (mtime, mtime))
+
+
+def test_auto_por_condicion_elige_el_mas_reciente_sin_deepinfra_reclasificado_ni_parcial(tmp_path):
+    _json_con_condicion(tmp_path, "analisis_riesgos_P3_a_viejo.json", "rag_verificacion", 1000)
+    _json_con_condicion(tmp_path, "analisis_riesgos_P3_b_elegido.json", "rag_verificacion", 2000)
+    _json_con_condicion(tmp_path, "analisis_riesgos_P3_c_otra_condicion.json", "sin_rag", 3000)
+    _json_con_condicion(tmp_path, "analisis_riesgos_P3_d_deepinfra-qwen3-32b.json", "rag_verificacion", 4000)
+    _json_con_condicion(tmp_path, "analisis_riesgos_P3_e_reclasificado.json", "rag_verificacion", 5000)
+    _json_con_condicion(tmp_path, "analisis_riesgos_P3_f_parcial.json", "rag_verificacion", 6000)
+    valor = {"auto": {"carpeta": str(tmp_path), "condicion": "rag_verificacion"}}
+    assert os.path.basename(tc.resolver_ruta(valor, "x")) == "analisis_riesgos_P3_b_elegido.json"
+
+
+def test_auto_por_sufijo_elige_el_mas_reciente_y_no_confunde_humo(tmp_path):
+    for nombre, t in (("analisis_riesgos_P4_1_deepinfra-qwen3-32b-thinking-amplio.json", 1000), ("analisis_riesgos_P4_2_deepinfra-qwen3-32b-thinking-amplio.json", 2000),
+                      ("analisis_riesgos_P4_3_deepinfra-qwen3-32b-thinking-amplio-humo10.json", 3000), ("analisis_riesgos_P4_4_deepinfra-qwen3-32b-thinking.json", 4000)):
+        _json_con_condicion(tmp_path, nombre, "rag_verificacion", t)
+    valor = {"auto": {"carpeta": str(tmp_path), "sufijo": "deepinfra-qwen3-32b-thinking-amplio"}}
+    assert os.path.basename(tc.resolver_ruta(valor, "x")) == "analisis_riesgos_P4_2_deepinfra-qwen3-32b-thinking-amplio.json"
+
+
+def test_auto_sin_resultado_se_omite_con_aviso_y_las_rutas_normales_pasan_igual(tmp_path, capsys):
+    cfg = {"configuraciones": {"c": {"P3": {"auto": {"carpeta": str(tmp_path), "condicion": "rag_verificacion"}}, "P1": "ruta/fija.json", "P2": ""}}}
+    assert tc.resolver_config(cfg) == {"c": {"P3": "", "P1": "ruta/fija.json", "P2": ""}}
+    assert "no hay JSON todavía" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        tc.resolver_ruta({"auto": {"carpeta": str(tmp_path)}}, "x")
+
+
+def test_resolver_imprime_json_ascii_para_el_script(tmp_path, capsys):
+    _json_con_condicion(tmp_path, "analisis_riesgos_P3_ok.json", "rag_verificacion", 1000)
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text(json.dumps({"configuraciones": {"32B con razonamiento + recuperación amplia": {"P3": {"auto": {"carpeta": str(tmp_path), "condicion": "rag_verificacion"}}}}}), encoding="utf-8")
+    tc.main(["--config", str(cfg), "--resolver"])
+    salida = json.loads(capsys.readouterr().out)
+    assert list(salida["configuraciones"]) == ["32B con razonamiento + recuperación amplia"]
+    assert salida["configuraciones"]["32B con razonamiento + recuperación amplia"]["P3"].endswith("analisis_riesgos_P3_ok.json")
+
+
+def test_config_final_se_carga_y_tiene_las_cuatro_configuraciones_y_los_dos_auto():
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "evaluacion", "config_final.json")
+    cfg = tc.cargar_config(ruta)
+    assert len(cfg["configuraciones"]) == 4 and set(cfg["sin_rag"]) == {"P1", "P2", "P3", "P4"}
+    autos = [(n, o) for n, ofertas in cfg["configuraciones"].items() for o, v in ofertas.items() if isinstance(v, dict)]
+    assert autos == [("qwen3:8b local", "P3"), ("qwen3:8b local", "P4"), ("32B con razonamiento + recuperación amplia", "P4")]
+
+
 # --- script de cierre ---
 
 def test_script_cerrar_evaluacion_es_ascii_y_llama_a_los_modulos_en_orden():
