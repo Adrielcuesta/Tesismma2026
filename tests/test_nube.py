@@ -285,3 +285,10 @@ def test_si_el_json_trae_la_parte_se_usa_esa_y_no_hay_aviso():
     avisos = []
     docs = nube.documentos_de_seccion([{"norma": "N", "articulo": "1", "parte": 2}], indice, avisos)
     assert [d.page_content for d in docs] == ["p2"] and avisos == []
+
+
+def test_el_sufijo_distingue_thinking_y_perfil_de_recuperacion_sin_romper_el_nombre():
+    assert nube.sufijo_corrida("deepinfra", "Qwen/Qwen3-32B", False, "local") == "deepinfra-qwen3-32b-local"
+    assert nube.sufijo_corrida("deepinfra", "Qwen/Qwen3-32B", True, "local") == "deepinfra-qwen3-32b-thinking-local"
+    assert nube.sufijo_corrida("deepinfra", "Qwen/Qwen3-32B", True, "amplio") == "deepinfra-qwen3-32b-thinking-amplio"
+    assert nube.sufijo_corrida("deepinfra", "Qwen/Qwen3-32B", True, None, 10) == "deepinfra-qwen3-32b-thinking-humo10"      # JSON local viejo: sin perfil

@@ -213,6 +213,11 @@ def sufijo_modelo(proveedor: str, modelo: str) -> str:
     return re.sub(r"[^a-z0-9.\-]+", "-", f"{proveedor}-{modelo.split('/')[-1]}".lower()).strip("-")
 
 
+def sufijo_corrida(proveedor: str, modelo: str, thinking: bool, perfil=None, max_pares=None) -> str:
+    """Sufijo del nombre de salida: modelo, -thinking, perfil de recuperación (si el JSON local lo trae) y -humoN. Todo en [a-z0-9.-]: evaluar.py deduce la oferta del nombre."""
+    return sufijo_modelo(proveedor, modelo) + ("-thinking" if thinking else "") + (f"-{perfil}" if perfil else "") + (f"-humo{max_pares}" if max_pares else "")
+
+
 def _unir_llamadas(resultados: list) -> Llamadas:
     total = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0})
     for _, r in resultados:
@@ -291,10 +296,12 @@ def correr_oferta(ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, li
     reporte = armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, proveedor, concurrencia, gasto_oferta, time.perf_counter() - t0,
                             thinking, max_pares, detenida, normalizaciones_formato() - normalizaciones_antes,
                             {"verificacion": cliente_verif.formato, "clasificacion": cliente_clasif.formato})
-    sufijo = sufijo_modelo(proveedor, modelo) + ("-thinking" if thinking else "") + (f"-humo{max_pares}" if max_pares else "")
+    perfil = (local.get("configuracion_analisis") or {}).get("perfil_recuperacion")    # solo los JSON de scripts.recuperar lo traen
+    sufijo = sufijo_corrida(proveedor, modelo, thinking, perfil, max_pares)
     marca = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{sufijo}"
     ruta_html = _guardar_y_generar_dashboard(reporte, os.path.basename(pdf), marca)
-    return {"oferta": os.path.basename(pdf), "html": ruta_html, "gasto": gasto_oferta, "detenida": detenida,
+    ruta_json = os.path.join(os.path.dirname(os.path.join(config.PROJECT_ROOT, ruta_html)), os.path.basename(ruta_html).replace("dashboard_", "analisis_riesgos_", 1)[:-5] + ".json")
+    return {"oferta": os.path.basename(pdf), "html": ruta_html, "json": ruta_json if os.path.isfile(ruta_json) else None, "gasto": gasto_oferta, "detenida": detenida,
             "resumen": resumen_humo(reporte.registro_tecnico, gasto_oferta), "brechas": len(reporte.registro_brechas), "riesgos": len(reporte.riesgos), "alertas": len(reporte.alertas)}
 
 
@@ -344,6 +351,8 @@ def main(argv=None) -> int:
         r = s["resumen"]
         print(f"\n{s['oferta']}: {r['pares']} pares | JSON bien parseado {r['json_ok']}/{r['pares']} | brechas {s['brechas']} | riesgos {s['riesgos']} | alertas {s['alertas']}")
         print(f"  tokens: {s['gasto']['entrada']} de entrada ({s['gasto']['cacheados']} cacheados), {s['gasto']['salida']} de salida | costo {s['gasto']['usd']:.4f} USD")
+        if s.get("json"):
+            print(f"  JSON: {s['json']}")
         print(f"  Dashboard: {s['html']}" + ("\n  DETENIDA: se alcanzó el presupuesto; las secciones incompletas figuran como presupuesto_agotado en el registro técnico." if s["detenida"] else ""))
     print(f"\nGasto total de la corrida: {gasto.usd:.4f} USD de {config.PRESUPUESTO_USD} USD")
     if fallos:
