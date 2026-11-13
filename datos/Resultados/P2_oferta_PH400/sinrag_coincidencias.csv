@@ -1,0 +1,7 @@
+﻿trampa;frase;descripcion_riesgo;cita;valido
+P2-01-M;relación agua/cemento 0,52;Posible falta de control en la relación agua/cemento durante la ejecución.;Los bloques de reacción se hormigonarán con relación agua/cemento 0,52.;
+P2-01-B;ensayo esclerométrico a los 28 días;Posible variación en la resistencia del hormigón.;La resistencia del hormigón se validará en obra mediante ensayo esclerométrico a los 28 días.;
+P2-03-B;a 3 m del equipo;Posible no cumplimiento del nivel sonoro de la central hidráulica.;El nivel sonoro de la central hidráulica se verificará en comisionamiento a 3 m del equipo, garantizándose un valor ≤ 85 dB(A).;
+P2-04-A;prueba de funcionamiento en vacío en sitio;Posible falta de pruebas de estanqueidad durante la recepción provisoria.;La recepción provisoria se otorgará con el protocolo FAT firmado en fábrica y la prueba de funcionamiento en vacío en sitio.;
+P2-04-M;desnivel longitudinal de hasta 1,5 mm/m;Posible no compensación de desnivel longitudinal excesivo.;La vía de acceso a la prensa admitirá un desnivel longitudinal de hasta 1,5 mm/m.;
+P2-04-B;levantamiento realizado antes del hormigonado;Posible no certificación de la geometría de la vía.;La geometría de vía se certificará con el levantamiento realizado antes del hormigonado de la losa de vía.;

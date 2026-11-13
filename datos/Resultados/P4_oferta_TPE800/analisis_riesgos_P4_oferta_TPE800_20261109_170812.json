@@ -1,0 +1,1433 @@
+{
+    "configuracion_analisis": {
+        "modelo_llm_usado": "qwen3:8b",
+        "display_name_modelo": "Qwen3 8B (Local, sin costo)",
+        "condicion": "sin_rag",
+        "n_secciones": 12,
+        "k_recuperacion": "N/A",
+        "top_n_por_seccion": "N/A",
+        "reranker_max_length": "N/A",
+        "recuperacion_por_subseccion": "N/A",
+        "k_subseccion": "N/A",
+        "top_n_subseccion": "N/A",
+        "top_densa_subseccion": "N/A",
+        "oraciones_cifras": "N/A",
+        "tope_fragmentos_por_seccion": "N/A",
+        "modo_generacion": "lista",
+        "usar_crag": false,
+        "temperature": 0,
+        "seed": 42,
+        "thinking_verificacion": "N/A",
+        "verif_temperature": "N/A",
+        "verif_top_p": "N/A",
+        "verif_top_k": "N/A",
+        "llamadas_llm": {
+            "lista": 12
+        },
+        "llamadas_fallidas": 2,
+        "costo_computacional": {
+            "modelo": "qwen3:8b",
+            "hardware": {
+                "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+                "vram": "8188 MiB"
+            },
+            "pares_verificados": 0,
+            "llamadas_totales": 12,
+            "llamadas_fallidas": 1,
+            "tiempo_total_s": 647.76,
+            "segundos_por_par": {
+                "mediana": null,
+                "p90": null
+            },
+            "tokens_entrada_total": 15359,
+            "tokens_salida_total": 15893,
+            "tokens_entrada_por_par": null,
+            "tokens_salida_por_par": null,
+            "normalizaciones_formato": 0
+        },
+        "hardware": {
+            "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+            "vram": "8188 MiB"
+        },
+        "llamadas_detalle": [
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S2 (lista de riesgos)",
+                "duracion_s": 46.295,
+                "prompt_eval_count": 1295,
+                "eval_count": 1109,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S3 (lista de riesgos)",
+                "duracion_s": 56.817,
+                "prompt_eval_count": 1072,
+                "eval_count": 1480,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S4 (lista de riesgos)",
+                "duracion_s": 166.877,
+                "prompt_eval_count": 3208,
+                "eval_count": 4096,
+                "intentos": 2,
+                "exitosa": false
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S5 (lista de riesgos)",
+                "duracion_s": 58.7,
+                "prompt_eval_count": 1257,
+                "eval_count": 1443,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S6 (lista de riesgos)",
+                "duracion_s": 50.192,
+                "prompt_eval_count": 1585,
+                "eval_count": 1217,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S7 (lista de riesgos)",
+                "duracion_s": 61.339,
+                "prompt_eval_count": 1270,
+                "eval_count": 1531,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S8 (lista de riesgos)",
+                "duracion_s": 46.529,
+                "prompt_eval_count": 1163,
+                "eval_count": 1120,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S9 (lista de riesgos)",
+                "duracion_s": 53.263,
+                "prompt_eval_count": 1285,
+                "eval_count": 1257,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S10 (lista de riesgos)",
+                "duracion_s": 46.268,
+                "prompt_eval_count": 1009,
+                "eval_count": 1105,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S11 (lista de riesgos)",
+                "duracion_s": 39.415,
+                "prompt_eval_count": 1192,
+                "eval_count": 973,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "lista",
+                "par": null,
+                "etiqueta": "S12 (lista de riesgos)",
+                "duracion_s": 21.539,
+                "prompt_eval_count": 1023,
+                "eval_count": 562,
+                "intentos": 1,
+                "exitosa": true
+            }
+        ],
+        "tokens_generados_por_tipo": {
+            "lista": {
+                "n": 12,
+                "max": 2048,
+                "promedio": 1324.4
+            }
+        },
+        "excluir_introduccion": true,
+        "calcular_respaldo": false,
+        "tiempos_s": {
+            "extraccion": 0.02,
+            "division": 0.0,
+            "carga_kb": 0.0,
+            "recuperacion": 0,
+            "crag": 0,
+            "generacion": 647.24,
+            "verificacion": 0,
+            "clasificacion": 0,
+            "validacion": 0.0,
+            "por_seccion": [
+                {
+                    "id": "S1"
+                },
+                {
+                    "id": "S2",
+                    "tokens_prompt": 1295,
+                    "generacion": 46.3,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S3",
+                    "tokens_prompt": 1072,
+                    "generacion": 56.82,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S4",
+                    "generacion": 166.88,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S5",
+                    "tokens_prompt": 1257,
+                    "generacion": 58.7,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S6",
+                    "tokens_prompt": 1585,
+                    "generacion": 50.19,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S7",
+                    "tokens_prompt": 1270,
+                    "generacion": 61.34,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S8",
+                    "tokens_prompt": 1163,
+                    "generacion": 46.53,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S9",
+                    "tokens_prompt": 1285,
+                    "generacion": 53.26,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S10",
+                    "tokens_prompt": 1009,
+                    "generacion": 46.27,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S11",
+                    "tokens_prompt": 1192,
+                    "generacion": 39.41,
+                    "validacion": 0.0
+                },
+                {
+                    "id": "S12",
+                    "tokens_prompt": 1023,
+                    "generacion": 21.54,
+                    "validacion": 0.0
+                }
+            ],
+            "union": 0.0,
+            "resumen_final": 0.0,
+            "total": 647.76
+        },
+        "tokens_prompt_por_seccion": {
+            "S2": 1295,
+            "S3": 1072,
+            "S5": 1257,
+            "S6": 1585,
+            "S7": 1270,
+            "S8": 1163,
+            "S9": 1285,
+            "S10": 1009,
+            "S11": 1192,
+            "S12": 1023
+        }
+    },
+    "fragmentos_fuente": [],
+    "nombre_proyecto_analizado": "P4 oferta TPE800",
+    "timestamp_analisis": "2026-11-09T17:19:00.680151",
+    "respuesta_cruda_llm": "{\n  \"riesgos_identificados\": [\n    {\n      \"descripcion_riesgo\": \"Falta de especificación de normas de seguridad para el torno CNC.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Ejecutor del proyecto\",\n      \"responsable_accidente\": \"Proveedor de la maquinaria\",\n      \"accion_mitigacion\": \"Incluir normas de seguridad en el manual de operación del torno.\",\n      \"umbral_alerta\": \"Incidente de accidente laboral relacionado con el torno.\",\n      \"explicacion_riesgo\": \"El texto no menciona normas de seguridad para el torno CNC, lo que podría generar riesgos de accidentes.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"1. Resumen ejecutivo\",\n      \"cita_oferta\": \"Provisión e instalación de un torno paralelo CNC TPE-800.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si el torno cumple con normas de seguridad vigentes.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el tipo de certificación del puente grúa birriel.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Ejecutor del proyecto\",\n      \"responsable_accidente\": \"Proveedor del puente grúa\",\n      \"accion_mitigacion\": \"Incluir certificación de seguridad del puente grúa en la documentación técnica.\",\n      \"umbral_alerta\": \"Fallo del puente grúa durante operación.\",\n      \"explicacion_riesgo\": \"El texto menciona el puente grúa pero no detalla su certificación, lo que podría generar riesgos de operación insegura.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"1. Resumen ejecutivo\",\n      \"cita_oferta\": \"Puente grúa birriel de 12,5 t, luz 16 m, con limitador de carga.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si el puente grúa tiene certificación vigente.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\",\n        \"cita no verificada\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se menciona el tipo de material de la fosa del transportador de viruta.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Baja\",\n      \"responsabilidad_mitigacion\": \"Ejecutor del proyecto\",\n      \"responsable_accidente\": \"Proveedor de la fosa\",\n      \"accion_mitigacion\": \"Incluir especificación del material de la fosa en la documentación técnica.\",\n      \"umbral_alerta\": \"Daño estructural de la fosa durante operación.\",\n      \"explicacion_riesgo\": \"El texto describe la fosa pero no detalla su material, lo que podría afectar su resistencia y durabilidad.\",\n      \"exposicion_riesgo\": 2,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"1.1 Datos principales\",\n      \"cita_oferta\": \"Fosa del transportador de viruta 5,5 m de longitud, 1,10 m de profundidad.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si el material es adecuado para el entorno.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el tipo de electrificación de la vía 4 de acceso.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Ejecutor del proyecto\",\n      \"responsable_accidente\": \"Proveedor de la electrificación\",\n      \"accion_mitigacion\": \"Incluir especificación del sistema de electrificación de la vía en la documentación técnica.\",\n      \"umbral_alerta\": \"Fallo en el sistema de electrificación de la vía.\",\n      \"explicacion_riesgo\": \"El texto menciona que la vía está electrificada, pero no detalla el tipo de sistema, lo que podría generar riesgos de operación insegura.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"1.1 Datos principales\",\n      \"cita_oferta\": \"Vía 4 de acceso: Trocha 1.676 mm, electrificada con catenaria en el tramo exterior.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si el sistema de electrificación cumple con normas vigentes.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Falta de especificación de la profundidad de excavación.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico geotécnico\",\n      \"responsable_accidente\": \"Constructora\",\n      \"accion_mitigacion\": \"Realizar estudios geotécnicos detallados antes de la excavación.\",\n      \"umbral_alerta\": \"Detectar desplazamiento del terreno durante la excavación.\",\n      \"explicacion_riesgo\": \"El estudio geotécnico complementario no especifica la profundidad ni las condiciones del terreno, lo que podría provocar riesgos de estabilidad.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"2. Alcance\",\n      \"cita_oferta\": \"Estudio geotécnico complementario, demolición y excavación.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la profundidad y condiciones del terreno.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Falta de especificación de la capacidad estructural de las vigas carrileras.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Ingeniero estructural\",\n      \"responsable_accidente\": \"Constructora\",\n      \"accion_mitigacion\": \"Verificar y documentar la capacidad estructural de las vigas carrileras antes del montaje.\",\n      \"umbral_alerta\": \"Detectar deformación o daño en las vigas durante la instalación.\",\n      \"explicacion_riesgo\": \"Se menciona la verificación estructural de las vigas carrileras, pero no se especifica su capacidad, lo que podría llevar a un incumplimiento estructural.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"2. Alcance\",\n      \"cita_oferta\": \"Suministro, montaje, pruebas y habilitación del puente grúa de 12,5 t, incluidas las vigas carrileras sobre ménsulas existentes verificadas estructuralmente.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la capacidad estructural de las vigas.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Falta de especificación de los parámetros técnicos del torno TPE-800.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico especializado en maquinaria\",\n      \"responsable_accidente\": \"Constructora\",\n      \"accion_mitigacion\": \"Verificar y documentar los parámetros técnicos del torno TPE-800 antes de su instalación.\",\n      \"umbral_alerta\": \"Detectar fallas en el funcionamiento del torno durante la puesta en servicio.\",\n      \"explicacion_riesgo\": \"Se menciona el suministro e instalación del torno TPE-800, pero no se especifican sus parámetros técnicos, lo que podría llevar a un incumplimiento funcional.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"2. Alcance\",\n      \"cita_oferta\": \"Suministro, izaje, montaje y puesta en servicio del torno TPE-800.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los parámetros técnicos del torno.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Falta de especificación de la capacidad de la vía 4.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Ingeniero de transporte\",\n      \"responsable_accidente\": \"Constructora\",\n      \"accion_mitigacion\": \"Verificar y documentar la capacidad de la vía 4 antes de su adecuación.\",\n      \"umbral_alerta\": \"Detectar daño o falla en la vía 4 durante la operación.\",\n      \"explicacion_riesgo\": \"Se menciona la adecuación de la vía 4, pero no se especifica su capacidad, lo que podría llevar a un incumplimiento funcional.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"2. Alcance\",\n      \"cita_oferta\": \"Adecuación de la vía 4 en los 5 m previos al área de carga de ejes.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la capacidad de la vía 4.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el método de medición de la trocha nominal.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Inspector técnico\",\n      \"responsable_accidente\": \"Contratista\",\n      \"accion_mitigacion\": \"Implementar un protocolo de medición estandarizado para la trocha.\",\n      \"umbral_alerta\": \"Desviación de la trocha por encima de ± 1,5 mm en más del 20% de las secciones.\",\n      \"explicacion_riesgo\": \"El texto menciona la tolerancia de la trocha pero no detalla el método de medición, lo que puede generar incertidumbre en la verificación.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"3.7 Vía 4\",\n      \"cita_oferta\": \"La trocha nominal es de 1.676 mm con tolerancia de ± 1,5 mm (1.674,5 a 1.677,5 mm), medida en 11 secciones cada 0,50 m, con\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el método de medición detallado en el plan de ejecución.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el tipo de hormigón o materiales a utilizar en la nivelación.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de obra\",\n      \"responsable_accidente\": \"Contratista\",\n      \"accion_mitigacion\": \"Incluir especificaciones técnicas de los materiales a utilizar en la nivelación.\",\n      \"umbral_alerta\": \"Falta de cumplimiento en la resistencia o durabilidad del hormigón.\",\n      \"explicacion_riesgo\": \"La sección menciona nivelación pero no detalla los materiales o especificaciones del hormigón, lo que puede afectar la calidad y durabilidad.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"3.8 Cronograma\",\n      \"cita_oferta\": \"Nivelación, grout, hidráulica, electricidad.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar las especificaciones técnicas del hormigón y materiales.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se menciona el control de calidad en el proceso de curado de las estructuras.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Alta\",\n      \"responsabilidad_mitigacion\": \"Inspector de obra\",\n      \"responsable_accidente\": \"Contratista\",\n      \"accion_mitigacion\": \"Implementar un plan de control de calidad durante el curado de las estructuras.\",\n      \"umbral_alerta\": \"Falta de cumplimiento en la humedad o temperatura durante el curado.\",\n      \"explicacion_riesgo\": \"El cronograma menciona curado, pero no detalla los parámetros o métodos de control, lo que puede afectar la resistencia final de las estructuras.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"3.8 Cronograma\",\n      \"cita_oferta\": \"Curado; montaje de vigas carrileras y puente grúa.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el plan de curado detallado.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el tipo de pruebas a realizar en el puente grúa antes de su habilitación.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de inspección\",\n      \"responsable_accidente\": \"Contratista\",\n      \"accion_mitigacion\": \"Definir y documentar los tipos de pruebas mecánicas y funcionales del puente grúa.\",\n      \"umbral_alerta\": \"Falta de resultados de pruebas validadas por un organismo acreditado.\",\n      \"explicacion_riesgo\": \"El cronograma menciona pruebas y habilitación del puente grúa, pero no detalla el tipo de pruebas, lo que puede comprometer la seguridad.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"3.8 Cronograma\",\n      \"cita_oferta\": \"Pruebas y habilitación del puente grúa.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el plan de pruebas detallado.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Posible interferencia electromagnética entre cables de encoder y motor.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de instalación eléctrica\",\n      \"responsable_accidente\": \"Proveedor de la instalación\",\n      \"accion_mitigacion\": \"Verificar la separación de 50 mm y la terminación de las pantallas de los cables.\",\n      \"umbral_alerta\": \"Detectar interferencias en la señal del encoder durante la operación.\",\n      \"explicacion_riesgo\": \"Los cables de encoder y motor se encuentran en la misma bandeja sin aislamiento suficiente, lo que podría causar interferencias.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"4.4 Canalizaciones y EMC\",\n      \"cita_oferta\": \"Los cables de encoder y de motor compartirán bandeja, separados 50 mm mediante precintos.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la normativa de EMC aplicable.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Posible falta de protección contra descargas eléctricas en las tomas de mantenimiento.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de instalación eléctrica\",\n      \"responsable_accidente\": \"Proveedor de la instalación\",\n      \"accion_mitigacion\": \"Verificar que el diferencial general de 300 mA cubra efectivamente las tomas de mantenimiento.\",\n      \"umbral_alerta\": \"Detectar cortes inesperados en las tomas de mantenimiento durante la limpieza.\",\n      \"explicacion_riesgo\": \"Las tomas de mantenimiento dentro de la fosa están protegidas por el diferencial general de 300 mA, pero no se especifica si este está correctamente configurado para evitar falsos disparos.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"4.2 Tablero seccional\",\n      \"cita_oferta\": \"Las tomas de mantenimiento dentro de la fosa quedarán protegidas por el diferencial general de 300 mA del tablero seccional.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la normativa de protección diferencial aplicable.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Posible falta de continuidad en la conexión de PE en cada masa.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Alta\",\n      \"responsabilidad_mitigacion\": \"Técnico de instalación eléctrica\",\n      \"responsable_accidente\": \"Proveedor de la instalación\",\n      \"accion_mitigacion\": \"Verificar que se realice la continuidad de PE en cada masa según la normativa vigente.\",\n      \"umbral_alerta\": \"Detectar falta de continuidad en la conexión de PE durante la verificación final.\",\n      \"explicacion_riesgo\": \"Se menciona que tras el montaje se emitirá un nuevo protocolo, pero no se especifica que se realice la continuidad de PE en cada masa.\",\n      \"exposicion_riesgo\": 9,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"4.3 Puesta a tierra\",\n      \"cita_oferta\": \"La red general de electrodos registra 3,4 Ω en la barra principal; tras el montaje se emitirá un nuevo protocolo según la Resolución SRT 900/2015,\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la normativa de continuidad de PE aplicable.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el tipo de aceite a utilizar.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Proveedor de aceite\",\n      \"responsable_accidente\": \"Empresa contratante\",\n      \"accion_mitigacion\": \"Definir el tipo de aceite compatible con los requisitos técnicos.\",\n      \"umbral_alerta\": \"No se cumple el estándar ISO 4406 en las muestras.\",\n      \"explicacion_riesgo\": \"La sección menciona la aceptación de muestras ISO 4406, pero no especifica el tipo de aceite, lo que puede generar incompatibilidad con los requisitos de filtración y temperatura.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"4.5 Hidráulica\",\n      \"cita_oferta\": \"aceite nuevo transferido por unidad de filtración externa.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el tipo de aceite compatible con los parámetros técnicos mencionados.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el tipo de filtro a utilizar para alcanzar β5(c) ≥ 200.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Proveedor de equipos de filtración\",\n      \"responsable_accidente\": \"Empresa contratante\",\n      \"accion_mitigacion\": \"Definir el tipo de filtro que cumpla con el requisito β5(c) ≥ 200.\",\n      \"umbral_alerta\": \"No se alcanza el valor β5(c) ≥ 200 en las muestras.\",\n      \"explicacion_riesgo\": \"El texto menciona el requisito de β5(c) ≥ 200, pero no detalla el tipo de filtro a utilizar, lo que puede generar incumplimiento técnico.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"4.5 Hidráulica\",\n      \"cita_oferta\": \"filtro β5(c) ≥ 200 y aceptación con tres muestras consecutivas ISO 4406 17/15/12 separadas 10 minutos.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el tipo de filtro compatible con los parámetros técnicos mencionados.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el tipo de aceite compatible con la temperatura de 55 °C.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Proveedor de aceite\",\n      \"responsable_accidente\": \"Empresa contratante\",\n      \"accion_mitigacion\": \"Definir el tipo de aceite compatible con la temperatura de 55 °C.\",\n      \"umbral_alerta\": \"El aceite no soporta la temperatura de 55 °C.\",\n      \"explicacion_riesgo\": \"El texto menciona la temperatura del fluido a 55 °C, pero no especifica el tipo de aceite, lo que puede generar incompatibilidad térmica.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"4.5 Hidráulica\",\n      \"cita_oferta\": \"fluído a 55 °C, filtro β5(c) ≥ 200 y aceptación con tres muestras consecutivas ISO 4406 17/15/12 separadas 10 minutos.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el tipo de aceite compatible con los parámetros técnicos mencionados.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el tipo de epóxico a utilizar para el grout bajo placas base.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Proveedor de materiales de grout\",\n      \"responsable_accidente\": \"Empresa contratante\",\n      \"accion_mitigacion\": \"Definir el tipo de epóxico compatible con las condiciones de no contracción de 90 MPa.\",\n      \"umbral_alerta\": \"No se cumple el requisito de no contracción de 90 MPa.\",\n      \"explicacion_riesgo\": \"El texto menciona el uso de epóxico sin contracción de 90 MPa, pero no detalla el tipo de material, lo que puede generar incumplimiento técnico.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"4.6 Bulonería y grout\",\n      \"cita_oferta\": \"grout bajo placas base será epóxico sin contracción de 90 MPa, con verificación de ausencia de huecos.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el tipo de epóxico compatible con los parámetros técnicos mencionados.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Frenos dimensionados solo para retener 150% de la carga máxima.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de seguridad\",\n      \"responsable_accidente\": \"Proveedor del equipo\",\n      \"accion_mitigacion\": \"Verificar que los frenos estén dimensionados para retener al menos 100% de la carga máxima.\",\n      \"umbral_alerta\": \"Fallo en el funcionamiento de los frenos durante pruebas.\",\n      \"explicacion_riesgo\": \"Los frenos dimensionados para retener solo 150% de la carga máxima pueden no ser suficientes para garantizar la seguridad en condiciones extremas.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"5.1 Características\",\n      \"cita_oferta\": \"frenos dimensionados para retener 150 % de la carga máxima admisible\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar normas de seguridad aplicables.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Pruebas del puente grúa limitadas a 100% de su capacidad nominal.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Inspector de seguridad\",\n      \"responsable_accidente\": \"Proveedor del equipo\",\n      \"accion_mitigacion\": \"Realizar pruebas adicionales a cargas superiores al 100% de la capacidad nominal.\",\n      \"umbral_alerta\": \"Fallo durante operación con cargas superiores al 100%.\",\n      \"explicacion_riesgo\": \"Limitar las pruebas a 100% de la capacidad nominal puede no detectar fallos en condiciones de uso extremas.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"5.2 Pruebas y habilitación\",\n      \"cita_oferta\": \"el nuevo puente grúa de 12,5 t se probará únicamente a su capacidad nominal (100 %)\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar normas de seguridad aplicables.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se menciona inspección de cables de seguridad.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de mantenimiento\",\n      \"responsable_accidente\": \"Proveedor del equipo\",\n      \"accion_mitigacion\": \"Incluir inspección de cables de seguridad en el plan de mantenimiento.\",\n      \"umbral_alerta\": \"Rotura o desgaste anormal de cables de seguridad.\",\n      \"explicacion_riesgo\": \"La ausencia de inspección específica de cables de seguridad puede no detectar daños o desgaste que comprometan la seguridad.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"5.3 Mantenimiento\",\n      \"cita_oferta\": \"plan de mantenimiento prevé una inspección especializada anual del puente grúa, con informe de cables, frenos, poleas, finales de carrera y controles.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar normas de seguridad aplicables.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Uso de autogrúa con capacidad insuficiente para el izaje del torno.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Responsable de Higiene y Seguridad\",\n      \"responsable_accidente\": \"Constructor\",\n      \"accion_mitigacion\": \"Verificar capacidad de la autogrúa y su radio de acción.\",\n      \"umbral_alerta\": \"Si la carga excede la capacidad de la autogrúa.\",\n      \"explicacion_riesgo\": \"La autogrúa de 80 t tiene una capacidad de tabla de 20 t con utilización del 70%, lo que equivale a 14 t, que coincide con la masa del torno. Sin embargo, la capacidad de tabla puede no reflejar la capacidad real en condiciones operativas.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"6.1 Maniobras\",\n      \"cita_oferta\": \"La bancada del torno (14 t, masa bruta de izaje con bastidor de transporte) se izará con autogrúa de 80 t a 10 m de\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la capacidad real de la autogrúa en condiciones operativas.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Posible interferencia con la vía electrificada durante las maniobras.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Supervisor de Montaje\",\n      \"responsable_accidente\": \"Constructor\",\n      \"accion_mitigacion\": \"Monitorear la distancia de 2,0 m de la catenaria durante las maniobras.\",\n      \"umbral_alerta\": \"Si la pluma se acerca más de 2,0 m a la catenaria.\",\n      \"explicacion_riesgo\": \"Aunque se menciona la distancia de 2,0 m, no se especifica cómo se garantizará esta distancia durante la operación, lo que podría llevar a interferencias con la vía electrificada.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"6.2 Interferencia con la vía 4 electrificada\",\n      \"cita_oferta\": \"Las maniobras de montaje con autogrúa junto a la vía 4 electrificada se realizarán a 2,0 m de la catenaria.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el sistema de monitoreo y señalización durante las maniobras.\",\n      \"subsanacion\": \"Documentacion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Falta de especificación sobre el control de la pluma durante la operación.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Alta\",\n      \"responsabilidad_mitigacion\": \"Supervisor de Montaje\",\n      \"responsable_accidente\": \"Constructor\",\n      \"accion_mitigacion\": \"Implementar un sistema de control de giro de la pluma para evitar el lado de la catenaria.\",\n      \"umbral_alerta\": \"Si la pluma se gira hacia el lado de la catenaria sin control.\",\n      \"explicacion_riesgo\": \"Se menciona la limitación de giro programada, pero no se especifica cómo se implementará ni si está verificada, lo que podría llevar a un mal control de la pluma.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"6.2 Interferencia con la vía 4 electrificada\",\n      \"cita_oferta\": \"La pluma operará con limitación de giro programada hacia el lado opuesto a la catenaria.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el sistema de control de giro de la pluma.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Falta de especificación sobre el uso de estabilizadores y su apoyo.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Responsable de Higiene y Seguridad\",\n      \"responsable_accidente\": \"Constructor\",\n      \"accion_mitigacion\": \"Verificar que los estabilizadores estén apoyados sobre planchones metálicos certificados.\",\n      \"umbral_alerta\": \"Si los estabilizadores no están apoyados sobre planchones certificados.\",\n      \"explicacion_riesgo\": \"Se menciona que los estabilizadores apoyarán sobre planchones metálicos certificados, pero no se especifica cómo se verificará su certificación ni su estado durante la operación.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"6.1 Maniobras\",\n      \"cita_oferta\": \"Los estabilizadores apoyarán sobre planchones metálicos certificados.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la certificación de los planchones metálicos.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Nivelación del torno excede el límite especificado.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de montaje\",\n      \"responsable_accidente\": \"Proveedor de la máquina\",\n      \"accion_mitigacion\": \"Realizar verificación de nivelación antes del uso.\",\n      \"umbral_alerta\": \"Nivelación detectada superior a 0,02 mm/m.\",\n      \"explicacion_riesgo\": \"La sección establece un límite máximo de nivelación, y cualquier incumplimiento podría afectar la precisión del torno.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"7. Montaje y nivelación\",\n      \"cita_oferta\": \"La nivelación final del torno será ≤ 0,02 mm/m longitudinal y transversal.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los métodos de medición y calibración.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Variación de temperatura durante la serie excede el límite especificado.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de control ambiental\",\n      \"responsable_accidente\": \"Proveedor de la máquina\",\n      \"accion_mitigacion\": \"Monitorear la temperatura durante la serie de operaciones.\",\n      \"umbral_alerta\": \"Variación de temperatura detectada superior a 1,0 °C.\",\n      \"explicacion_riesgo\": \"La sección establece un límite máximo de variación de temperatura, y su incumplimiento podría afectar la estabilidad térmica de la máquina.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"7. Montaje y nivelación\",\n      \"cita_oferta\": \"Variación de temperatura ≤ 1,0 °C durante cada serie.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los sistemas de control térmico.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Variación por apriete de anclajes excede el límite especificado.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de montaje\",\n      \"responsable_accidente\": \"Proveedor de la máquina\",\n      \"accion_mitigacion\": \"Verificar el apriete de anclajes antes de cada serie.\",\n      \"umbral_alerta\": \"Variación por apriete detectada superior a 0,01 mm/m.\",\n      \"explicacion_riesgo\": \"La sección establece un límite máximo de variación por apriete de anclajes, y su incumplimiento podría afectar la precisión del torno.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"7. Montaje y nivelación\",\n      \"cita_oferta\": \"La variación inducida por el apriete de anclajes no superará 0,01 mm/m.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los métodos de apriete y medición.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Alineación del eje de la vía con el eje del torno excede el límite especificado.\",\n      \"tipo_de_riesgo\": \"Explícito\",\n      \"impacto_estimado\": \"Alto\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Técnico de alineación\",\n      \"responsable_accidente\": \"Proveedor de la máquina\",\n      \"accion_mitigacion\": \"Realizar verificación de alineación antes de cada operación.\",\n      \"umbral_alerta\": \"Alineación detectada superior a 0,03°.\",\n      \"explicacion_riesgo\": \"La sección establece un límite máximo de alineación, y su incumplimiento podría afectar la precisión del torno.\",\n      \"exposicion_riesgo\": 6,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"7. Montaje y nivelación\",\n      \"cita_oferta\": \"La alineación del eje de la vía con el eje del torno será inferior a 0,03°.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los métodos de medición y alineación.\",\n      \"subsanacion\": \"Correccion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el método de medición de la rugosidad en condiciones reales de operación.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Jefe de Puesta en Marcha de MetalRail\",\n      \"responsable_accidente\": \"Operador\",\n      \"accion_mitigacion\": \"Definir y documentar el método de medición de rugosidad en condiciones reales.\",\n      \"umbral_alerta\": \"Desviación en los valores de rugosidad registrados por encima de Ra ≤ 1,6 μm.\",\n      \"explicacion_riesgo\": \"La sección menciona la medición de rugosidad pero no detalla el método ni los parámetros de medición en condiciones reales de operación.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"8.1 SAT bajo carga\",\n      \"cita_oferta\": \"La rugosidad se medirá con tres trazas por pieza distribuidas a 120°, con criterio Ra ≤ 1,6 μm en asientos de rodamiento.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el método de medición de rugosidad en condiciones reales.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se establece un procedimiento para la verificación de la temperatura de los rodamientos durante las pruebas.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Jefe de Puesta en Marcha de MetalRail\",\n      \"responsable_accidente\": \"Operador\",\n      \"accion_mitigacion\": \"Definir un protocolo de medición de temperatura de los rodamientos durante las pruebas.\",\n      \"umbral_alerta\": \"Temperatura de los rodamientos por encima de los límites establecidos por el fabricante.\",\n      \"explicacion_riesgo\": \"La sección menciona la medición manual de la temperatura, pero no establece un procedimiento detallado ni parámetros de control.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"8.1 SAT bajo carga\",\n      \"cita_oferta\": \"La temperatura de los rodamientos se registrará manualmente cada 15 minutos durante las pruebas, con termómetro infrarrojo calibrado, consignando los valores en la planilla de\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el procedimiento de medición de temperatura de los rodamientos.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica el criterio de aprobación para las observaciones del Operador en el acta SAT.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Jefe de Puesta en Marcha de MetalRail\",\n      \"responsable_accidente\": \"Operador\",\n      \"accion_mitigacion\": \"Definir un criterio claro para la aprobación de las observaciones del Operador en el acta SAT.\",\n      \"umbral_alerta\": \"Observaciones del Operador no aprobadas dentro del plazo establecido.\",\n      \"explicacion_riesgo\": \"La sección menciona que el Operador podrá adjuntar observaciones, pero no establece un criterio de aprobación ni plazo claro.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"8.2 Actas y recepción\",\n      \"cita_oferta\": \"El acta SAT será firmada por el Jefe de Puesta en Marcha de MetalRail; el Operador podrá adjuntar observaciones dentro de los 5 días hábiles\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el criterio de aprobación de las observaciones del Operador.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"Falta de especificación sobre la metodología de entrega de documentos.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Representante Técnico\",\n      \"responsable_accidente\": \"Proveedor\",\n      \"accion_mitigacion\": \"Definir claramente el método de entrega y formato de los documentos.\",\n      \"umbral_alerta\": \"No se entreguen los documentos en el formato solicitado.\",\n      \"explicacion_riesgo\": \"No se especifica cómo se entregará la documentación, lo que puede generar ambigüedad en la entrega.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"9. Documentación y capacitación\",\n      \"cita_oferta\": \"Se entregará el dossier completo con planos conforme a obra, memorias, certificados, registros de hormigón, nivelación, torque, flushing, pruebas del puente grúa, protocolo de puesta\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el formato y el método de entrega de los documentos.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    },\n    {\n      \"descripcion_riesgo\": \"No se especifica la certificación de los operadores.\",\n      \"tipo_de_riesgo\": \"Implícito\",\n      \"impacto_estimado\": \"Medio\",\n      \"probabilidad_estimada\": \"Media\",\n      \"responsabilidad_mitigacion\": \"Representante Técnico\",\n      \"responsable_accidente\": \"Proveedor\",\n      \"accion_mitigacion\": \"Incluir la certificación de los operadores en la capacitación.\",\n      \"umbral_alerta\": \"No se presenten certificaciones de los operadores.\",\n      \"explicacion_riesgo\": \"No se menciona si los operadores están certificados, lo que podría afectar la seguridad y cumplimiento.\",\n      \"exposicion_riesgo\": 4,\n      \"respaldo_base_conocimiento\": null,\n      \"fuentes\": [],\n      \"seccion_oferta\": \"9. Documentación y capacitación\",\n      \"cita_oferta\": \"La capacitación incluye 32 horas para operadores del torno y 16 horas para operadores del puente grúa.\",\n      \"comentario\": \"El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si los operadores están certificados.\",\n      \"subsanacion\": \"Aclaracion\",\n      \"marcas\": [\n        \"sin respaldo normativo\"\n      ],\n      \"veredicto\": null,\n      \"oraciones\": [],\n      \"requisitos\": [],\n      \"motivo\": \"\"\n    }\n  ]\n}",
+    "evaluacion_evidencia": null,
+    "advertencia_evidencia": null,
+    "suficiencia_evidencia": null,
+    "comentarios_generales": null,
+    "acciones_generales": [],
+    "secciones": [
+        {
+            "id": "S1",
+            "titulos": [
+                "Introducción"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S2",
+            "titulos": [
+                "1. Resumen ejecutivo",
+                "1.1 Datos principales"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S3",
+            "titulos": [
+                "2. Alcance"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S4",
+            "titulos": [
+                "3. Secuencia constructiva",
+                "3.1 Estudio geotécnico y excavación",
+                "3.2 Hormigón",
+                "3.3 Curado",
+                "3.4 Bancada y control de vibraciones",
+                "3.5 Fosa del transportador de viruta"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S5",
+            "titulos": [
+                "3.6 Puntos de espera",
+                "3.7 Vía 4",
+                "3.8 Cronograma"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S6",
+            "titulos": [
+                "4. Especificación de materiales e instalaciones",
+                "4.1 Alimentación y capacidad del sistema",
+                "4.2 Tablero seccional",
+                "4.3 Puesta a tierra",
+                "4.4 Canalizaciones y EMC"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S7",
+            "titulos": [
+                "4.5 Hidráulica",
+                "4.6 Bulonería y grout",
+                "4.7 Ruido"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S8",
+            "titulos": [
+                "5. Puente grúa de servicio 12,5 t",
+                "5.1 Características",
+                "5.2 Pruebas y habilitación",
+                "5.3 Mantenimiento"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S9",
+            "titulos": [
+                "6. Plan de izaje del torno",
+                "6.1 Maniobras",
+                "6.2 Interferencia con la vía 4 electrificada"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S10",
+            "titulos": [
+                "7. Montaje y nivelación"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S11",
+            "titulos": [
+                "8. Pruebas de aceptación en sitio y recepción",
+                "8.1 SAT bajo carga",
+                "8.2 Actas y recepción"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S12",
+            "titulos": [
+                "9. Documentación y capacitación"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        }
+    ],
+    "registro_brechas": [],
+    "riesgos": [],
+    "solicitudes": [],
+    "alertas": [],
+    "resumen_ejecutivo": null,
+    "lineamientos": null,
+    "registro_tecnico": [
+        {
+            "seccion": "S2",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 1109
+        },
+        {
+            "seccion": "S3",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 1480
+        },
+        {
+            "seccion": "S4",
+            "etapa": "lista",
+            "estado": "tiempo_agotado",
+            "motivo": "el modelo no respondió en el tiempo límite"
+        },
+        {
+            "seccion": "S5",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 1443
+        },
+        {
+            "seccion": "S6",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 1217
+        },
+        {
+            "seccion": "S7",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 1531
+        },
+        {
+            "seccion": "S8",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 1120
+        },
+        {
+            "seccion": "S9",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 1257
+        },
+        {
+            "seccion": "S10",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 1105
+        },
+        {
+            "seccion": "S11",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 973
+        },
+        {
+            "seccion": "S12",
+            "etapa": "lista",
+            "estado": "ok",
+            "eval_count": 562
+        }
+    ],
+    "riesgos_identificados_estructurados": [
+        {
+            "descripcion_riesgo": "Falta de especificación de normas de seguridad para el torno CNC.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Ejecutor del proyecto",
+            "responsable_accidente": "Proveedor de la maquinaria",
+            "accion_mitigacion": "Incluir normas de seguridad en el manual de operación del torno.",
+            "umbral_alerta": "Incidente de accidente laboral relacionado con el torno.",
+            "explicacion_riesgo": "El texto no menciona normas de seguridad para el torno CNC, lo que podría generar riesgos de accidentes.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "1. Resumen ejecutivo",
+            "cita_oferta": "Provisión e instalación de un torno paralelo CNC TPE-800.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si el torno cumple con normas de seguridad vigentes.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el tipo de certificación del puente grúa birriel.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Ejecutor del proyecto",
+            "responsable_accidente": "Proveedor del puente grúa",
+            "accion_mitigacion": "Incluir certificación de seguridad del puente grúa en la documentación técnica.",
+            "umbral_alerta": "Fallo del puente grúa durante operación.",
+            "explicacion_riesgo": "El texto menciona el puente grúa pero no detalla su certificación, lo que podría generar riesgos de operación insegura.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "1. Resumen ejecutivo",
+            "cita_oferta": "Puente grúa birriel de 12,5 t, luz 16 m, con limitador de carga.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si el puente grúa tiene certificación vigente.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo",
+                "cita no verificada"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "No se menciona el tipo de material de la fosa del transportador de viruta.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Baja",
+            "responsabilidad_mitigacion": "Ejecutor del proyecto",
+            "responsable_accidente": "Proveedor de la fosa",
+            "accion_mitigacion": "Incluir especificación del material de la fosa en la documentación técnica.",
+            "umbral_alerta": "Daño estructural de la fosa durante operación.",
+            "explicacion_riesgo": "El texto describe la fosa pero no detalla su material, lo que podría afectar su resistencia y durabilidad.",
+            "exposicion_riesgo": 2,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "1.1 Datos principales",
+            "cita_oferta": "Fosa del transportador de viruta 5,5 m de longitud, 1,10 m de profundidad.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si el material es adecuado para el entorno.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Verde",
+            "nivel_exposicion": "Baja"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el tipo de electrificación de la vía 4 de acceso.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Ejecutor del proyecto",
+            "responsable_accidente": "Proveedor de la electrificación",
+            "accion_mitigacion": "Incluir especificación del sistema de electrificación de la vía en la documentación técnica.",
+            "umbral_alerta": "Fallo en el sistema de electrificación de la vía.",
+            "explicacion_riesgo": "El texto menciona que la vía está electrificada, pero no detalla el tipo de sistema, lo que podría generar riesgos de operación insegura.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "1.1 Datos principales",
+            "cita_oferta": "Vía 4 de acceso: Trocha 1.676 mm, electrificada con catenaria en el tramo exterior.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si el sistema de electrificación cumple con normas vigentes.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Falta de especificación de la profundidad de excavación.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico geotécnico",
+            "responsable_accidente": "Constructora",
+            "accion_mitigacion": "Realizar estudios geotécnicos detallados antes de la excavación.",
+            "umbral_alerta": "Detectar desplazamiento del terreno durante la excavación.",
+            "explicacion_riesgo": "El estudio geotécnico complementario no especifica la profundidad ni las condiciones del terreno, lo que podría provocar riesgos de estabilidad.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "2. Alcance",
+            "cita_oferta": "Estudio geotécnico complementario, demolición y excavación.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la profundidad y condiciones del terreno.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Falta de especificación de la capacidad estructural de las vigas carrileras.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Ingeniero estructural",
+            "responsable_accidente": "Constructora",
+            "accion_mitigacion": "Verificar y documentar la capacidad estructural de las vigas carrileras antes del montaje.",
+            "umbral_alerta": "Detectar deformación o daño en las vigas durante la instalación.",
+            "explicacion_riesgo": "Se menciona la verificación estructural de las vigas carrileras, pero no se especifica su capacidad, lo que podría llevar a un incumplimiento estructural.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "2. Alcance",
+            "cita_oferta": "Suministro, montaje, pruebas y habilitación del puente grúa de 12,5 t, incluidas las vigas carrileras sobre ménsulas existentes verificadas estructuralmente.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la capacidad estructural de las vigas.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Falta de especificación de los parámetros técnicos del torno TPE-800.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico especializado en maquinaria",
+            "responsable_accidente": "Constructora",
+            "accion_mitigacion": "Verificar y documentar los parámetros técnicos del torno TPE-800 antes de su instalación.",
+            "umbral_alerta": "Detectar fallas en el funcionamiento del torno durante la puesta en servicio.",
+            "explicacion_riesgo": "Se menciona el suministro e instalación del torno TPE-800, pero no se especifican sus parámetros técnicos, lo que podría llevar a un incumplimiento funcional.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "2. Alcance",
+            "cita_oferta": "Suministro, izaje, montaje y puesta en servicio del torno TPE-800.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los parámetros técnicos del torno.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Falta de especificación de la capacidad de la vía 4.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Ingeniero de transporte",
+            "responsable_accidente": "Constructora",
+            "accion_mitigacion": "Verificar y documentar la capacidad de la vía 4 antes de su adecuación.",
+            "umbral_alerta": "Detectar daño o falla en la vía 4 durante la operación.",
+            "explicacion_riesgo": "Se menciona la adecuación de la vía 4, pero no se especifica su capacidad, lo que podría llevar a un incumplimiento funcional.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "2. Alcance",
+            "cita_oferta": "Adecuación de la vía 4 en los 5 m previos al área de carga de ejes.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la capacidad de la vía 4.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el método de medición de la trocha nominal.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Inspector técnico",
+            "responsable_accidente": "Contratista",
+            "accion_mitigacion": "Implementar un protocolo de medición estandarizado para la trocha.",
+            "umbral_alerta": "Desviación de la trocha por encima de ± 1,5 mm en más del 20% de las secciones.",
+            "explicacion_riesgo": "El texto menciona la tolerancia de la trocha pero no detalla el método de medición, lo que puede generar incertidumbre en la verificación.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "3.7 Vía 4",
+            "cita_oferta": "La trocha nominal es de 1.676 mm con tolerancia de ± 1,5 mm (1.674,5 a 1.677,5 mm), medida en 11 secciones cada 0,50 m, con",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el método de medición detallado en el plan de ejecución.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el tipo de hormigón o materiales a utilizar en la nivelación.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de obra",
+            "responsable_accidente": "Contratista",
+            "accion_mitigacion": "Incluir especificaciones técnicas de los materiales a utilizar en la nivelación.",
+            "umbral_alerta": "Falta de cumplimiento en la resistencia o durabilidad del hormigón.",
+            "explicacion_riesgo": "La sección menciona nivelación pero no detalla los materiales o especificaciones del hormigón, lo que puede afectar la calidad y durabilidad.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "3.8 Cronograma",
+            "cita_oferta": "Nivelación, grout, hidráulica, electricidad.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar las especificaciones técnicas del hormigón y materiales.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "No se menciona el control de calidad en el proceso de curado de las estructuras.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Alta",
+            "responsabilidad_mitigacion": "Inspector de obra",
+            "responsable_accidente": "Contratista",
+            "accion_mitigacion": "Implementar un plan de control de calidad durante el curado de las estructuras.",
+            "umbral_alerta": "Falta de cumplimiento en la humedad o temperatura durante el curado.",
+            "explicacion_riesgo": "El cronograma menciona curado, pero no detalla los parámetros o métodos de control, lo que puede afectar la resistencia final de las estructuras.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "3.8 Cronograma",
+            "cita_oferta": "Curado; montaje de vigas carrileras y puente grúa.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el plan de curado detallado.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el tipo de pruebas a realizar en el puente grúa antes de su habilitación.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de inspección",
+            "responsable_accidente": "Contratista",
+            "accion_mitigacion": "Definir y documentar los tipos de pruebas mecánicas y funcionales del puente grúa.",
+            "umbral_alerta": "Falta de resultados de pruebas validadas por un organismo acreditado.",
+            "explicacion_riesgo": "El cronograma menciona pruebas y habilitación del puente grúa, pero no detalla el tipo de pruebas, lo que puede comprometer la seguridad.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "3.8 Cronograma",
+            "cita_oferta": "Pruebas y habilitación del puente grúa.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el plan de pruebas detallado.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Posible interferencia electromagnética entre cables de encoder y motor.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de instalación eléctrica",
+            "responsable_accidente": "Proveedor de la instalación",
+            "accion_mitigacion": "Verificar la separación de 50 mm y la terminación de las pantallas de los cables.",
+            "umbral_alerta": "Detectar interferencias en la señal del encoder durante la operación.",
+            "explicacion_riesgo": "Los cables de encoder y motor se encuentran en la misma bandeja sin aislamiento suficiente, lo que podría causar interferencias.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "4.4 Canalizaciones y EMC",
+            "cita_oferta": "Los cables de encoder y de motor compartirán bandeja, separados 50 mm mediante precintos.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la normativa de EMC aplicable.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "Posible falta de protección contra descargas eléctricas en las tomas de mantenimiento.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de instalación eléctrica",
+            "responsable_accidente": "Proveedor de la instalación",
+            "accion_mitigacion": "Verificar que el diferencial general de 300 mA cubra efectivamente las tomas de mantenimiento.",
+            "umbral_alerta": "Detectar cortes inesperados en las tomas de mantenimiento durante la limpieza.",
+            "explicacion_riesgo": "Las tomas de mantenimiento dentro de la fosa están protegidas por el diferencial general de 300 mA, pero no se especifica si este está correctamente configurado para evitar falsos disparos.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "4.2 Tablero seccional",
+            "cita_oferta": "Las tomas de mantenimiento dentro de la fosa quedarán protegidas por el diferencial general de 300 mA del tablero seccional.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la normativa de protección diferencial aplicable.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Posible falta de continuidad en la conexión de PE en cada masa.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Alta",
+            "responsabilidad_mitigacion": "Técnico de instalación eléctrica",
+            "responsable_accidente": "Proveedor de la instalación",
+            "accion_mitigacion": "Verificar que se realice la continuidad de PE en cada masa según la normativa vigente.",
+            "umbral_alerta": "Detectar falta de continuidad en la conexión de PE durante la verificación final.",
+            "explicacion_riesgo": "Se menciona que tras el montaje se emitirá un nuevo protocolo, pero no se especifica que se realice la continuidad de PE en cada masa.",
+            "exposicion_riesgo": 9,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "4.3 Puesta a tierra",
+            "cita_oferta": "La red general de electrodos registra 3,4 Ω en la barra principal; tras el montaje se emitirá un nuevo protocolo según la Resolución SRT 900/2015,",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la normativa de continuidad de PE aplicable.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el tipo de aceite a utilizar.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Proveedor de aceite",
+            "responsable_accidente": "Empresa contratante",
+            "accion_mitigacion": "Definir el tipo de aceite compatible con los requisitos técnicos.",
+            "umbral_alerta": "No se cumple el estándar ISO 4406 en las muestras.",
+            "explicacion_riesgo": "La sección menciona la aceptación de muestras ISO 4406, pero no especifica el tipo de aceite, lo que puede generar incompatibilidad con los requisitos de filtración y temperatura.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "4.5 Hidráulica",
+            "cita_oferta": "aceite nuevo transferido por unidad de filtración externa.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el tipo de aceite compatible con los parámetros técnicos mencionados.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el tipo de filtro a utilizar para alcanzar β5(c) ≥ 200.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Proveedor de equipos de filtración",
+            "responsable_accidente": "Empresa contratante",
+            "accion_mitigacion": "Definir el tipo de filtro que cumpla con el requisito β5(c) ≥ 200.",
+            "umbral_alerta": "No se alcanza el valor β5(c) ≥ 200 en las muestras.",
+            "explicacion_riesgo": "El texto menciona el requisito de β5(c) ≥ 200, pero no detalla el tipo de filtro a utilizar, lo que puede generar incumplimiento técnico.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "4.5 Hidráulica",
+            "cita_oferta": "filtro β5(c) ≥ 200 y aceptación con tres muestras consecutivas ISO 4406 17/15/12 separadas 10 minutos.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el tipo de filtro compatible con los parámetros técnicos mencionados.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el tipo de aceite compatible con la temperatura de 55 °C.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Proveedor de aceite",
+            "responsable_accidente": "Empresa contratante",
+            "accion_mitigacion": "Definir el tipo de aceite compatible con la temperatura de 55 °C.",
+            "umbral_alerta": "El aceite no soporta la temperatura de 55 °C.",
+            "explicacion_riesgo": "El texto menciona la temperatura del fluido a 55 °C, pero no especifica el tipo de aceite, lo que puede generar incompatibilidad térmica.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "4.5 Hidráulica",
+            "cita_oferta": "fluído a 55 °C, filtro β5(c) ≥ 200 y aceptación con tres muestras consecutivas ISO 4406 17/15/12 separadas 10 minutos.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el tipo de aceite compatible con los parámetros técnicos mencionados.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el tipo de epóxico a utilizar para el grout bajo placas base.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Proveedor de materiales de grout",
+            "responsable_accidente": "Empresa contratante",
+            "accion_mitigacion": "Definir el tipo de epóxico compatible con las condiciones de no contracción de 90 MPa.",
+            "umbral_alerta": "No se cumple el requisito de no contracción de 90 MPa.",
+            "explicacion_riesgo": "El texto menciona el uso de epóxico sin contracción de 90 MPa, pero no detalla el tipo de material, lo que puede generar incumplimiento técnico.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "4.6 Bulonería y grout",
+            "cita_oferta": "grout bajo placas base será epóxico sin contracción de 90 MPa, con verificación de ausencia de huecos.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el tipo de epóxico compatible con los parámetros técnicos mencionados.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "Frenos dimensionados solo para retener 150% de la carga máxima.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de seguridad",
+            "responsable_accidente": "Proveedor del equipo",
+            "accion_mitigacion": "Verificar que los frenos estén dimensionados para retener al menos 100% de la carga máxima.",
+            "umbral_alerta": "Fallo en el funcionamiento de los frenos durante pruebas.",
+            "explicacion_riesgo": "Los frenos dimensionados para retener solo 150% de la carga máxima pueden no ser suficientes para garantizar la seguridad en condiciones extremas.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "5.1 Características",
+            "cita_oferta": "frenos dimensionados para retener 150 % de la carga máxima admisible",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar normas de seguridad aplicables.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "Pruebas del puente grúa limitadas a 100% de su capacidad nominal.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Inspector de seguridad",
+            "responsable_accidente": "Proveedor del equipo",
+            "accion_mitigacion": "Realizar pruebas adicionales a cargas superiores al 100% de la capacidad nominal.",
+            "umbral_alerta": "Fallo durante operación con cargas superiores al 100%.",
+            "explicacion_riesgo": "Limitar las pruebas a 100% de la capacidad nominal puede no detectar fallos en condiciones de uso extremas.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "5.2 Pruebas y habilitación",
+            "cita_oferta": "el nuevo puente grúa de 12,5 t se probará únicamente a su capacidad nominal (100 %)",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar normas de seguridad aplicables.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "No se menciona inspección de cables de seguridad.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de mantenimiento",
+            "responsable_accidente": "Proveedor del equipo",
+            "accion_mitigacion": "Incluir inspección de cables de seguridad en el plan de mantenimiento.",
+            "umbral_alerta": "Rotura o desgaste anormal de cables de seguridad.",
+            "explicacion_riesgo": "La ausencia de inspección específica de cables de seguridad puede no detectar daños o desgaste que comprometan la seguridad.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "5.3 Mantenimiento",
+            "cita_oferta": "plan de mantenimiento prevé una inspección especializada anual del puente grúa, con informe de cables, frenos, poleas, finales de carrera y controles.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar normas de seguridad aplicables.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Uso de autogrúa con capacidad insuficiente para el izaje del torno.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Responsable de Higiene y Seguridad",
+            "responsable_accidente": "Constructor",
+            "accion_mitigacion": "Verificar capacidad de la autogrúa y su radio de acción.",
+            "umbral_alerta": "Si la carga excede la capacidad de la autogrúa.",
+            "explicacion_riesgo": "La autogrúa de 80 t tiene una capacidad de tabla de 20 t con utilización del 70%, lo que equivale a 14 t, que coincide con la masa del torno. Sin embargo, la capacidad de tabla puede no reflejar la capacidad real en condiciones operativas.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "6.1 Maniobras",
+            "cita_oferta": "La bancada del torno (14 t, masa bruta de izaje con bastidor de transporte) se izará con autogrúa de 80 t a 10 m de",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la capacidad real de la autogrúa en condiciones operativas.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Posible interferencia con la vía electrificada durante las maniobras.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Supervisor de Montaje",
+            "responsable_accidente": "Constructor",
+            "accion_mitigacion": "Monitorear la distancia de 2,0 m de la catenaria durante las maniobras.",
+            "umbral_alerta": "Si la pluma se acerca más de 2,0 m a la catenaria.",
+            "explicacion_riesgo": "Aunque se menciona la distancia de 2,0 m, no se especifica cómo se garantizará esta distancia durante la operación, lo que podría llevar a interferencias con la vía electrificada.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "6.2 Interferencia con la vía 4 electrificada",
+            "cita_oferta": "Las maniobras de montaje con autogrúa junto a la vía 4 electrificada se realizarán a 2,0 m de la catenaria.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el sistema de monitoreo y señalización durante las maniobras.",
+            "subsanacion": "Documentacion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Falta de especificación sobre el control de la pluma durante la operación.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Alta",
+            "responsabilidad_mitigacion": "Supervisor de Montaje",
+            "responsable_accidente": "Constructor",
+            "accion_mitigacion": "Implementar un sistema de control de giro de la pluma para evitar el lado de la catenaria.",
+            "umbral_alerta": "Si la pluma se gira hacia el lado de la catenaria sin control.",
+            "explicacion_riesgo": "Se menciona la limitación de giro programada, pero no se especifica cómo se implementará ni si está verificada, lo que podría llevar a un mal control de la pluma.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "6.2 Interferencia con la vía 4 electrificada",
+            "cita_oferta": "La pluma operará con limitación de giro programada hacia el lado opuesto a la catenaria.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el sistema de control de giro de la pluma.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Falta de especificación sobre el uso de estabilizadores y su apoyo.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Responsable de Higiene y Seguridad",
+            "responsable_accidente": "Constructor",
+            "accion_mitigacion": "Verificar que los estabilizadores estén apoyados sobre planchones metálicos certificados.",
+            "umbral_alerta": "Si los estabilizadores no están apoyados sobre planchones certificados.",
+            "explicacion_riesgo": "Se menciona que los estabilizadores apoyarán sobre planchones metálicos certificados, pero no se especifica cómo se verificará su certificación ni su estado durante la operación.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "6.1 Maniobras",
+            "cita_oferta": "Los estabilizadores apoyarán sobre planchones metálicos certificados.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar la certificación de los planchones metálicos.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "Nivelación del torno excede el límite especificado.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de montaje",
+            "responsable_accidente": "Proveedor de la máquina",
+            "accion_mitigacion": "Realizar verificación de nivelación antes del uso.",
+            "umbral_alerta": "Nivelación detectada superior a 0,02 mm/m.",
+            "explicacion_riesgo": "La sección establece un límite máximo de nivelación, y cualquier incumplimiento podría afectar la precisión del torno.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "7. Montaje y nivelación",
+            "cita_oferta": "La nivelación final del torno será ≤ 0,02 mm/m longitudinal y transversal.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los métodos de medición y calibración.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Variación de temperatura durante la serie excede el límite especificado.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de control ambiental",
+            "responsable_accidente": "Proveedor de la máquina",
+            "accion_mitigacion": "Monitorear la temperatura durante la serie de operaciones.",
+            "umbral_alerta": "Variación de temperatura detectada superior a 1,0 °C.",
+            "explicacion_riesgo": "La sección establece un límite máximo de variación de temperatura, y su incumplimiento podría afectar la estabilidad térmica de la máquina.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "7. Montaje y nivelación",
+            "cita_oferta": "Variación de temperatura ≤ 1,0 °C durante cada serie.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los sistemas de control térmico.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "Variación por apriete de anclajes excede el límite especificado.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de montaje",
+            "responsable_accidente": "Proveedor de la máquina",
+            "accion_mitigacion": "Verificar el apriete de anclajes antes de cada serie.",
+            "umbral_alerta": "Variación por apriete detectada superior a 0,01 mm/m.",
+            "explicacion_riesgo": "La sección establece un límite máximo de variación por apriete de anclajes, y su incumplimiento podría afectar la precisión del torno.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "7. Montaje y nivelación",
+            "cita_oferta": "La variación inducida por el apriete de anclajes no superará 0,01 mm/m.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los métodos de apriete y medición.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "Alineación del eje de la vía con el eje del torno excede el límite especificado.",
+            "tipo_de_riesgo": "Explícito",
+            "impacto_estimado": "Alto",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Técnico de alineación",
+            "responsable_accidente": "Proveedor de la máquina",
+            "accion_mitigacion": "Realizar verificación de alineación antes de cada operación.",
+            "umbral_alerta": "Alineación detectada superior a 0,03°.",
+            "explicacion_riesgo": "La sección establece un límite máximo de alineación, y su incumplimiento podría afectar la precisión del torno.",
+            "exposicion_riesgo": 6,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "7. Montaje y nivelación",
+            "cita_oferta": "La alineación del eje de la vía con el eje del torno será inferior a 0,03°.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar los métodos de medición y alineación.",
+            "subsanacion": "Correccion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Rojo",
+            "nivel_exposicion": "Alta"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el método de medición de la rugosidad en condiciones reales de operación.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Jefe de Puesta en Marcha de MetalRail",
+            "responsable_accidente": "Operador",
+            "accion_mitigacion": "Definir y documentar el método de medición de rugosidad en condiciones reales.",
+            "umbral_alerta": "Desviación en los valores de rugosidad registrados por encima de Ra ≤ 1,6 μm.",
+            "explicacion_riesgo": "La sección menciona la medición de rugosidad pero no detalla el método ni los parámetros de medición en condiciones reales de operación.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "8.1 SAT bajo carga",
+            "cita_oferta": "La rugosidad se medirá con tres trazas por pieza distribuidas a 120°, con criterio Ra ≤ 1,6 μm en asientos de rodamiento.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el método de medición de rugosidad en condiciones reales.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "No se establece un procedimiento para la verificación de la temperatura de los rodamientos durante las pruebas.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Jefe de Puesta en Marcha de MetalRail",
+            "responsable_accidente": "Operador",
+            "accion_mitigacion": "Definir un protocolo de medición de temperatura de los rodamientos durante las pruebas.",
+            "umbral_alerta": "Temperatura de los rodamientos por encima de los límites establecidos por el fabricante.",
+            "explicacion_riesgo": "La sección menciona la medición manual de la temperatura, pero no establece un procedimiento detallado ni parámetros de control.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "8.1 SAT bajo carga",
+            "cita_oferta": "La temperatura de los rodamientos se registrará manualmente cada 15 minutos durante las pruebas, con termómetro infrarrojo calibrado, consignando los valores en la planilla de",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el procedimiento de medición de temperatura de los rodamientos.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "No se especifica el criterio de aprobación para las observaciones del Operador en el acta SAT.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Jefe de Puesta en Marcha de MetalRail",
+            "responsable_accidente": "Operador",
+            "accion_mitigacion": "Definir un criterio claro para la aprobación de las observaciones del Operador en el acta SAT.",
+            "umbral_alerta": "Observaciones del Operador no aprobadas dentro del plazo establecido.",
+            "explicacion_riesgo": "La sección menciona que el Operador podrá adjuntar observaciones, pero no establece un criterio de aprobación ni plazo claro.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "8.2 Actas y recepción",
+            "cita_oferta": "El acta SAT será firmada por el Jefe de Puesta en Marcha de MetalRail; el Operador podrá adjuntar observaciones dentro de los 5 días hábiles",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el criterio de aprobación de las observaciones del Operador.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "Falta de especificación sobre la metodología de entrega de documentos.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Representante Técnico",
+            "responsable_accidente": "Proveedor",
+            "accion_mitigacion": "Definir claramente el método de entrega y formato de los documentos.",
+            "umbral_alerta": "No se entreguen los documentos en el formato solicitado.",
+            "explicacion_riesgo": "No se especifica cómo se entregará la documentación, lo que puede generar ambigüedad en la entrega.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "9. Documentación y capacitación",
+            "cita_oferta": "Se entregará el dossier completo con planos conforme a obra, memorias, certificados, registros de hormigón, nivelación, torque, flushing, pruebas del puente grúa, protocolo de puesta",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar el formato y el método de entrega de los documentos.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        },
+        {
+            "descripcion_riesgo": "No se especifica la certificación de los operadores.",
+            "tipo_de_riesgo": "Implícito",
+            "impacto_estimado": "Medio",
+            "probabilidad_estimada": "Media",
+            "responsabilidad_mitigacion": "Representante Técnico",
+            "responsable_accidente": "Proveedor",
+            "accion_mitigacion": "Incluir la certificación de los operadores en la capacitación.",
+            "umbral_alerta": "No se presenten certificaciones de los operadores.",
+            "explicacion_riesgo": "No se menciona si los operadores están certificados, lo que podría afectar la seguridad y cumplimiento.",
+            "exposicion_riesgo": 4,
+            "respaldo_base_conocimiento": null,
+            "fuentes": [],
+            "seccion_oferta": "9. Documentación y capacitación",
+            "cita_oferta": "La capacitación incluye 32 horas para operadores del torno y 16 horas para operadores del puente grúa.",
+            "comentario": "El riesgo se identificó sin base normativa disponible, solo con conocimiento general. Habría que verificar si los operadores están certificados.",
+            "subsanacion": "Aclaracion",
+            "marcas": [
+                "sin respaldo normativo"
+            ],
+            "veredicto": null,
+            "oraciones": [],
+            "requisitos": [],
+            "motivo": "",
+            "estado_RAG_sugerido": "Ámbar",
+            "nivel_exposicion": "Media"
+        }
+    ],
+    "nombre_archivo_original": "P4_oferta_TPE800.pdf"
+}

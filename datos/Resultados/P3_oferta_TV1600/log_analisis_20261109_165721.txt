@@ -1,0 +1,42 @@
+2026-11-09 16:57:22 - INFO - scripts.main - 📝 Log de este análisis guardándose en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P3_oferta_TV1600\log_analisis_20261109_165721.txt
+2026-11-09 16:57:22 - INFO - scripts.main - --- INICIANDO ANÁLISIS (Modelo: qwen3:8b) ---
+2026-11-09 16:57:22 - INFO - scripts.main - --- ANÁLISIS POR SECCIÓN (Modelo: qwen3:8b, condición: sin_rag, modo: lista) ---
+2026-11-09 16:57:22 - INFO - scripts.main - Oferta de 13896 caracteres dividida en 11 secciones.
+2026-11-09 16:57:22 - INFO - scripts.rag_components - Intentando inicializar el modelo: 'qwen3:8b' del proveedor: 'ollama'
+2026-11-09 16:57:22 - INFO - scripts.main - S1 (Introducción): introducción excluida, 0 riesgos
+2026-11-09 16:57:22 - INFO - scripts.main - S2 (1. Introducción, 1.1 Datos técnicos principales): 0 fragmentos, evidencia None
+2026-11-09 16:57:25 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:58:15 - INFO - scripts.main - S2: 5 riesgos (52.54 s de generación)
+2026-11-09 16:58:15 - INFO - scripts.main - S3 (2. Alcance, 2.1 Suministros y trabajos incluidos, 2.2 Plazo): 0 fragmentos, evidencia None
+2026-11-09 16:58:16 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:59:07 - INFO - scripts.main - S3: 5 riesgos (52.34 s de generación)
+2026-11-09 16:59:07 - INFO - scripts.main - S4 (3. Secuencia constructiva, 3.1 Estudio geotécnico, 3.2 Excavación, 3.3 Fundación, 3.4 Canal de viruta, 3.5 Inspección y liberaciones): 0 fragmentos, evidencia None
+2026-11-09 16:59:08 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:00:15 - INFO - scripts.main - S4: 6 riesgos (68.4 s de generación)
+2026-11-09 17:00:15 - INFO - scripts.main - S5 (3.6 Vía de abastecimiento y pasarela, 3.7 Cronograma): 0 fragmentos, evidencia None
+2026-11-09 17:00:16 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:01:36 - WARNING - scripts.main - S5 (lista de riesgos): respuesta cortada por num_predict; se reintenta una vez.
+2026-11-09 17:01:37 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:02:44 - INFO - scripts.main - S5: 6 riesgos (148.4 s de generación)
+2026-11-09 17:02:44 - INFO - scripts.main - S6 (4. Especificación de materiales e instalaciones, 4.1 Alimentación eléctrica, 4.2 Tablero del torno, 4.3 Puesta a tierra, 4.4 Compatibilidad electromagnética): 0 fragmentos, evidencia None
+2026-11-09 17:02:45 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:03:42 - INFO - scripts.main - S6: 4 riesgos (58.03 s de generación)
+2026-11-09 17:03:42 - INFO - scripts.main - S7 (4.5 Circuito hidráulico del plato, 4.6 Anclajes, bulonería y grout, 4.7 Ruido): 0 fragmentos, evidencia None
+2026-11-09 17:03:43 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:04:40 - INFO - scripts.main - S7: 5 riesgos (57.86 s de generación)
+2026-11-09 17:04:40 - INFO - scripts.main - S8 (5. Plan de izaje, 5.1 Maniobras, 5.2 Plan de Izaje Crítico, 5.3 Apoyo de la autogrúa, 5.4 Supervisión, 5.5 Puntos de toma): 0 fragmentos, evidencia None
+2026-11-09 17:04:41 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:05:39 - INFO - scripts.main - S8: 5 riesgos (59.34 s de generación)
+2026-11-09 17:05:39 - INFO - scripts.main - S9 (6. Montaje y nivelación): 0 fragmentos, evidencia None
+2026-11-09 17:05:40 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:06:02 - INFO - scripts.main - S9: 2 riesgos (22.68 s de generación)
+2026-11-09 17:06:02 - INFO - scripts.main - S10 (7. Pruebas de aceptación en sitio (SAT), 7.1 Unidades de prueba, 7.2 Ensayos bajo carga, 7.3 Mediciones, 7.4 Supervisión, actas y recepción): 0 fragmentos, evidencia None
+2026-11-09 17:06:03 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:07:07 - INFO - scripts.main - S10: 6 riesgos (65.29 s de generación)
+2026-11-09 17:07:07 - INFO - scripts.main - S11 (8. Documentación y capacitación): 0 fragmentos, evidencia None
+2026-11-09 17:07:08 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 17:08:01 - INFO - scripts.main - S11: 5 riesgos (53.82 s de generación)
+2026-11-09 17:08:01 - INFO - scripts.main - Unión: 49 riesgos -> 44 tras deduplicar.
+2026-11-09 17:08:01 - INFO - scripts.report_utils - Procesando objeto RiskReport para guardado final (JSON)...
+2026-11-09 17:08:01 - INFO - scripts.report_utils - Reporte JSON guardado en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P3_oferta_TV1600\analisis_riesgos_P3_oferta_TV1600_20261109_165721.json
+2026-11-09 17:08:01 - INFO - scripts.dashboard_generator - Dashboard HTML generado exitosamente en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P3_oferta_TV1600\dashboard_P3_oferta_TV1600_20261109_165721.html

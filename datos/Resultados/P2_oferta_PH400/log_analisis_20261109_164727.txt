@@ -1,0 +1,42 @@
+2026-11-09 16:47:27 - INFO - scripts.main - 📝 Log de este análisis guardándose en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P2_oferta_PH400\log_analisis_20261109_164727.txt
+2026-11-09 16:47:27 - INFO - scripts.main - --- INICIANDO ANÁLISIS (Modelo: qwen3:8b) ---
+2026-11-09 16:47:27 - INFO - scripts.main - --- ANÁLISIS POR SECCIÓN (Modelo: qwen3:8b, condición: sin_rag, modo: lista) ---
+2026-11-09 16:47:27 - INFO - scripts.main - Oferta de 13973 caracteres dividida en 11 secciones.
+2026-11-09 16:47:27 - INFO - scripts.rag_components - Intentando inicializar el modelo: 'qwen3:8b' del proveedor: 'ollama'
+2026-11-09 16:47:27 - INFO - scripts.main - S1 (Introducción): introducción excluida, 0 riesgos
+2026-11-09 16:47:27 - INFO - scripts.main - S2 (1. Presentación, 1.1 Características técnicas de la prensa PH-400): 0 fragmentos, evidencia None
+2026-11-09 16:47:30 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:48:12 - INFO - scripts.main - S2: 4 riesgos (44.85 s de generación)
+2026-11-09 16:48:12 - INFO - scripts.main - S3 (2. Alcance de la provisión, 2.1 Trabajos incluidos, 2.2 Implantación sobre la losa existente, 2.3 Interfaces con el Comitente): 0 fragmentos, evidencia None
+2026-11-09 16:48:13 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:49:07 - INFO - scripts.main - S3: 5 riesgos (55.35 s de generación)
+2026-11-09 16:49:07 - INFO - scripts.main - S4 (3. Secuencia constructiva y adecuación civil, 3.1 Etapas, 3.2 Hormigón de bloques de anclaje y losa de vía, 3.3 Drenaje de aceite): 0 fragmentos, evidencia None
+2026-11-09 16:49:08 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:50:02 - INFO - scripts.main - S4: 5 riesgos (54.66 s de generación)
+2026-11-09 16:50:02 - INFO - scripts.main - S5 (3.4 Vía de alimentación de pares montados): 0 fragmentos, evidencia None
+2026-11-09 16:50:03 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:50:44 - INFO - scripts.main - S5: 4 riesgos (42.0 s de generación)
+2026-11-09 16:50:44 - INFO - scripts.main - S6 (4. Especificación de materiales e instalaciones, 4.1 Instalación eléctrica, 4.2 Tablero de la prensa, 4.3 Puesta a tierra): 0 fragmentos, evidencia None
+2026-11-09 16:50:45 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:51:49 - INFO - scripts.main - S6: 5 riesgos (64.71 s de generación)
+2026-11-09 16:51:49 - INFO - scripts.main - S7 (4.4 Sistema oleohidráulico, 4.5 Bulonería y anclajes, 4.6 Compatibilidad electromagnética, 4.7 Ruido): 0 fragmentos, evidencia None
+2026-11-09 16:51:50 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:53:12 - WARNING - scripts.main - S7 (lista de riesgos): respuesta cortada por num_predict; se reintenta una vez.
+2026-11-09 16:53:12 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:54:14 - INFO - scripts.main - S7: 5 riesgos (144.96 s de generación)
+2026-11-09 16:54:14 - INFO - scripts.main - S8 (5. Plan de izaje, 5.1 Maniobra del bastidor, 5.2 Eslingado, 5.3 Documentación y supervisión): 0 fragmentos, evidencia None
+2026-11-09 16:54:15 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:55:17 - INFO - scripts.main - S8: 5 riesgos (63.73 s de generación)
+2026-11-09 16:55:17 - INFO - scripts.main - S9 (6. Montaje y nivelación): 0 fragmentos, evidencia None
+2026-11-09 16:55:18 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:55:51 - INFO - scripts.main - S9: 3 riesgos (33.6 s de generación)
+2026-11-09 16:55:51 - INFO - scripts.main - S10 (7. Pruebas y recepción, 7.1 Pruebas en fábrica (FAT), 7.2 Pruebas en sitio y recepción, 7.3 Garantía): 0 fragmentos, evidencia None
+2026-11-09 16:55:52 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:56:37 - INFO - scripts.main - S10: 4 riesgos (45.81 s de generación)
+2026-11-09 16:56:37 - INFO - scripts.main - S11 (8. Documentación final): 0 fragmentos, evidencia None
+2026-11-09 16:56:38 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-09 16:57:10 - INFO - scripts.main - S11: 3 riesgos (33.25 s de generación)
+2026-11-09 16:57:10 - INFO - scripts.main - Unión: 43 riesgos -> 37 tras deduplicar.
+2026-11-09 16:57:10 - INFO - scripts.report_utils - Procesando objeto RiskReport para guardado final (JSON)...
+2026-11-09 16:57:10 - INFO - scripts.report_utils - Reporte JSON guardado en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P2_oferta_PH400\analisis_riesgos_P2_oferta_PH400_20261109_164727.json
+2026-11-09 16:57:10 - INFO - scripts.dashboard_generator - Dashboard HTML generado exitosamente en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P2_oferta_PH400\dashboard_P2_oferta_PH400_20261109_164727.html

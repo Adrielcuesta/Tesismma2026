@@ -1,0 +1,49 @@
+2026-11-08 02:18:34 - INFO - scripts.main - 📝 Log de este análisis guardándose en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P1_oferta_TBP01\log_analisis_20261108_021834.txt
+2026-11-08 02:18:34 - INFO - scripts.main - --- INICIANDO ANÁLISIS (Modelo: qwen3:8b) ---
+2026-11-08 02:18:34 - INFO - scripts.main - --- ANÁLISIS POR SECCIÓN (Modelo: qwen3:8b, condición: sin_rag, modo: lista) ---
+2026-11-08 02:18:34 - INFO - scripts.main - Oferta de 21488 caracteres dividida en 14 secciones.
+2026-11-08 02:18:34 - INFO - scripts.rag_components - Intentando inicializar el modelo: 'qwen3:8b' del proveedor: 'ollama'
+2026-11-08 02:18:35 - INFO - scripts.main - S1 (Introducción): introducción excluida, 0 riesgos
+2026-11-08 02:18:35 - INFO - scripts.main - S2 (1. Presentación del oferente y objeto de la oferta, 1.1 Datos principales de la máquina ofertada, 1.2 Documentación que integra la oferta): 0 fragmentos, evidencia None
+2026-11-08 02:18:38 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:19:05 - INFO - scripts.main - S2: 4 riesgos (30.58 s de generación)
+2026-11-08 02:19:05 - INFO - scripts.main - S3 (2. Alcance de los trabajos, 2.1 Alcance incluido, 2.2 Exclusiones, 2.3 Organización del Consorcio en obra): 0 fragmentos, evidencia None
+2026-11-08 02:19:06 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:19:38 - INFO - scripts.main - S3: 5 riesgos (32.22 s de generación)
+2026-11-08 02:19:38 - INFO - scripts.main - S4 (3. Secuencia constructiva, 3.1 Estudios previos, 3.2 Excavación y contención, 3.3 Hormigón estructural de fosa y bancada): 0 fragmentos, evidencia None
+2026-11-08 02:19:38 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:20:05 - INFO - scripts.main - S4: 4 riesgos (27.68 s de generación)
+2026-11-08 02:20:05 - INFO - scripts.main - S5 (3.4 Bancada de inercia y aislamiento, 3.5 Optimización del plazo de la obra civil): 0 fragmentos, evidencia None
+2026-11-08 02:20:06 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:20:25 - INFO - scripts.main - S5: 3 riesgos (20.12 s de generación)
+2026-11-08 02:20:25 - INFO - scripts.main - S6 (3.6 Fosa: accesos, achique y estanqueidad, 3.7 Canal de viruta y tapas, 3.8 Puntos de espera y registro documental, 3.9 Cronograma resumido): 0 fragmentos, evidencia None
+2026-11-08 02:20:26 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:20:58 - INFO - scripts.main - S6: 5 riesgos (32.62 s de generación)
+2026-11-08 02:20:58 - INFO - scripts.main - S7 (4. Especificación de materiales y sistemas, 4.1 Instalación eléctrica de potencia, 4.2 Tableros seccionales): 0 fragmentos, evidencia None
+2026-11-08 02:20:59 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:21:26 - INFO - scripts.main - S7: 4 riesgos (28.0 s de generación)
+2026-11-08 02:21:26 - INFO - scripts.main - S8 (4.3 Puesta a tierra y compatibilidad electromagnética, 4.4 Sistema oleohidráulico, 4.5 Bulonería, anclajes y grout): 0 fragmentos, evidencia None
+2026-11-08 02:21:27 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:22:10 - INFO - scripts.main - S8: 6 riesgos (43.93 s de generación)
+2026-11-08 02:22:10 - INFO - scripts.main - S9 (4.6 Vía de aproximación, 4.7 Niveles sonoros): 0 fragmentos, evidencia None
+2026-11-08 02:22:10 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:22:32 - INFO - scripts.main - S9: 3 riesgos (22.13 s de generación)
+2026-11-08 02:22:32 - INFO - scripts.main - S10 (5. Plan de izaje y montaje mecánico, 5.1 Descripción de la maniobra principal, 5.2 Eslingado y accesorios, 5.3 Apoyo de la grúa y área de maniobra, 5.4 Supervisión y documentación): 0 fragmentos, evidencia None
+2026-11-08 02:22:33 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:23:07 - INFO - scripts.main - S10: 5 riesgos (34.97 s de generación)
+2026-11-08 02:23:07 - INFO - scripts.main - S11 (5.5 Protección de la máquina durante el manipuleo): 0 fragmentos, evidencia None
+2026-11-08 02:23:08 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:23:22 - INFO - scripts.main - S11: 2 riesgos (14.75 s de generación)
+2026-11-08 02:23:22 - INFO - scripts.main - S12 (6. Montaje, nivelación y alineación, 6.1 Nivelación de la bancada, 6.2 Alineación vía-máquina, 6.3 Control geométrico de la vía de aproximación, 6.4 Gálibos): 0 fragmentos, evidencia None
+2026-11-08 02:23:22 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:23:58 - INFO - scripts.main - S12: 5 riesgos (36.07 s de generación)
+2026-11-08 02:23:58 - INFO - scripts.main - S13 (7. Pruebas de aceptación en sitio (SAT) y recepción, 7.1 Etapas de prueba, 7.2 SAT bajo carga, 7.3 Mediciones, 7.4 Supervisión y actas): 0 fragmentos, evidencia None
+2026-11-08 02:23:59 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:24:43 - INFO - scripts.main - S13: 7 riesgos (45.02 s de generación)
+2026-11-08 02:24:43 - INFO - scripts.main - S14 (8. Gestión de calidad, seguridad y documentación final): 0 fragmentos, evidencia None
+2026-11-08 02:24:43 - INFO - httpx - HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+2026-11-08 02:25:26 - INFO - scripts.main - S14: 7 riesgos (43.47 s de generación)
+2026-11-08 02:25:26 - INFO - scripts.main - Unión: 60 riesgos -> 55 tras deduplicar.
+2026-11-08 02:25:26 - INFO - scripts.report_utils - Procesando objeto RiskReport para guardado final (JSON)...
+2026-11-08 02:25:26 - INFO - scripts.report_utils - Reporte JSON guardado en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P1_oferta_TBP01\analisis_riesgos_P1_oferta_TBP01_20261108_021834.json
+2026-11-08 02:25:26 - INFO - scripts.dashboard_generator - Dashboard HTML generado exitosamente en: C:\Users\adrie\Documents\tesismma2026\datos\Resultados\P1_oferta_TBP01\dashboard_P1_oferta_TBP01_20261108_021834.html

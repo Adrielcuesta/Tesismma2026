@@ -1,0 +1,8 @@
+﻿trampa;frase;descripcion_riesgo;cita;valido
+P4-02-A;diferencial general de 300 mA;Posible falta de protección contra descargas eléctricas en las tomas de mantenimiento.;Las tomas de mantenimiento dentro de la fosa quedarán protegidas por el diferencial general de 300 mA del tablero seccional.;
+P4-03-A;únicamente a su capacidad nominal (100 %);Pruebas del puente grúa limitadas a 100% de su capacidad nominal.;el nuevo puente grúa de 12,5 t se probará únicamente a su capacidad nominal (100 %);
+P4-03-B;inspección especializada anual;No se menciona inspección de cables de seguridad.;plan de mantenimiento prevé una inspección especializada anual del puente grúa, con informe de cables, frenos, poleas, finales de carrera y controles.;
+P4-04-A;a 2,0 m de la catenaria;Posible interferencia con la vía electrificada durante las maniobras.;Las maniobras de montaje con autogrúa junto a la vía 4 electrificada se realizarán a 2,0 m de la catenaria.;
+P4-04-M;firmada por el Jefe de Puesta en Marcha;No se especifica el criterio de aprobación para las observaciones del Operador en el acta SAT.;"El acta SAT será firmada por el Jefe de Puesta en Marcha de MetalRail; el Operador podrá adjuntar observaciones dentro de los 5 días hábiles";
+P4-04-B;manualmente cada 15 minutos;No se establece un procedimiento para la verificación de la temperatura de los rodamientos durante las pruebas.;La temperatura de los rodamientos se registrará manualmente cada 15 minutos durante las pruebas, con termómetro infrarrojo calibrado, consignando los valores en la planilla de;
+P4-05-M;separados 50 mm;Posible interferencia electromagnética entre cables de encoder y motor.;Los cables de encoder y de motor compartirán bandeja, separados 50 mm mediante precintos.;

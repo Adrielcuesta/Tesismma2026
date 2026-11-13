@@ -1,0 +1,9 @@
+﻿trampa;frase;descripcion_riesgo;cita;valido
+P3-01-A;taludes naturales 1:0,5;Riesgo de colapso de taludes durante excavación.;La excavación se ejecutará con taludes naturales 1:0,5, dada la buena cohesión del suelo observada en el sitio y en los sondeos.;
+P3-03-A;contrachapado fenólico de 25 mm;Uso de estabilizadores sobre tableros de contrachapado fenólico.;Los estabilizadores de la autogrúa se apoyarán sobre tableros de contrachapado fenólico de 25 mm.;
+P3-03-A;contrachapado fenólico de 25 mm;Falta de especificación de la capacidad de soporte del pavimento.;Los estabilizadores de la autogrúa se apoyarán sobre tableros de contrachapado fenólico de 25 mm disponibles en obra.;
+P3-03-A;contrachapado fenólico de 25 mm;Falta de especificación de la capacidad de soporte del pavimento del playón de acceso.;Los estabilizadores de la autogrúa se apoyarán sobre tableros de contrachapado fenólico de 25 mm disponibles en obra, colocados en doble capa sobre el pavimento;
+P3-04-M;altura libre de 2,00 m;No se especifica el método de control de la altura libre de la pasarela de acceso.;La pasarela de acceso al pupitre de mando cruzará sobre el paso peatonal con una altura libre de 2,00 m.;
+P3-04-B;Una traza por rueda;Falta de especificación de tolerancias para la rugosidad superficial.;"Rugosidad superficial: Una traza por rueda en la zona de rodadura; Ra ≤ 3,2 μm";
+P3-05-M;mortero cementicio de nivelación de alta resistencia (60 MPa);No se especifica el tipo de mortero cementicio a utilizar.;relleno bajo placas base se ejecutará con mortero cementicio de nivelación de alta resistencia (60 MPa).;
+P3-05-B;portón de la nave abierto;Posible incumplimiento en la tolerancia de nivelación.;La nivelación final se realizará en turno diurno con el portón de la nave abierto para ventilar, a fin de garantizar condiciones confortables para el;

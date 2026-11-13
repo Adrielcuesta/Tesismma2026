@@ -1,0 +1,4869 @@
+{
+  "nombre_archivo_original": "P1_oferta_TBP01.pdf",
+  "secciones": [
+    {
+      "id": "S1",
+      "titulos": [
+        "Introducción"
+      ],
+      "fragmentos": [],
+      "candidatos": null,
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S2",
+      "titulos": [
+        "1. Presentación del oferente y objeto de la oferta",
+        "1.1 Datos principales de la máquina ofertada",
+        "1.2 Documentación que integra la oferta"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_02",
+          "articulo": "6.6",
+          "score": 0.11327864229679108,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.1",
+          "score": 0.07383079081773758,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1",
+          "score": 0.05741625279188156,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.19",
+          "score": 0.05608605220913887,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2",
+          "score": 0.03900778666138649,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.12",
+          "score": 0.03733823075890541,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.8",
+          "score": 0.035979948937892914,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.2",
+          "score": 0.033247001469135284,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.4",
+          "score": 0.0323343500494957,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.2",
+          "score": 0.030209852382540703,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.2",
+          "score": 0.02965281903743744,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.1",
+          "score": 0.026358753442764282,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.1",
+          "score": 0.0238175168633461,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4",
+          "score": 0.02257614955306053,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4",
+          "score": 0.021324604749679565,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.1",
+          "score": 0.018707353621721268,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.5",
+          "score": 0.016984784975647926,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.8",
+          "score": 0.016552556306123734,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.1",
+          "score": 0.013832599855959415,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.3",
+          "score": 0.011771739460527897,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.9",
+          "score": 0.01160386297851801,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.2",
+          "score": 0.01124248281121254,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.12",
+          "score": 0.0025986258406192064,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.1",
+          "score": null,
+          "parte": 2
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.6",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.10",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.3",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.6",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.6",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.2",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.5",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.4",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "preambulo"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.12"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "preambulo"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.9"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "preambulo"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.6"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.20"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.9"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.9"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.6"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.12"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.5"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.19"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.8"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.17"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.12"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.3"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.13"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.8"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.3"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S3",
+      "titulos": [
+        "2. Alcance de los trabajos",
+        "2.1 Alcance incluido",
+        "2.2 Exclusiones",
+        "2.3 Organización del Consorcio en obra"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_03",
+          "articulo": "1.2",
+          "score": 0.23661920428276062,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.2",
+          "score": 0.1610545814037323,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.9",
+          "score": 0.09761887788772583,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.1",
+          "score": 0.03427879884839058,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.6",
+          "score": 0.01980155147612095,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.19",
+          "score": 0.018723905086517334,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.2",
+          "score": 0.013790201395750046,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4",
+          "score": 0.007522772066295147,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.9",
+          "score": 0.007213065400719643,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.2",
+          "score": 0.006371583789587021,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.8",
+          "score": 0.005491646472364664,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.4",
+          "score": 0.005283839534968138,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.3",
+          "score": 0.004887728951871395,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.1",
+          "score": 0.004070510622113943,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.2",
+          "score": 0.0034853415563702583,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.9",
+          "score": 0.003241423051804304,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.1",
+          "score": 0.0031902093905955553,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.13",
+          "score": 0.0027019381523132324,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.9",
+          "score": 0.00206795334815979,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.11",
+          "score": 0.001903121592476964,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.8",
+          "score": 0.0015412713401019573,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.21",
+          "score": 0.0012021122965961695,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.12",
+          "score": 0.0010616462677717209,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.9",
+          "score": 0.001014538574963808,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.13",
+          "score": 0.0008315075538121164,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.5",
+          "score": 0.0008178182761184871,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.5",
+          "score": 0.0007752772653475404,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.17",
+          "score": 0.0006840343703515828,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1",
+          "score": 0.0004419725446496159,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.20",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.3",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.8",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.1",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.10",
+          "score": null,
+          "parte": 2
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.9",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_04",
+          "articulo": "0.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.8"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.9"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.5"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.12"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.19"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.17"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.21"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.12"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.20"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.11"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.13"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.14"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.6"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.13"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.9"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.9"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.10"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.6"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.13"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.8"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.9"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.5"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.6"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.5"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.3"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.12"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.12"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S4",
+      "titulos": [
+        "3. Secuencia constructiva",
+        "3.1 Estudios previos",
+        "3.2 Excavación y contención",
+        "3.3 Hormigón estructural de fosa y bancada"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_01",
+          "articulo": "10.1",
+          "score": 0.9393318295478821,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.1",
+          "score": 0.8987206220626831,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.1",
+          "score": 0.8700833916664124,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.1",
+          "score": 0.8229504227638245,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.4",
+          "score": 0.8184977173805237,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.5",
+          "score": 0.7975872755050659,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.2",
+          "score": 0.7796280384063721,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.3",
+          "score": 0.7432314157485962,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.3",
+          "score": 0.6798041462898254,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.4",
+          "score": 0.6670612096786499,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.5",
+          "score": 0.44119203090667725,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.4",
+          "score": 0.42569422721862793,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2",
+          "score": 0.3476989269256592,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.2",
+          "score": 0.3287850022315979,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3",
+          "score": 0.2394886165857315,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.2",
+          "score": 0.15731804072856903,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.9",
+          "score": 0.04449154809117317,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.8",
+          "score": 0.043499261140823364,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.2",
+          "score": 0.039994414895772934,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.9",
+          "score": 0.037374988198280334,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.5",
+          "score": 0.008376856334507465,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.14",
+          "score": 0.007919172756373882,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4",
+          "score": 0.007130692712962627,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.7",
+          "score": 0.005096441600471735,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.4",
+          "score": 0.000776473549194634,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.1",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.6",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.4",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.13",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_01",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.1"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.5"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.7"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.8"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.9"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.6"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.1"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.9"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.13"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S5",
+      "titulos": [
+        "3.4 Bancada de inercia y aislamiento",
+        "3.5 Optimización del plazo de la obra civil"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_01",
+          "articulo": "7.3",
+          "score": 0.8713884949684143,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.4",
+          "score": 0.8165211081504822,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.5",
+          "score": 0.7037372589111328,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.14",
+          "score": 0.663321316242218,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.1",
+          "score": 0.6353211998939514,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2",
+          "score": 0.5153860449790955,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.6",
+          "score": 0.3161955773830414,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.7",
+          "score": 0.3135085105895996,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.2",
+          "score": 0.26038530468940735,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.2",
+          "score": 0.05920066311955452,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.2",
+          "score": 0.018979066982865334,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.5",
+          "score": 0.005258227698504925,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.13",
+          "score": 0.004639938473701477,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.1",
+          "score": 0.00328914076089859,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.2",
+          "score": 0.00199199584312737,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.3",
+          "score": 0.0015196233289316297,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4",
+          "score": 0.0011162693845108151,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.5",
+          "score": 0.0008343934896402061,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.1",
+          "score": 0.0007390885730274022,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.3",
+          "score": 0.0004366383363958448,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.4",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.18",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.4",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.7",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.5",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_01",
+          "articulo": "7.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.14"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.1"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.6"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.13"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.18"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.6"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.7"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.7"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.3"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.13"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.7"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.10"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.7"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.5"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S6",
+      "titulos": [
+        "3.6 Fosa: accesos, achique y estanqueidad",
+        "3.7 Canal de viruta y tapas",
+        "3.8 Puntos de espera y registro documental",
+        "3.9 Cronograma resumido"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_01",
+          "articulo": "6.6",
+          "score": 0.9478529691696167,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3",
+          "score": 0.9318188428878784,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.2",
+          "score": 0.9063599705696106,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.3",
+          "score": 0.8950238823890686,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.4",
+          "score": 0.831055223941803,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.1",
+          "score": 0.7469474673271179,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.6",
+          "score": 0.7183554768562317,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.7",
+          "score": 0.7076528668403625,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.10",
+          "score": 0.7009660601615906,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.2",
+          "score": 0.557206928730011,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.12",
+          "score": 0.4164351522922516,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.13",
+          "score": 0.4011830687522888,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.8",
+          "score": 0.37575292587280273,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.2",
+          "score": 0.372684508562088,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.3",
+          "score": 0.3353846073150635,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.8",
+          "score": 0.31765246391296387,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.8",
+          "score": 0.2586921751499176,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.1",
+          "score": 0.17419591546058655,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.6",
+          "score": 0.17361856997013092,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.8",
+          "score": 0.1534118950366974,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.19",
+          "score": 0.13552697002887726,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.2",
+          "score": 0.11161661148071289,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.1",
+          "score": 0.06515748053789139,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.24",
+          "score": 0.061370622366666794,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.3",
+          "score": 0.04017876088619232,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.18",
+          "score": 0.027703305706381798,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.13",
+          "score": 0.012278941459953785,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.4",
+          "score": 0.01119953952729702,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.1",
+          "score": 0.006896199192851782,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.4",
+          "score": 0.005091231781989336,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.5",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.6",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.4",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.9",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.4",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.4",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.1",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.5",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.7"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.10"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.8"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.8"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.15"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.8"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.6"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.13"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.24"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.22"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.12"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.19"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.2"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.10"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.11"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.11"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.14"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.18"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.6"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.19"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.15"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.13"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.17"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.17"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.9"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.17"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.4"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S7",
+      "titulos": [
+        "4. Especificación de materiales y sistemas",
+        "4.1 Instalación eléctrica de potencia",
+        "4.2 Tableros seccionales"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_02",
+          "articulo": "6.10",
+          "score": 0.9001588225364685,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.5",
+          "score": 0.1797097772359848,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.3",
+          "score": 0.1739320158958435,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.5",
+          "score": 0.04228939116001129,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.10",
+          "score": 0.04186073690652847,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.22",
+          "score": 0.0400749035179615,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.15",
+          "score": 0.02168888784945011,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.11",
+          "score": 0.021685762330889702,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.1",
+          "score": 0.0194378811866045,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.10",
+          "score": 0.018542615696787834,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.3",
+          "score": 0.013933955691754818,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.2",
+          "score": 0.013025056570768356,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.6",
+          "score": 0.006832074839621782,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.9",
+          "score": 0.006264607422053814,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.11",
+          "score": 0.003572121262550354,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.12",
+          "score": 0.0024061002768576145,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.2",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.16",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.19",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.15",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.7",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.7",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.7",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.2",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_02",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.9"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.10"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.11"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.10"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.16"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.14"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.10"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.15"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.5"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.11"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.19"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.20"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.13"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.5"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.22"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.10"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.19"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.4"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.6"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.2"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S8",
+      "titulos": [
+        "4.3 Puesta a tierra y compatibilidad electromagnética",
+        "4.4 Sistema oleohidráulico",
+        "4.5 Bulonería, anclajes y grout"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_05",
+          "articulo": "4.9",
+          "score": 0.5791642069816589,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.5",
+          "score": 0.5613438487052917,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.4",
+          "score": 0.5338731408119202,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.9",
+          "score": 0.32719314098358154,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.3",
+          "score": 0.30535387992858887,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.10",
+          "score": 0.2889558970928192,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.1",
+          "score": 0.26743823289871216,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.5",
+          "score": 0.24622491002082825,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.4",
+          "score": 0.2439839094877243,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.5",
+          "score": 0.20733483135700226,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.6",
+          "score": 0.20497499406337738,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.11",
+          "score": 0.17122429609298706,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.16",
+          "score": 0.163333460688591,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.1",
+          "score": 0.15101008117198944,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.3",
+          "score": 0.09483906626701355,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.1",
+          "score": 0.07139503210783005,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.8",
+          "score": 0.04719957336783409,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.8",
+          "score": 0.04646816849708557,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.7",
+          "score": 0.04050210490822792,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.4",
+          "score": 0.029775269329547882,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.11",
+          "score": 0.029349591583013535,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.6",
+          "score": 0.022893723100423813,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.19",
+          "score": 0.012040612287819386,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.12",
+          "score": 0.01151825301349163,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.10",
+          "score": 0.01047657709568739,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.4",
+          "score": 0.0060871965251863,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.13",
+          "score": 0.0051316856406629086,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4",
+          "score": 0.0017013725591823459,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.5",
+          "score": 0.0013937059557065368,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.25",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.8",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.4",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.8",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.8",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.10",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.9",
+          "score": null,
+          "parte": 2
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.5",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_02",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.11"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.19"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.7"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.11"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.6"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.16"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.5"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.8"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.6"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "1.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.1"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.10"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.5"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.13"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.12"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.16"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.11"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.6"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.12"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.15"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.5"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.10"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.10"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.5"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.8"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.5"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.13"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.17"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.9"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.18"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.6"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.9"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "4.2"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.12"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S9",
+      "titulos": [
+        "4.6 Vía de aproximación",
+        "4.7 Niveles sonoros"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_03",
+          "articulo": "6.2",
+          "score": 0.9664924144744873,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.1",
+          "score": 0.4124690294265747,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.7",
+          "score": 0.3058917224407196,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.7",
+          "score": 0.24002893269062042,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.3",
+          "score": 0.21772320568561554,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.2",
+          "score": 0.1720009297132492,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.10",
+          "score": 0.08825505524873734,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.3",
+          "score": 0.08695348352193832,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.4",
+          "score": 0.07186885178089142,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.16",
+          "score": 0.04729069769382477,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.4",
+          "score": 0.03711545094847679,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.10",
+          "score": 0.03627403452992439,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.12",
+          "score": 0.030735693871974945,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.1",
+          "score": 0.0306684672832489,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.5",
+          "score": 0.02407044917345047,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.5",
+          "score": 0.010019339621067047,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.8",
+          "score": 0.003869549138471484,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.2",
+          "score": 0.0024973859544843435,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.10",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.12",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.15",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.7",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_04",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.16"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.15"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.11"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.10"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.10"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.7"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.1"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.8"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.10"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.6"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.9"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.7"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.13"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.5"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S10",
+      "titulos": [
+        "5. Plan de izaje y montaje mecánico",
+        "5.1 Descripción de la maniobra principal",
+        "5.2 Eslingado y accesorios",
+        "5.3 Apoyo de la grúa y área de maniobra",
+        "5.4 Supervisión y documentación"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_03",
+          "articulo": "3.7",
+          "score": 0.8470193147659302,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.5",
+          "score": 0.8027362823486328,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.2",
+          "score": 0.5588148832321167,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.2",
+          "score": 0.5324687957763672,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4",
+          "score": 0.5096270442008972,
+          "parte": 2
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.12",
+          "score": 0.4731101393699646,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.8",
+          "score": 0.37606796622276306,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.7",
+          "score": 0.33211612701416016,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.6",
+          "score": 0.2835863530635834,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.1",
+          "score": 0.2795088291168213,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.6",
+          "score": 0.2682682275772095,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.3",
+          "score": 0.22631382942199707,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.8",
+          "score": 0.1504829078912735,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.6",
+          "score": 0.14667175710201263,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.7",
+          "score": 0.1395065039396286,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.1",
+          "score": 0.11714904010295868,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.2",
+          "score": 0.11191131174564362,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.3",
+          "score": 0.10994035005569458,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.2",
+          "score": 0.09847629070281982,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.13",
+          "score": 0.09514778852462769,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.3",
+          "score": 0.09401597082614899,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.2",
+          "score": 0.06751929223537445,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.4",
+          "score": 0.06276127696037292,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.9",
+          "score": 0.05167100951075554,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.5",
+          "score": 0.047178518027067184,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.2",
+          "score": 0.0433623380959034,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.11",
+          "score": 0.03742383420467377,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.7",
+          "score": 0.0319988876581192,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.5",
+          "score": 0.03174729272723198,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.6",
+          "score": 0.02172149159014225,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.12",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_05",
+          "articulo": "1.6"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.9"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.5"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.3"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.6"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.6"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.6"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.11"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.7"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.6"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.7"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "2.7"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.11"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.13"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.12"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.10"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.13"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.24"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.3"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.10"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.22"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.5"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.6"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.7"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.2"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.1"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S11",
+      "titulos": [
+        "5.5 Protección de la máquina durante el manipuleo"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_05",
+          "articulo": "1.9",
+          "score": 0.8051390647888184,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.8",
+          "score": 0.11188305169343948,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.8",
+          "score": 0.048274315893650055,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.10",
+          "score": 0.016224784776568413,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.11",
+          "score": 0.015909982845187187,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.19",
+          "score": 0.012753074988722801,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.15",
+          "score": 0.011424638330936432,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.14",
+          "score": 0.010925805196166039,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.8",
+          "score": 0.006199485622346401,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.1",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_05",
+          "articulo": "1.8"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.9"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.11"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.10"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.6"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.13"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.9"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.11"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.11"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "1.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.13"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.3"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.13"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.14"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.8"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "3.15"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.19"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S12",
+      "titulos": [
+        "6. Montaje, nivelación y alineación",
+        "6.1 Nivelación de la bancada",
+        "6.2 Alineación vía-máquina",
+        "6.3 Control geométrico de la vía de aproximación",
+        "6.4 Gálibos"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_04",
+          "articulo": "4.9",
+          "score": 0.9524823427200317,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "5.3",
+          "score": 0.9361137747764587,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.1",
+          "score": 0.9267501831054688,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.16",
+          "score": 0.8867334127426147,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.6",
+          "score": 0.876507580280304,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.5",
+          "score": 0.8526316285133362,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.7",
+          "score": 0.800822377204895,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.3",
+          "score": 0.7775824666023254,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.4",
+          "score": 0.7345156669616699,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.2",
+          "score": 0.6876756548881531,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.8",
+          "score": 0.6397846341133118,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.10",
+          "score": 0.6161409020423889,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.7",
+          "score": 0.6021276116371155,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.6",
+          "score": 0.5461981892585754,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.2",
+          "score": 0.5369723439216614,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.3",
+          "score": 0.5154705047607422,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.8",
+          "score": 0.48431846499443054,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.6",
+          "score": 0.46125298738479614,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.2",
+          "score": 0.4610523581504822,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.2",
+          "score": 0.45551562309265137,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.1",
+          "score": 0.3802708089351654,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.4",
+          "score": 0.37292951345443726,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.3",
+          "score": 0.2914365231990814,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.8",
+          "score": 0.2802376449108124,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.1",
+          "score": 0.2669975459575653,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.18",
+          "score": 0.20941096544265747,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.7",
+          "score": 0.10159444808959961,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.8",
+          "score": 0.09825833141803741,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.2",
+          "score": 0.0739465281367302,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3",
+          "score": 0.0449686162173748,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.10",
+          "score": null,
+          "parte": 2
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.3",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.10",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.8",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.1",
+          "score": null,
+          "parte": 2
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.12",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.11",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.15",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.10",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_05",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.8"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.6"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.8"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "5.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.7"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.6"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.15"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "2.10"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.10"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.9"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.13"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.1"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.11"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.10"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.8"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.18"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "5.18"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.21"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.15"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.16"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.10"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.11"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "6.3"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.13"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.9"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.8"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "4.3"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "4.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.17"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.3"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S13",
+      "titulos": [
+        "7. Pruebas de aceptación en sitio (SAT) y recepción",
+        "7.1 Etapas de prueba",
+        "7.2 SAT bajo carga",
+        "7.3 Mediciones",
+        "7.4 Supervisión y actas"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_04",
+          "articulo": "3.20",
+          "score": 0.9752840399742126,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.6",
+          "score": 0.8764759302139282,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.8",
+          "score": 0.7659711837768555,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.19",
+          "score": 0.543644905090332,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.7",
+          "score": 0.4380345940589905,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.17",
+          "score": 0.411136269569397,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.5",
+          "score": 0.38983839750289917,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.4",
+          "score": 0.33732980489730835,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.1",
+          "score": 0.2642765939235687,
+          "parte": 2
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.1",
+          "score": 0.18558494746685028,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.12",
+          "score": 0.1780136078596115,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.2",
+          "score": 0.12392965704202652,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.9",
+          "score": 0.11792358011007309,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.6",
+          "score": 0.10915456712245941,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.5",
+          "score": 0.10736288875341415,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.4",
+          "score": 0.09612986445426941,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.3",
+          "score": 0.08883275836706161,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.18",
+          "score": 0.07356850802898407,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.10",
+          "score": 0.052368126809597015,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.2",
+          "score": 0.05138859897851944,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.4",
+          "score": 0.047492265701293945,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.6",
+          "score": 0.03750893101096153,
+          "parte": 4
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.3",
+          "score": 0.03401383385062218,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.25",
+          "score": 0.03295164927840233,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.9",
+          "score": 0.02468780241906643,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.22",
+          "score": 0.021660229191184044,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.16",
+          "score": 0.018189948052167892,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.21",
+          "score": 0.014845771715044975,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.2",
+          "score": 0.013906165026128292,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.13",
+          "score": 0.011441393755376339,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.9",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.1",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.2",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.12",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_04",
+          "articulo": "3.22"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.21"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.16"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.25"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.19"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.17"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.18"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.15"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.1"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.19"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.13"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.14"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.8"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.9"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.13"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.20"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.10"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.9"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.5"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.7"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "6.4"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.5"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "7.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.11"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.6"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.18"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.9"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.2"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "2.10"
+        }
+      ],
+      "clasificacion_crag": null
+    },
+    {
+      "id": "S14",
+      "titulos": [
+        "8. Gestión de calidad, seguridad y documentación final"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_05",
+          "articulo": "5.8",
+          "score": 0.8559041023254395,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.8",
+          "score": 0.2599705457687378,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.2",
+          "score": 0.1453150063753128,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.6",
+          "score": 0.1201816201210022,
+          "parte": 2
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.7",
+          "score": 0.11924698948860168,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1",
+          "score": 0.07362937182188034,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.19",
+          "score": 0.05944691225886345,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.12",
+          "score": 0.03728559613227844,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.4",
+          "score": 0.020508568733930588,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.3",
+          "score": 0.010900938883423805,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.4",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "3.6",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.1",
+          "score": null,
+          "parte": 3
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "9.2",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.4",
+          "score": null,
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.21",
+          "score": null,
+          "parte": 1
+        }
+      ],
+      "candidatos": [
+        {
+          "norma": "NORM_05",
+          "articulo": "5.8"
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "6.8"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "10.4"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "4.19"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.3"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "8.1"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.12"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "3.7"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "5.6"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "1.14"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.12"
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "3.12"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "0.8"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.3"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.19"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.25"
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "3.4"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "5.1"
+        },
+        {
+          "norma": "NORM_01",
+          "articulo": "1.5"
+        },
+        {
+          "norma": "NORM_03",
+          "articulo": "7.2"
+        }
+      ],
+      "clasificacion_crag": null
+    }
+  ],
+  "configuracion_analisis": {
+    "modo": "solo_recuperacion",
+    "condicion": "rag_verificacion",
+    "perfil_recuperacion": "amplio",
+    "parametros_recuperacion": {
+      "K_SUBSECCION": 20,
+      "TOP_DENSA_SUBSECCION": 5,
+      "TOP_N_SUBSECCION": 8,
+      "VERIFICAR_TOPE": 30,
+      "ORACIONES_CIFRAS": true,
+      "ORACIONES_N": 2,
+      "ORACIONES_CUPO": 10
+    },
+    "huella_recuperacion": "afb6122d042215225a027582b7f5d3eb71dc00c1555a59ef4d20f8d415595a68",
+    "n_secciones": 14,
+    "use_reranker": true,
+    "recuperacion": "densa",
+    "k_subseccion": 20,
+    "top_n_subseccion": 8,
+    "top_densa_subseccion": 5,
+    "oraciones_cifras": {
+      "n": 2,
+      "cupo": 10
+    },
+    "tope_fragmentos_por_seccion": 30,
+    "recuperacion_por_subseccion": true,
+    "reranker": "BAAI/bge-reranker-v2-m3",
+    "embeddings": "C:\\Users\\adrie\\Documents\\tesismma2026\\modelos_locales\\bge-m3"
+  }
+}

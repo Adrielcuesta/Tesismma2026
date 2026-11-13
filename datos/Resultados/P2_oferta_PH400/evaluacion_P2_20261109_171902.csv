@@ -1,0 +1,16 @@
+﻿trampa;encontrada;norma;articulo;articulo_citado;articulo_verificado;perezosa;perezosa_clasificacion;perdida;clase_esperada;clase_obtenida;responsable_esperado;responsable_obtenido;nivel_esperado;nivel_obtenido;como_alerta
+P2-01-A;no;NORM_01;5.2;;0;0;0;n/d;Crítico;;Gerencia de Infraestructura y Vías;;Alto;;0
+P2-01-M;encontrada por frase;NORM_01;3.2;;0;0;0;n/d;Menor;;Gerencia de Infraestructura y Vías;;Bajo;;0
+P2-01-B;encontrada por frase;NORM_01;3.7;;0;0;0;n/d;Mayor;;Gerencia de Infraestructura y Vías;;Medio;;0
+P2-02-A;no;NORM_02;3.13;;0;0;0;n/d;Crítico;;Gerencia de Energía e Instalaciones Electromecánicas;;Alto;;0
+P2-02-M;no;NORM_02;2.16;;0;0;0;n/d;Mayor;;Gerencia de Energía e Instalaciones Electromecánicas;;Medio;;0
+P2-02-B;no;NORM_02;4.7;;0;0;0;n/d;Menor;;Gerencia de Energía e Instalaciones Electromecánicas;;Bajo;;0
+P2-03-A;no;NORM_03;2.8;;0;0;0;n/d;Crítico;;Gerencia de Seguridad Operacional y Salud Ocupacional;;Alto;;0
+P2-03-M;no;NORM_03;2.4;;0;0;0;n/d;Mayor;;Gerencia de Seguridad Operacional y Salud Ocupacional;;Medio;;0
+P2-03-B;encontrada por frase;NORM_03;6.2;;0;0;0;n/d;Menor;;Gerencia de Seguridad Operacional y Salud Ocupacional;;Bajo;;0
+P2-04-A;encontrada por frase;NORM_04;3.2;;0;0;0;n/d;Crítico;;Gerencia de Material Rodante y Equipamiento de Talleres;;Alto;;0
+P2-04-M;encontrada por frase;NORM_04;2.6;;0;0;0;n/d;Mayor;;Gerencia de Infraestructura y Vías;;Medio;;0
+P2-04-B;encontrada por frase;NORM_04;2.13;;0;0;0;n/d;Mayor;;Gerencia de Infraestructura y Vías;;Medio;;0
+P2-05-A;no;NORM_05;1.8;;0;0;0;n/d;Crítico;;Gerencia de Material Rodante y Equipamiento de Talleres;;Alto;;0
+P2-05-M;no;NORM_05;3.5;;0;0;0;n/d;Mayor;;Gerencia de Material Rodante y Equipamiento de Talleres;;Medio;;0
+P2-05-B;no;NORM_05;3.8;;0;0;0;n/d;Menor;;Gerencia de Material Rodante y Equipamiento de Talleres;;Bajo;;0

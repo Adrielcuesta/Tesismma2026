@@ -1,0 +1,5 @@
+﻿trampa;frase;descripcion_riesgo;cita;valido
+P1-01-B;prueba de inundación de 24 h;Falta de especificación de pruebas de estanqueidad en condiciones reales.;La estanqueidad de la fosa se verificará mediante prueba de inundación de 24 h y control visual ...;
+P1-03-A;utilización resultante es del 87 %;Uso excesivo de la capacidad de la grúa.;La utilización resultante es del 87 %, dentro de la capacidad del equipo.;
+P1-03-M;ángulo de 55°;Posible sobrecarga por ángulo de eslingado.;El eslingado de la bancada será de cuatro ramales de cable de acero y trabajará con un ángulo de 55° respecto de la vertical.;
+P1-04-A;ajustada a ± 3 mm;Posible error en la medición de la trocha en la zona de aproximación.;La tolerancia de trocha en la zona de aproximación será ajustada a ± 3 mm.;

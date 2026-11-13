@@ -1,0 +1,3539 @@
+{
+    "configuracion_analisis": {
+        "modelo_llm_usado": "deepinfra:Qwen/Qwen3-235B-A22B-Instruct-2507",
+        "display_name_modelo": "Qwen/Qwen3-235B-A22B-Instruct-2507 (deepinfra, nube)",
+        "condicion": "rag_seccion",
+        "n_secciones": 14,
+        "k_recuperacion": 20,
+        "top_n_por_seccion": 4,
+        "reranker_max_length": 512,
+        "recuperacion_por_subseccion": true,
+        "k_subseccion": 10,
+        "top_n_subseccion": 5,
+        "top_densa_subseccion": 5,
+        "oraciones_cifras": {
+            "n": 2,
+            "cupo": 8
+        },
+        "tope_fragmentos_por_seccion": 25,
+        "modo_generacion": "verificacion",
+        "usar_crag": false,
+        "temperature": 0,
+        "seed": 42,
+        "thinking_verificacion": false,
+        "verif_temperature": "N/A",
+        "verif_top_p": "N/A",
+        "verif_top_k": "N/A",
+        "llamadas_llm": {
+            "verificacion": 10,
+            "clasificacion": 6,
+            "comentario": 0
+        },
+        "llamadas_fallidas": 0,
+        "costo_computacional": {
+            "modelo": "deepinfra:Qwen/Qwen3-235B-A22B-Instruct-2507",
+            "hardware": {
+                "gpu": null,
+                "vram": null
+            },
+            "pares_verificados": 10,
+            "llamadas_totales": 16,
+            "llamadas_fallidas": 0,
+            "tiempo_total_s": 111.8045408000471,
+            "segundos_por_par": {
+                "mediana": 12.972999999999999,
+                "p90": 17.335399999999996
+            },
+            "tokens_entrada_total": 55582,
+            "tokens_salida_total": 4539,
+            "tokens_entrada_por_par": 5558.2,
+            "tokens_salida_por_par": 453.9,
+            "proveedor": "deepinfra",
+            "concurrencia": 8,
+            "costo_usd": 0.007499,
+            "tokens_cacheados": 0,
+            "llamadas_cobradas": 16,
+            "presupuesto_usd": 1.0,
+            "detenida_por_presupuesto": false,
+            "normalizaciones_formato": 0,
+            "formato_respuesta": {
+                "verificacion": "json_schema",
+                "clasificacion": "json_schema"
+            }
+        },
+        "hardware": {
+            "gpu": null,
+            "vram": null
+        },
+        "llamadas_detalle": [
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_02|6.6",
+                "etiqueta": "S2 NORM_02 Art. 6.6 (verificación)",
+                "duracion_s": 7.499,
+                "prompt_eval_count": 1686,
+                "eval_count": 260,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_01|8.1",
+                "etiqueta": "S2 NORM_01 Art. 8.1 (verificación)",
+                "duracion_s": 5.402,
+                "prompt_eval_count": 1883,
+                "eval_count": 261,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_04|4.19",
+                "etiqueta": "S2 NORM_04 Art. 4.19 (verificación)",
+                "duracion_s": 7.035,
+                "prompt_eval_count": 1666,
+                "eval_count": 326,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_01|10.2",
+                "etiqueta": "S2 NORM_01 Art. 10.2 (verificación)",
+                "duracion_s": 5.123,
+                "prompt_eval_count": 1911,
+                "eval_count": 251,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_05|5.8",
+                "etiqueta": "S2 NORM_05 Art. 5.8 (verificación)",
+                "duracion_s": 6.739,
+                "prompt_eval_count": 1757,
+                "eval_count": 247,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_01|1.2",
+                "etiqueta": "S2 NORM_01 Art. 1.2 (verificación)",
+                "duracion_s": 3.902,
+                "prompt_eval_count": 1869,
+                "eval_count": 180,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_02|1.2",
+                "etiqueta": "S2 NORM_02 Art. 1.2 (verificación)",
+                "duracion_s": 3.375,
+                "prompt_eval_count": 1698,
+                "eval_count": 155,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_01|7.1",
+                "etiqueta": "S2 NORM_01 Art. 7.1 (verificación)",
+                "duracion_s": 6.79,
+                "prompt_eval_count": 1990,
+                "eval_count": 293,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_03|7.4",
+                "etiqueta": "S2 NORM_03 Art. 7.4 (verificación)",
+                "duracion_s": 4.72,
+                "prompt_eval_count": 2436,
+                "eval_count": 152,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "verificacion",
+                "par": "S2|NORM_01|2.4",
+                "etiqueta": "S2 NORM_01 Art. 2.4 (verificación)",
+                "duracion_s": 7.554,
+                "prompt_eval_count": 1919,
+                "eval_count": 361,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "clasificacion",
+                "par": "S2|NORM_02|6.6",
+                "etiqueta": "S2 NORM_02 Art. 6.6 (clasificación)",
+                "duracion_s": 9.645,
+                "prompt_eval_count": 5966,
+                "eval_count": 458,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "clasificacion",
+                "par": "S2|NORM_01|8.1",
+                "etiqueta": "S2 NORM_01 Art. 8.1 (clasificación)",
+                "duracion_s": 8.568,
+                "prompt_eval_count": 6184,
+                "eval_count": 378,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "clasificacion",
+                "par": "S2|NORM_04|4.19",
+                "etiqueta": "S2 NORM_04 Art. 4.19 (clasificación)",
+                "duracion_s": 7.78,
+                "prompt_eval_count": 6022,
+                "eval_count": 359,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "clasificacion",
+                "par": "S2|NORM_01|10.2",
+                "etiqueta": "S2 NORM_01 Art. 10.2 (clasificación)",
+                "duracion_s": 6.853,
+                "prompt_eval_count": 6202,
+                "eval_count": 261,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "clasificacion",
+                "par": "S2|NORM_05|5.8",
+                "etiqueta": "S2 NORM_05 Art. 5.8 (clasificación)",
+                "duracion_s": 12.319,
+                "prompt_eval_count": 6054,
+                "eval_count": 312,
+                "intentos": 1,
+                "exitosa": true
+            },
+            {
+                "tipo": "clasificacion",
+                "par": "S2|NORM_01|7.1",
+                "etiqueta": "S2 NORM_01 Art. 7.1 (clasificación)",
+                "duracion_s": 8.469,
+                "prompt_eval_count": 6339,
+                "eval_count": 285,
+                "intentos": 1,
+                "exitosa": true
+            }
+        ],
+        "tokens_generados_por_tipo": {
+            "verificacion": {
+                "n": 10,
+                "max": 361,
+                "promedio": 248.6
+            },
+            "clasificacion": {
+                "n": 6,
+                "max": 458,
+                "promedio": 342.2
+            }
+        },
+        "excluir_introduccion": true,
+        "calcular_respaldo": false,
+        "tiempos_s": {
+            "total": 111.8,
+            "por_seccion": [
+                {
+                    "id": "S2",
+                    "verificacion": 58.14,
+                    "clasificacion": 53.64
+                }
+            ]
+        },
+        "tokens_prompt_por_seccion": {},
+        "recuperacion_reusada": true,
+        "max_pares": 10
+    },
+    "fragmentos_fuente": [
+        {
+            "contenido": "Art. 6.6. Identificación de maquinaria de gran porte\nPara cada torno bajo piso, torno CNC, prensa hidráulica, alesadora, rectificadora, puente grúa y equipo equivalente existirá una ficha de interfaz eléctrica con potencia y corriente nominal; tensión y frecuencia; factor de potencia;\nrendimiento; régimen de servicio; corriente de arranque; tipo y potencia del variador; armónicos; corriente de fuga;\ncorriente de cortocircuito admisible (SCCR o dato equivalente); protecciones exigidas por el fabricante; sección PE;\nborne de tierra; tensión mínima/máxima; desconectador local; y plano de conexión.",
+            "nombre_documento_fuente": "NORM_02_Reglamento_Tecnico_BT_MT.pdf",
+            "numero_pagina": 18,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 8.1. DOCUMENTACIÓN DE PROYECTO Y LEGAJO TÉCNICO\nAntes de licitar o ejecutar, el Legajo Técnico tendrá: memoria descriptiva; relevamiento de interferencias; planos de fundación, armaduras, insertos y juntas; especificaciones de hormigón y grout; estudio geotécnico; memoria de cálculo estructural; análisis dinámico cuando aplique; diseño de aislamiento; planos de excavación y entibación; estudio de impermeabilización; cálculo de bombas; datos de máquina y reacciones; tolerancias de nivelación; secuencia constructiva;\nplan de inspección y ensayos; plan de izaje y montaje; y procedimiento de puesta en servicio.\nLos Documentos de Construcción deberán indicar reglamentos y ediciones utilizadas, acciones de diseño, hipótesis, criterios de conformidad, requisitos de inspección, cargas admisibles, cotas, recubrimientos, diámetros, anclajes, grout, curado y edad de habilitación. Todo trabajo delegado al contratista se identificará con sus criterios de diseño y deberá ser elaborado por profesional habilitado; el contratista remitirá los documentos necesarios al Proyectista Estructural para verificar compatibilidad.\nLos planos conforme a obra incluirán desvíos aprobados, resultados de inspección, ubicación real de anclajes, insertos, canalizaciones, juntas, bombas, drenajes, aislamientos y puntos de instrumentación. La información se conservará para operación, modificación y reparación.",
+            "nombre_documento_fuente": "NORM_01_reglamento.pdf",
+            "numero_pagina": 15,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 4.19. Documentación de la interfaz vía-máquina\nEl expediente contendrá memoria de cálculo; datos del fabricante; reacciones de apoyo; planos de cimentación; detalles de anclaje; especificación de grout; planos de vía y carriles de apoyo; levantamiento geométrico; certificados de materiales;\nactas de montaje; medidas de alineación angular; registros de carga y vibración; e inspección posterior a SAT.\nLos planos as-built identificarán cualquier modificación respecto al IFC y enlazarán la modificación con su autorización, cálculo y registro de inspección.",
+            "nombre_documento_fuente": "NORM_04_Reglamento_Tecnico_Galibos_Vias_SAT.pdf",
+            "numero_pagina": 16,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 10.2. LISTA MÍNIMA DE VERIFICACIONES DE CÁLCULO\nLa memoria estructural deberá contener: (a) geometría, materiales y vida útil; (b) datos de máquina y reacciones por apoyo;\n(c) hipótesis de carga y combinaciones; (d) resistencia a flexión, corte, punzonamiento, compresión, tracción y torsión; (e) verificación de anclajes, placas base, llaves de corte y distancias a borde; (f) control de fisuración y deformación; (g) presiones de contacto y estabilidad; (h) asentamiento total y diferencial; (i) rigidez y frecuencia natural de la bancada; (j) masa efectiva y relación de masa; (k) análisis de respuesta a excitación y armónicos; (l) selección y transmisibilidad de aisladores; (m) vibración transmitida a estructura y piso adyacentes; (n) verificación de juntas y efectos de retracción; (o) durabilidad, recubrimiento y protección química; (p) secuencia de construcción y estados transitorios; y (q) inspección, ensayo y plan de recepción.\nLa memoria geotécnica incluirá exploraciones, perfiles, parámetros resistentes y deformacionales, nivel freático, capacidad portante, asentamientos, interacción dinámica cuando aplique, recomendaciones de excavación, contención, drenaje y control. El cálculo de fosas añadirá presión hidrostática, subpresión, empuje lateral, cargas de piso, sobrecargas de borde, estanqueidad y condiciones de mantenimiento.",
+            "nombre_documento_fuente": "NORM_01_reglamento.pdf",
+            "numero_pagina": 17,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 5.8. Requisitos de cierre documental\nEl dossier final contendrá: plano de implantación; plano de fundación; certificados de grout; actas de izaje; registros dimensionales; mapa de nivelación; protocolos geométricos ISO 230-1; protocolos CNC ISO 230-2; ensayos térmicos ISO 230-3 cuando apliquen; planos hidráulicos; registros de flushing; certificados de filtros; códigos ISO 4406;\nhumedad; pruebas de presión y estanqueidad; listado de torque; certificados de herramientas; plano EMC “as built”; y resultados funcionales.\nLa documentación se entregará en formato PDF de lectura y archivos fuente editables. Los datos de ensayo se entregarán además en formato tabular estructurado (CSV o XLSX) con las unidades, condiciones y referencias sin pérdida de precisión. Los certificados deberán conservar su vínculo con el número de serie de los instrumentos y el lote de los materiales.",
+            "nombre_documento_fuente": "NORM_05_Estandares_Montaje_Mecanico_Oleohidraulica_Tolerancias.pdf",
+            "numero_pagina": 16,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 1.2. ÁMBITO DE APLICACIÓN Y UMBRALES DE CARGA\nSe encuentran comprendidas las máquinas cuya masa operativa total sea superior a 10 t, así como las máquinas de menor masa que produzcan fuerzas alternas importantes, impactos, pares pulsantes, vibraciones de precisión, cargas concentradas elevadas o exigencias de nivelación incompatibles con una losa industrial convencional. La masa que se considerará será la del conjunto instalado en condición de servicio: máquina, accesorios, fluidos, herramientas, dispositivos de carga, carros, componentes móviles y máxima carga de proceso prevista.\nSe consideran incluidas, entre otras, las siguientes instalaciones: tornos de ruedas bajo piso; prensas hidráulicas de gran porte; rectificadoras y tornos CNC; fresadoras pesadas; bancos de ensayo; máquinas de equilibrado; equipos de mantenimiento de bogies y ejes; transportadores de viruta; fosas de mantenimiento; equipos de lavado; y maquinaria de movimiento alternativo.\nLa aplicación de un umbral de masa no sustituye el análisis de las acciones reales. Una máquina de 11 t con apoyos puntuales de pequeña superficie puede ser más exigente para una losa que un equipo de 20 t con una base amplia y carga uniformemente distribuida. Las fuerzas de proceso, los momentos, la frecuencia de excitación y la rigidez de los apoyos serán consideradas conjuntamente.",
+            "nombre_documento_fuente": "NORM_01_reglamento.pdf",
+            "numero_pagina": 3,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 1.2. Alcance funcional\nQuedan comprendidos los suministros trifásicos de gran demanda y los circuitos asociados a tornos bajo piso ferroviarios, tornos CNC, alesadoras, fresadoras, rectificadoras, mandrinadoras, prensas hidráulicas, bancos de ensayo, compresores, bombas, sistemas de refrigeración, hornos, puentes grúa, pórticos, cabrestantes, elevadores, líneas de montaje y equipos auxiliares. El alcance incluye máquinas con motores de arranque directo, estrella- triángulo, autotransformador, arrancador suave, variador de velocidad, servoaccionamientos, frenado regenerativo, resistencias de frenado y fuentes conmutadas.",
+            "nombre_documento_fuente": "NORM_02_Reglamento_Tecnico_BT_MT.pdf",
+            "numero_pagina": 2,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 7.1. CLASIFICACIÓN DE MÁQUINAS Y CAMPO ISO 20816-3\nISO 20816-3:2022 se aplica a la evaluación in situ de maquinaria industrial acoplada con potencia superior a 15 kW y velocidad de operación entre 120 r/min y 30 000 r/min, para los tipos de máquina incluidos en su alcance. Divide las máquinas en Grupo 1: grandes máquinas con potencia nominal superior a 300 kW o máquinas eléctricas con altura de eje H >= 315 mm; y Grupo 2: máquinas medianas con potencia superior a 15 kW y hasta 300 kW o máquinas eléctricas con altura de eje entre 160 mm y menos de 315 mm. La clasificación del soporte es rígido o flexible en cada dirección de medida.\nSegún ISO 20816-3, un soporte puede considerarse rígido en una dirección cuando la menor frecuencia natural del conjunto máquina-soporte en esa dirección es al menos 25 % mayor que la frecuencia principal de excitación; en caso contrario se clasifica como flexible. Una misma bancada puede ser rígida en dirección vertical y flexible en horizontal. Si la clasificación no es clara por planos y cálculo, podrá determinarse mediante ensayo.\nLa norma excluye las máquinas reciprocantes y máquinas sólidamente acopladas a reciprocantes. Para prensas, martillos, mecanismos alternativos y ciertos equipos de movimiento cíclico, el Proyectista deberá identificar la norma especializada aplicable, como ISO 10816-6 cuando corresponda, o acordar el criterio con fabricante y cliente. ISO 20816-3 no evalúa vibración externa transmitida hacia la máquina desde una fuente ajena; por ello, las mediciones del piso adyacente requeridas por este reglamento constituyen un criterio complementario.",
+            "nombre_documento_fuente": "NORM_01_reglamento.pdf",
+            "numero_pagina": 12,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 7.4. Orden de prevalencia\nEn caso de discrepancia se aplicará el requisito legal vigente que resulte más exigente y el criterio técnico de fabricante o norma de producto que corresponda al equipo. Entre varios valores internos prevalecerá el más restrictivo que resulte técnicamente aplicable. Ningún plan, ensayo o autorización podrá derogar la prohibición de superar la carga máxima admisible del equipo durante operación.\nANEXO A. METODOLOGÍA DE CÁLCULO DE CARGA, ESLINGADO Y CAPACIDAD A.1. Datos de partida La hoja de cálculo contendrá: peso certificado de la carga; peso de bastidores y embalaje; masa de aparejos y accesorios; posición del centro de gravedad; coordenadas de puntos de toma; ángulos de ramales; geometría del balancín; WLL de cada accesorio; radio y configuración del equipo; capacidad disponible de tabla; reacciones de apoyo; capacidad del terreno y recorrido.\nA.2. Ejemplo ilustrativo de clasificación de una máquina de 35 t Hipótesis de cálculo exclusivamente ilustrativa:\nMasa de máquina: 35.000 kg.\nBastidor y protecciones: 800 kg.\nAccesorios suspendidos y útiles: 900 kg.\nPeso bruto de referencia: 36.700 kg.\nCapacidad de tabla para configuración real: 45.000 kg.\nUtilización:\nU = 36.700 / 45.000 x 100 = 81,56 %.\nResultado: maniobra crítica por superar el umbral interno del 80 %. Requiere Plan de Izaje Crítico firmado y aprobado antes de ejecución. La utilización no supera el 100 %, pero no constituye autorización automática; deberán verificarse eslingado, apoyos, radios, gálibos, estructura, estabilidad y demás condiciones del plan.\nPara una capacidad de tabla de 40.000 kg:\nU = 36.700 / 40.000 x 100 = 91,75 %.\nResultado: izaje crítico con utilización elevada. Sólo podrá ejecutarse con aprobación del plan y con capacidad real comprobada en toda la trayectoria. Si la capacidad de tabla para una posición intermedia cae por debajo de 36.700 kg, la maniobra queda prohibida en esa posición.\nA.3. Capacidad de referencia para mantener el 80 % Cuando el objetivo de diseño sea que el peso bruto no exceda el 80 % de la capacidad disponible, se utilizará:\nC_min = Q_s / 0,80 Para Q_s = 36.700 kg:\nC_min = 36.700 / 0,80 = 45.875 kg.\nPor lo tanto, la capacidad disponible deberá ser como mínimo 45.875 kg para obtener utilización igual o inferior al 80 %. El valor se comprobará contra la tabla real de carga, no contra la capacidad nominal general del equipo.\nA.4. Ejemplo de tensión idealizada en dos ramales Para W = 36.700 kgf equivalente y dos ramales simétricos a 45° de la vertical:\nT = 36.700 / (2 x cos 45°) T = 36.700 / 1,4142 T = aproximadamente 25.951 kgf por ramal.\nEl resultado no incluye factores adicionales, reducción por modo de uso, tolerancia, reparto desigual, aceleración, flexibilidad ni efecto de contacto. No podrá usarse como selección final sin la memoria completa. La WLL marcada de cada ramal deberá superar la solicitación final de cálculo en la configuración de trabajo.",
+            "nombre_documento_fuente": "NORM_03_Protocolo_Izaje_Critico.pdf",
+            "numero_pagina": 20,
+            "score_relevancia": null
+        },
+        {
+            "contenido": "Art. 2.4. CRITERIOS MÍNIMOS DE ACEPTABILIDAD SEGÚN CARGA\nLa aceptación se efectuará en función de la categoría de la Tabla 2.1 y de la clase de máquina. Para toda máquina de más de 10 t se requerirá memoria de cálculo de fundación o justificación analítica de la estructura existente. Para toda máquina de más de 15 t sobre piso preexistente, será condición suspensiva un informe firmado por Ingeniero Civil habilitado que establezca la capacidad resistente de losa, subbase, terreno, juntas, bordes, apoyos y elementos vecinos. Para CNC, tornos de ruedas y equipos de precisión se requerirá además la verificación de nivelación y asentamiento diferencial.\nLa instalación se considerará NO ACEPTABLE cuando ocurra cualquiera de los siguientes supuestos: inexistencia de plano conforme a obra o levantamiento geométrico fiable; ausencia de datos de cargas; resistencia de hormigón no demostrada;\narmaduras o espesor insuficientes; presión de contacto superior a la admisible del informe geotécnico; riesgo de pérdida de contacto no contemplado; asentamiento diferencial superior al límite de proyecto; anclajes sin cálculo o instalados fuera de especificación; fisuras activas o aplastamiento en apoyos; vibración transmitida superior al límite interno del artículo 7.7;\ningreso de agua no controlado en fosa; o documentación de recepción incompleta.\nUna inspección visual favorable no constituye prueba de capacidad estructural. La autorización de uso exige la aprobación conjunta de los responsables técnicos y el acta de puesta en servicio.",
+            "nombre_documento_fuente": "NORM_01_reglamento.pdf",
+            "numero_pagina": 5,
+            "score_relevancia": null
+        }
+    ],
+    "nombre_proyecto_analizado": "P1 oferta TBP01",
+    "timestamp_analisis": "2026-11-09T00:15:56.316182",
+    "respuesta_cruda_llm": "{\n  \"riesgos_identificados\": []\n}",
+    "evaluacion_evidencia": null,
+    "advertencia_evidencia": null,
+    "suficiencia_evidencia": null,
+    "comentarios_generales": null,
+    "acciones_generales": [],
+    "secciones": [
+        {
+            "id": "S1",
+            "titulos": [
+                "Introducción"
+            ],
+            "fragmentos": [],
+            "candidatos": null,
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S2",
+            "titulos": [
+                "1. Presentación del oferente y objeto de la oferta",
+                "1.1 Datos principales de la máquina ofertada",
+                "1.2 Documentación que integra la oferta"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.6",
+                    "score": 0.11327864229679108
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.1",
+                    "score": 0.05741625279188156
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.19",
+                    "score": 0.05608605220913887
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.2",
+                    "score": 0.03900778666138649
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.8",
+                    "score": 0.035979948937892914
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.2",
+                    "score": 0.030209852382540703
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.2",
+                    "score": 0.02965281903743744
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.1",
+                    "score": 0.026358753442764282
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4",
+                    "score": 0.02257614955306053
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4",
+                    "score": 0.021324602887034416
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.8",
+                    "score": 0.016552556306123734
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.1",
+                    "score": 0.013832599855959415
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.9",
+                    "score": 0.01160386297851801
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.2",
+                    "score": 0.01124248281121254
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "0.1",
+                    "score": 0.009742837399244308
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.12",
+                    "score": 0.0025986258406192064
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.6",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.10",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.3",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.6",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.6",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.2"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "preambulo"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.12"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "preambulo"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.9"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "0.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.2"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.9"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.6"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.2"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.19"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.8"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.1"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.8"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.4"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.17"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.14"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "4.12"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S3",
+            "titulos": [
+                "2. Alcance de los trabajos",
+                "2.1 Alcance incluido",
+                "2.2 Exclusiones",
+                "2.3 Organización del Consorcio en obra"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.2",
+                    "score": 0.1610545814037323
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.9",
+                    "score": 0.09761887788772583
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.1",
+                    "score": 0.03427879884839058
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.6",
+                    "score": 0.01980155147612095
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.19",
+                    "score": 0.0187238659709692
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "0.2",
+                    "score": 0.013790201395750046
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4",
+                    "score": 0.007522772066295147
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.9",
+                    "score": 0.0072130621410906315
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.4",
+                    "score": 0.005283839534968138
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.3",
+                    "score": 0.004887728951871395
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.1",
+                    "score": 0.004070510622113943
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.2",
+                    "score": 0.0034853415563702583
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.11",
+                    "score": 0.0019031197298318148
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.8",
+                    "score": 0.0015412713401019573
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.21",
+                    "score": 0.0012021122965961695
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.12",
+                    "score": 0.0010616462677717209
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "0.9",
+                    "score": 0.001014538574963808
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.13",
+                    "score": 0.0008315075538121164
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.17",
+                    "score": 0.0006840344285592437
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.1",
+                    "score": 0.0004419725446496159
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.20",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.3",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.8",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.5",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.10",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.2",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_04",
+                    "articulo": "0.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.2"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.2"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.9"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.8"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.3"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.19"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.17"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.21"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.12"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.9"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.20"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.11"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.13"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.14"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.6"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.3"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.13"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.8"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "0.9"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.14"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.3"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.5"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S4",
+            "titulos": [
+                "3. Secuencia constructiva",
+                "3.1 Estudios previos",
+                "3.2 Excavación y contención",
+                "3.3 Hormigón estructural de fosa y bancada"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.1",
+                    "score": 0.8987206220626831
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.1",
+                    "score": 0.8700833916664124
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.1",
+                    "score": 0.8229504227638245
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.4",
+                    "score": 0.8184977173805237
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.5",
+                    "score": 0.7975872755050659
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.2",
+                    "score": 0.7796280384063721
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.3",
+                    "score": 0.6798041462898254
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.5",
+                    "score": 0.44119203090667725
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.4",
+                    "score": 0.42569422721862793
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.2",
+                    "score": 0.3476989269256592
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.2",
+                    "score": 0.3287850022315979
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.3",
+                    "score": 0.2394886165857315
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.2",
+                    "score": 0.15731804072856903
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.9",
+                    "score": 0.037374988198280334
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.5",
+                    "score": 0.008376856334507465
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4",
+                    "score": 0.007130693644285202
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.4",
+                    "score": 0.000776473549194634
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.7",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.14",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.6",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.13",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.1"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.3"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.4"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.3"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.2"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.9"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.8"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.9"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.4"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.1"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.9"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S5",
+            "titulos": [
+                "3.4 Bancada de inercia y aislamiento",
+                "3.5 Optimización del plazo de la obra civil"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.3",
+                    "score": 0.8713884949684143
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.5",
+                    "score": 0.7037372589111328
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.14",
+                    "score": 0.663321316242218
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.1",
+                    "score": 0.6353211998939514
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.2",
+                    "score": 0.26038527488708496
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.2",
+                    "score": 0.05920066311955452
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.2",
+                    "score": 0.018979066982865334
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.13",
+                    "score": 0.004639938473701477
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.1",
+                    "score": 0.00328914076089859
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.3",
+                    "score": 0.0015196233289316297
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.1",
+                    "score": 0.0007390885730274022
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.3",
+                    "score": 0.0004366383363958448
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.7",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.18",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.7",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.5",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.3"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.14"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.1"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.6"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.3"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.13"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.7"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.3"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.1"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S6",
+            "titulos": [
+                "3.6 Fosa: accesos, achique y estanqueidad",
+                "3.7 Canal de viruta y tapas",
+                "3.8 Puntos de espera y registro documental",
+                "3.9 Cronograma resumido"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.6",
+                    "score": 0.9478529691696167
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.3",
+                    "score": 0.9318188428878784
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.2",
+                    "score": 0.9063597917556763
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.4",
+                    "score": 0.831055223941803
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.1",
+                    "score": 0.746947705745697
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.6",
+                    "score": 0.7183552384376526
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.7",
+                    "score": 0.7076533436775208
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.10",
+                    "score": 0.7009660601615906
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.2",
+                    "score": 0.5572070479393005
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.13",
+                    "score": 0.40118297934532166
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.3",
+                    "score": 0.33538493514060974
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.1",
+                    "score": 0.1741952747106552
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.19",
+                    "score": 0.13552705943584442
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.2",
+                    "score": 0.11161661148071289
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.24",
+                    "score": 0.061370622366666794
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.3",
+                    "score": 0.04017895460128784
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.18",
+                    "score": 0.02770329639315605
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.13",
+                    "score": 0.012278941459953785
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.1",
+                    "score": 0.006896199192851782
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.2",
+                    "score": 0.004712794441729784
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.1",
+                    "score": 0.0037394575774669647
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.9",
+                    "score": 0.0019758539274334908
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.17",
+                    "score": 0.0017622715095058084
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.5",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.12",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "3.6",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.9",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.1",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.3"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.4"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.7"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.2"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.10"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.5"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.8"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.6"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.13"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.24"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.1"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.22"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "1.1"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.12"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.19"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.18"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.6"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.3"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.19"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.15"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.12"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.13"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.9"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.17"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.1"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S7",
+            "titulos": [
+                "4. Especificación de materiales y sistemas",
+                "4.1 Instalación eléctrica de potencia",
+                "4.2 Tableros seccionales"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.10",
+                    "score": 0.2277127206325531
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.5",
+                    "score": 0.17971011996269226
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.3",
+                    "score": 0.17393198609352112
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.5",
+                    "score": 0.04228939116001129
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.10",
+                    "score": 0.04186073690652847
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.22",
+                    "score": 0.040074966847896576
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.10",
+                    "score": 0.018542632460594177
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.2",
+                    "score": 0.013025074265897274
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.10",
+                    "score": 0.009302152320742607
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.9",
+                    "score": 0.006264607422053814
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.11",
+                    "score": 0.003572121262550354
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.12",
+                    "score": 0.0024060981813818216
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.11",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.2",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.16",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.19",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.15",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.1",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.5"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.9"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.10"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.11"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.10"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.16"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.14"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.4"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "3.10"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.3"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.5"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.22"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.10"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.12"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.5"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.19"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.5"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.15"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.2"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S8",
+            "titulos": [
+                "4.3 Puesta a tierra y compatibilidad electromagnética",
+                "4.4 Sistema oleohidráulico",
+                "4.5 Bulonería, anclajes y grout"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_05",
+                    "articulo": "4.9",
+                    "score": 0.5791641473770142
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.5",
+                    "score": 0.5613438487052917
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.4",
+                    "score": 0.5338731408119202
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.9",
+                    "score": 0.32719314098358154
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.3",
+                    "score": 0.30535387992858887
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.10",
+                    "score": 0.2889558970928192
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "4.1",
+                    "score": 0.26743823289871216
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.4",
+                    "score": 0.2439839094877243
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.5",
+                    "score": 0.20733483135700226
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.11",
+                    "score": 0.17122429609298706
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.16",
+                    "score": 0.163333460688591
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.1",
+                    "score": 0.15101008117198944
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.1",
+                    "score": 0.07139503210783005
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.8",
+                    "score": 0.04646816849708557
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.4",
+                    "score": 0.029775269329547882
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.11",
+                    "score": 0.029349591583013535
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.19",
+                    "score": 0.012040612287819386
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.12",
+                    "score": 0.01151825301349163
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.10",
+                    "score": 0.01047657709568739
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.4",
+                    "score": 0.0060871965251863
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4",
+                    "score": 0.0017013725591823459
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.5",
+                    "score": 0.0013937059557065368
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.7",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.25",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "4.8",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.5",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "4.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.8",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "1.8",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "4.10",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.4"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.1"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.11"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.19"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.7"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "4.9"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.11"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.6"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.16"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.1"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.10"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.4"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.4"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.5"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.13"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.12"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "3.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.16"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.4"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.10"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "4.3"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.5"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.8"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "4.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.5"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.13"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.17"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.9"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S9",
+            "titulos": [
+                "4.6 Vía de aproximación",
+                "4.7 Niveles sonoros"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.2",
+                    "score": 0.9664925336837769
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.1",
+                    "score": 0.4124690294265747
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.7",
+                    "score": 0.3058914840221405
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.7",
+                    "score": 0.24002893269062042
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.3",
+                    "score": 0.21772320568561554
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.2",
+                    "score": 0.1720009446144104
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.10",
+                    "score": 0.08825505524873734
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.4",
+                    "score": 0.07186885178089142
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.16",
+                    "score": 0.04729069769382477
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.4",
+                    "score": 0.03711545839905739
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.8",
+                    "score": 0.003869549138471484
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.2",
+                    "score": 0.0024973880499601364
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.10",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.12",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.12",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.15",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.7",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.16"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.7"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.15"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.12"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.11"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.6"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.2"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.7"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.1"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.8"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.10"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.4"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.5"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.6"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S10",
+            "titulos": [
+                "5. Plan de izaje y montaje mecánico",
+                "5.1 Descripción de la maniobra principal",
+                "5.2 Eslingado y accesorios",
+                "5.3 Apoyo de la grúa y área de maniobra",
+                "5.4 Supervisión y documentación"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_03",
+                    "articulo": "3.7",
+                    "score": 0.8470193147659302
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.5",
+                    "score": 0.8027362823486328
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.2",
+                    "score": 0.5324687957763672
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4",
+                    "score": 0.5096270442008972
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.12",
+                    "score": 0.4731101393699646
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.8",
+                    "score": 0.37606796622276306
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.7",
+                    "score": 0.33211612701416016
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.6",
+                    "score": 0.2835863530635834
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.1",
+                    "score": 0.2795088291168213
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.6",
+                    "score": 0.2682682275772095
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.3",
+                    "score": 0.22631382942199707
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.8",
+                    "score": 0.1504829078912735
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.6",
+                    "score": 0.14667175710201263
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.7",
+                    "score": 0.1395065039396286
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.2",
+                    "score": 0.11191131174564362
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.3",
+                    "score": 0.10994035005569458
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.13",
+                    "score": 0.09514778852462769
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.9",
+                    "score": 0.05167100951075554
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.2",
+                    "score": 0.0433623380959034
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.7",
+                    "score": 0.0319988876581192
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.5",
+                    "score": 0.03174729272723198
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.6",
+                    "score": 0.02172149159014225
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.11",
+                    "score": 0.012210547924041748
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.6",
+                    "score": 0.0032393594738096
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.2",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.12",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "3.4",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.6"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.9"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.5"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.2"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.8"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.5"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.1"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.3"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.2"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "3.7"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.6"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.7"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "2.7"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.11"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.13"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.12"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.3"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.8"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.10"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.6"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.7"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.6"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.14"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.11"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.10"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "5.13"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "1.7"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.2"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.1"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.5"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.3"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.6"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "3.4"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.14"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S11",
+            "titulos": [
+                "5.5 Protección de la máquina durante el manipuleo"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.9",
+                    "score": 0.8051388263702393
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.8",
+                    "score": 0.11188314855098724
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.10",
+                    "score": 0.0162248145788908
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.11",
+                    "score": 0.01590999774634838
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.8",
+                    "score": 0.006618608720600605
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.8",
+                    "score": 0.006199485622346401
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.1",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.8"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.9"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.11"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.8"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.10"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.8"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.6"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "2.13"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.9"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.3"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S12",
+            "titulos": [
+                "6. Montaje, nivelación y alineación",
+                "6.1 Nivelación de la bancada",
+                "6.2 Alineación vía-máquina",
+                "6.3 Control geométrico de la vía de aproximación",
+                "6.4 Gálibos"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.9",
+                    "score": 0.9524822235107422
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.3",
+                    "score": 0.9361137747764587
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.1",
+                    "score": 0.9267503023147583
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.16",
+                    "score": 0.8867334127426147
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.5",
+                    "score": 0.8526316285133362
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.7",
+                    "score": 0.8008226156234741
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.3",
+                    "score": 0.7775819301605225
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.4",
+                    "score": 0.7345149517059326
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.10",
+                    "score": 0.6161407828330994
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.6",
+                    "score": 0.5461981892585754
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.2",
+                    "score": 0.5369723439216614
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.3",
+                    "score": 0.5154705047607422
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.8",
+                    "score": 0.48431840538978577
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.6",
+                    "score": 0.46125298738479614
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.2",
+                    "score": 0.4610523581504822
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.2",
+                    "score": 0.45551562309265137
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.4",
+                    "score": 0.37292951345443726
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.8",
+                    "score": 0.09825833141803741
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.3",
+                    "score": 0.0449686124920845
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.8",
+                    "score": 0.040813419967889786
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.6",
+                    "score": 0.021913014352321625
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.12",
+                    "score": 0.018506810069084167
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.11",
+                    "score": 0.014818793162703514
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.10",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.3",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.10",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.8",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.12",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.15",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.3"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.8"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.6"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.8"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.1"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "5.4"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.7"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "2.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.6"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.9"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.11"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.10"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.12"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.7"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.8"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.15"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.16"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.5"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.6"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.5"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "6.3"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "4.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.14"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "1.13"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "4.10"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S13",
+            "titulos": [
+                "7. Pruebas de aceptación en sitio (SAT) y recepción",
+                "7.1 Etapas de prueba",
+                "7.2 SAT bajo carga",
+                "7.3 Mediciones",
+                "7.4 Supervisión y actas"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.20",
+                    "score": 0.9752840995788574
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.6",
+                    "score": 0.876475989818573
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.8",
+                    "score": 0.7659709453582764
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.19",
+                    "score": 0.543644368648529
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.17",
+                    "score": 0.4111359417438507
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.5",
+                    "score": 0.3898386061191559
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.4",
+                    "score": 0.337329626083374
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.1",
+                    "score": 0.18558460474014282
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.2",
+                    "score": 0.12392979860305786
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "0.9",
+                    "score": 0.11792349070310593
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.6",
+                    "score": 0.10915441066026688
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.4",
+                    "score": 0.09612966328859329
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.3",
+                    "score": 0.08883260935544968
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.10",
+                    "score": 0.05236801505088806
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.4",
+                    "score": 0.047492269426584244
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.3",
+                    "score": 0.034013811498880386
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.9",
+                    "score": 0.02468780241906643
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.22",
+                    "score": 0.0216602124273777
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.16",
+                    "score": 0.01818995736539364
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.21",
+                    "score": 0.014845779165625572
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.2",
+                    "score": 0.013906165026128292
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.13",
+                    "score": 0.011441398411989212
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.12",
+                    "score": 0.010872461833059788
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.9",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.2",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.18",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.7",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.12",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.22"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.21"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.16"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.25"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.19"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.17"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.6"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.1"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.3"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.8"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.9"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.7"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.5"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.10"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "7.6"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.12"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.2"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.13"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.9"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.5"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "2.7"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "6.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "3.20"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "0.9"
+                }
+            ],
+            "clasificacion_crag": null
+        },
+        {
+            "id": "S14",
+            "titulos": [
+                "8. Gestión de calidad, seguridad y documentación final"
+            ],
+            "fragmentos": [
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.8",
+                    "score": 0.8559041023254395
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.8",
+                    "score": 0.2599705457687378
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.6",
+                    "score": 0.1201816201210022
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.7",
+                    "score": 0.11924698948860168
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.1",
+                    "score": 0.07362937182188034
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.19",
+                    "score": 0.05944691225886345
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.4",
+                    "score": 0.020508568733930588
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.3",
+                    "score": 0.010900938883423805
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "3.6",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "7.1",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "9.2",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.4",
+                    "score": null
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.21",
+                    "score": null
+                }
+            ],
+            "candidatos": [
+                {
+                    "norma": "NORM_05",
+                    "articulo": "5.8"
+                },
+                {
+                    "norma": "NORM_02",
+                    "articulo": "6.8"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "10.4"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "4.19"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.3"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "8.1"
+                },
+                {
+                    "norma": "NORM_03",
+                    "articulo": "5.12"
+                },
+                {
+                    "norma": "NORM_01",
+                    "articulo": "3.7"
+                },
+                {
+                    "norma": "NORM_04",
+                    "articulo": "5.6"
+                },
+                {
+                    "norma": "NORM_05",
+                    "articulo": "1.14"
+                }
+            ],
+            "clasificacion_crag": null
+        }
+    ],
+    "registro_brechas": [],
+    "riesgos": [],
+    "solicitudes": [],
+    "alertas": [
+        {
+            "seccion": "S2",
+            "seccion_oferta": "1.2 Documentación que integra la oferta",
+            "norma": "NORM_04",
+            "articulo": "4.19",
+            "oraciones": [
+                "O17"
+            ],
+            "cita": "La oferta se compone de este documento, de los planos de implantación PL-MFS-041-01 a 07, de la memoria de cálculo estructural MC-MFS-041-02, del estudio geotécnico EG-041, de la memoria eléctrica ME-MFS-041-03 y del cronograma de obra CR-MFS-041-R0.",
+            "motivo": "El artículo NORM_04, Art. 4.19 exige documentación específica sobre la interfaz vía-máquina, incluyendo planos de cimentación, detalles de anclaje, especificación de grout, planos de vía, levantamiento geométrico, certificados, actas y registros posteriores. La oferta menciona planos de implantación, memoria de cálculo, estudio geotécnico y otros documentos, pero no se especifica si estos incluyen todos los elementos exigidos por el artículo. Según el Art. 2.9, cuando no puede determinarse con certeza si se cumple el requisito, se clasifica como alerta a revisar."
+        },
+        {
+            "seccion": "S2",
+            "seccion_oferta": "1.2 Documentación que integra la oferta",
+            "norma": "NORM_01",
+            "articulo": "10.2",
+            "oraciones": [
+                "O17"
+            ],
+            "cita": "La oferta se compone de este documento, de los planos de implantación PL-MFS-041-01 a 07, de la memoria de cálculo estructural MC-MFS-041-02, del estudio geotécnico EG-041, de la memoria eléctrica ME-MFS-041-03 y del cronograma de obra CR-MFS-041-R0.",
+            "motivo": "La oferta menciona la presentación de la memoria estructural y el estudio geotécnico, pero no se especifica si contienen todos los puntos exigidos por el artículo. La condición de aplicación no puede determinarse con certeza a partir de la oferta."
+        },
+        {
+            "seccion": "S2",
+            "seccion_oferta": "1. Presentación del oferente y objeto de la oferta",
+            "norma": "NORM_01",
+            "articulo": "7.1",
+            "oraciones": [
+                "O5",
+                "O11",
+                "O12",
+                "O13",
+                "O14",
+                "O15",
+                "O17"
+            ],
+            "cita": "(40 %), presenta su Oferta Técnica para la provisión, obra civil, montaje mecánico, instalación electromecánica, pruebas y puesta en servicio de un Torno de Ruedas Bajo Piso CNC (en adelante, TBP-01) en el Taller Central de Material Rodante del Operador Ferroviario Estatal. Trocha de la vía de taller 1.676 mm (trocha ancha) Carga máxima por eje admitida 25 t Potencia instalada total 165 kW Alimentación 400/230 V – 50 Hz, trifásica con neutro y PE Sistema de sujeción de ruedas Oleohidráulico de alta presión con servoválvulas Control CNC con medición automática de perfil y diámetro Masa de la bancada principal (subconjunto de izaje más pesado) 26 t La oferta se compone de este documento, de los planos de implantación PL-MFS-041-01 a 07, de la memoria de cálculo estructural MC-MFS-041-02, del estudio geotécnico EG-041, de la memoria eléctrica ME-MFS-041-03 y del cronograma de obra CR-MFS-041-R0.",
+            "motivo": "La oferta describe una máquina con potencia de 165 kW, superior a 15 kW, por lo que el artículo NORM_01 Art. 7.1 es aplicable. Sin embargo, no se declara la clasificación del soporte (rígido o flexible) ni se menciona el cálculo o ensayo que la justifique, y el verificador previo indica duda sobre la condición de aplicación. Según Art. 2.9, cuando la condición de aplicación no puede determinarse con la oferta, se informa como alerta."
+        }
+    ],
+    "resumen_ejecutivo": {
+        "decision": "Aceptable",
+        "por_nivel": {
+            "Alto": 0,
+            "Medio": 0,
+            "Bajo": 0
+        },
+        "por_clase": {
+            "Crítico": 0,
+            "Mayor": 0,
+            "Menor": 0
+        },
+        "comentario_general": "Decisión de aceptabilidad: Aceptable. No se identificaron riesgos.",
+        "origen_comentario": "plantilla"
+    },
+    "lineamientos": {
+        "huella": "b7d171f017cb281f4939b936443caf87fa7965acbc84d968680d5451d0cd288a",
+        "caracteres_criterios": 10905,
+        "documentos": {
+            "NORM_06": "NORM_06_Estructura Organizacional.docx",
+            "NORM_07": "NORM_07.docx"
+        }
+    },
+    "registro_tecnico": [
+        {
+            "seccion": "S2",
+            "norma": "NORM_02",
+            "articulo": "6.6",
+            "veredicto": "Incumple",
+            "oraciones": [
+                "O5",
+                "O17"
+            ],
+            "explicacion": "El artículo exige expresamente presentar una ficha de interfaz eléctrica detallada y un plano de conexión, que no son mencionados en la oferta.",
+            "eval_count": 260,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_01",
+            "articulo": "8.1",
+            "veredicto": "Incumple",
+            "oraciones": [
+                "O17"
+            ],
+            "explicacion": "La oferta menciona el estudio geotécnico y la memoria de cálculo estructural, pero no presenta planos de fundación, armaduras, insertos y juntas, ni otros documentos exigidos como análisis dinámico o plan de izaje.",
+            "eval_count": 261,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_04",
+            "articulo": "4.19",
+            "veredicto": "Revisar",
+            "oraciones": [
+                "O17"
+            ],
+            "explicacion": "La oferta menciona planos de implantación, memoria de cálculo y estudio geotécnico, pero no especifica si incluyen todos los documentos exigidos por el artículo, como planos de cimentación, detalles de anclaje, especificación de grout, planos de vía, levantamiento geométrico, ni certificados, actas o registros posteriores.",
+            "eval_count": 326,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_01",
+            "articulo": "10.2",
+            "veredicto": "Revisar",
+            "oraciones": [
+                "O17"
+            ],
+            "explicacion": "La oferta menciona la presentación de la memoria de cálculo estructural y el estudio geotécnico, pero no detalla si incluyen todos los puntos exigidos por el artículo.",
+            "eval_count": 251,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_05",
+            "articulo": "5.8",
+            "veredicto": "Incumple",
+            "oraciones": [
+                "O17"
+            ],
+            "explicacion": "La oferta menciona planos de implantación pero no incluye ni menciona los protocolos ISO 230-1, 230-2, 230-3, ni formatos tabulares estructurados para datos de ensayo, ni vínculo de certificados con números de serie o lotes.",
+            "eval_count": 247,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_01",
+            "articulo": "1.2",
+            "veredicto": "Cumple",
+            "oraciones": [
+                "O5",
+                "O9"
+            ],
+            "explicacion": "La masa operativa total ofertada es de 42 t, superior al umbral de 10 t establecido en el artículo, por lo que la máquina está comprendida en el ámbito de aplicación.",
+            "eval_count": 180,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_02",
+            "articulo": "1.2",
+            "veredicto": "No aplica",
+            "oraciones": [],
+            "explicacion": "El artículo define el alcance funcional de suministros y equipos incluidos, pero la oferta no menciona ni describe los suministros trifásicos ni los circuitos asociados a las máquinas listadas, ni los métodos de arranque o componentes eléctricos específicos.",
+            "eval_count": 155,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_01",
+            "articulo": "7.1",
+            "veredicto": "Revisar",
+            "oraciones": [
+                "O5",
+                "O11",
+                "O12",
+                "O13",
+                "O14",
+                "O15",
+                "O17"
+            ],
+            "explicacion": "La máquina ofertada tiene una potencia instalada de 165 kW, superior a 15 kW, por lo que ISO 20816-3:2022 es aplicable y debe clasificarse según Grupo 2.",
+            "eval_count": 293,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_03",
+            "articulo": "7.4",
+            "veredicto": "No aplica",
+            "oraciones": [],
+            "explicacion": "El artículo regula la orden de prevalencia de requisitos y la metodología de cálculo para izajes, pero no exige un dato, documento o característica específica que deba ser presentado en la oferta; la sección de la oferta no menciona planos, ensayos ni cálculos relacionados con esta norma.",
+            "eval_count": 152,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_01",
+            "articulo": "2.4",
+            "veredicto": "Cumple",
+            "oraciones": [
+                "O6",
+                "O17"
+            ],
+            "explicacion": "La máquina ofertada tiene una masa operativa total de 42 t, superior a 10 t, por lo que requiere memoria de cálculo de fundación, la cual se presenta como MC-MFS-041-02, junto con el estudio geotécnico EG-041, cumpliendo así el requisito normativo.",
+            "eval_count": 361,
+            "estado": "ok"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_02",
+            "articulo": "6.6",
+            "etapa": "clasificacion",
+            "veredicto": "INFORMACION_FALTANTE",
+            "oraciones": [
+                "O5",
+                "O17"
+            ],
+            "estado": "no_es_riesgo",
+            "motivo": "La oferta no menciona la presentación de una ficha de interfaz eléctrica ni su contenido, aunque el artículo NORM_02, Art. 6.6, la exige expresamente como documento específico. La omisión no implica contradicción ni desvío, pero el dato exigido no está presente. [Art. 2.5: no es un ítem del Art. 2.6]",
+            "eval_count": 458,
+            "regla": "2.5"
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_01",
+            "articulo": "8.1",
+            "etapa": "clasificacion",
+            "veredicto": "NO_APLICA",
+            "oraciones": [
+                "O17"
+            ],
+            "estado": "no_es_riesgo",
+            "motivo": "La oferta menciona la memoria de cálculo estructural, el estudio geotécnico y los planos de implantación, pero no describe ni ofrece los planos de fundación, armaduras, insertos y juntas, ni otros documentos exigidos en el Art. 8.1 como el análisis dinámico, plan de izaje o plan de inspección. Sin embargo, el Art. 8.1 exige documentos para el Legajo Técnico que deben estar antes de licitar o ejecutar, pero no requiere su presentación en la oferta. El Art. 2.7 establece que si el requisito corresponde a etapas posteriores (como ejecución o dossier final) y la oferta no dice nada al respecto, el veredicto es No aplica. La oferta no contradice ni propone soluciones alternativas, solo omite mencionar documentos que, según el contexto, pertenecen a etapas posteriores al acto de ofertar.",
+            "eval_count": 378
+        },
+        {
+            "seccion": "S2",
+            "norma": "NORM_05",
+            "articulo": "5.8",
+            "etapa": "clasificacion",
+            "veredicto": "NO_APLICA",
+            "oraciones": [
+                "O17"
+            ],
+            "estado": "no_es_riesgo",
+            "motivo": "La oferta describe la actividad correspondiente al artículo NORM_05, Art. 5.8, que regula los requisitos de cierre documental. Sin embargo, el artículo exige documentación propia de la ejecución y entrega final (dossier final), como registros de ensayo en formatos estructurados, protocolos ISO 230, y vínculo de certificados con números de serie o lotes. La oferta no declara nada sobre estos elementos, ni su cumplimiento ni su omisión. Por tanto, el requisito corresponde a una etapa posterior a la oferta.",
+            "eval_count": 312
+        }
+    ],
+    "riesgos_identificados_estructurados": [],
+    "nombre_archivo_original": "P1_oferta_TBP01.pdf"
+}

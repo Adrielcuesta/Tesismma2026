@@ -1,0 +1,31 @@
+﻿trampa;encontrada;norma;articulo;articulo_citado;articulo_verificado;perezosa;perezosa_clasificacion;perdida;clase_esperada;clase_obtenida;responsable_esperado;responsable_obtenido;nivel_esperado;nivel_obtenido;como_alerta
+P1-01-A;encontrada;NORM_01;4.2;;1;0;0;encontrada;Crítico;Crítico;Gerencia de Infraestructura y Vías;Gerencia de Infraestructura y Vías;Alto;Alto;0
+P1-01-M;encontrada;NORM_01;6.3;;1;0;0;encontrada;Mayor;Mayor;Gerencia de Infraestructura y Vías;Gerencia de Infraestructura y Vías;Medio;Medio;0
+P1-01-B;otro artículo;NORM_01;6.5;NORM_01 Art. 6.3;1;0;0;otra causa;Mayor;;Gerencia de Infraestructura y Vías;;Medio;;0
+P1-02-A;encontrada;NORM_02;5.4;;1;0;0;encontrada;Crítico;Crítico;Gerencia de Energía e Instalaciones Electromecánicas;Gerencia de Energía e Instalaciones Electromecánicas;Alto;Alto;0
+P1-02-M;encontrada;NORM_02;4.5;;1;0;0;encontrada;Mayor;Mayor;Gerencia de Energía e Instalaciones Electromecánicas;Gerencia de Energía e Instalaciones Electromecánicas;Medio;Medio;0
+P1-02-B;otro artículo;NORM_02;5.16;NORM_02 Art. 5.8;1;1;0;perdida en verificación;Menor;;Gerencia de Energía e Instalaciones Electromecánicas;;Bajo;;0
+P1-03-A;encontrada;NORM_03;2.2;;1;0;0;encontrada;Crítico;Mayor;Gerencia de Seguridad Operacional y Salud Ocupacional;Gerencia de Seguridad Operacional y Salud Ocupacional;Alto;Alto;0
+P1-03-M;encontrada;NORM_03;2.6;;1;0;0;encontrada;Mayor;Crítico;Gerencia de Seguridad Operacional y Salud Ocupacional;Gerencia de Seguridad Operacional y Salud Ocupacional;Medio;Alto;0
+P1-03-B;encontrada;NORM_03;5.1;;1;0;0;encontrada;Menor;Menor;Gerencia de Seguridad Operacional y Salud Ocupacional;Gerencia de Seguridad Operacional y Salud Ocupacional;Bajo;Bajo;0
+P1-04-A;encontrada;NORM_04;2.3;;1;0;0;encontrada;Mayor;Mayor;Gerencia de Infraestructura y Vías;Gerencia de Infraestructura y Vías;Alto;Medio;0
+P1-04-M;encontrada;NORM_04;3.8;;1;0;0;encontrada;Mayor;Crítico;Gerencia de Material Rodante y Equipamiento de Talleres;Gerencia de Material Rodante y Equipamiento de Talleres;Alto;Alto;0
+P1-04-B;otro artículo;NORM_04;2.5;NORM_05 Art. 5.3;0;0;0;no recuperada;Menor;;Gerencia de Infraestructura y Vías;;Bajo;;0
+P1-05-A;encontrada;NORM_05;3.4;;1;0;0;encontrada;Crítico;Mayor;Gerencia de Material Rodante y Equipamiento de Talleres;Gerencia de Material Rodante y Equipamiento de Talleres;Alto;Bajo;0
+P1-05-M;otro artículo;NORM_05;2.1;NORM_05 Art. 5.3;0;0;0;no recuperada;Mayor;;Gerencia de Material Rodante y Equipamiento de Talleres;;Alto;;0
+P1-05-B;otro artículo;NORM_05;4.4;NORM_05 Art. 4.9;1;1;0;perdida en verificación;Menor;;Gerencia de Material Rodante y Equipamiento de Talleres;;Bajo;;0
+P2-01-A;encontrada;NORM_01;5.2;;1;0;0;encontrada;Crítico;Crítico;Gerencia de Infraestructura y Vías;Gerencia de Infraestructura y Vías;Alto;Alto;0
+P2-01-M;otro artículo;NORM_01;3.2;NORM_04 Art. 2.13;0;0;0;no recuperada;Menor;;Gerencia de Infraestructura y Vías;;Bajo;;0
+P2-01-B;otro artículo;NORM_01;3.7;NORM_01 Art. 4.5;0;0;0;no recuperada;Mayor;;Gerencia de Infraestructura y Vías;;Medio;;0
+P2-02-A;encontrada;NORM_02;3.13;;1;0;0;encontrada;Crítico;Crítico;Gerencia de Energía e Instalaciones Electromecánicas;Gerencia de Energía e Instalaciones Electromecánicas;Alto;Alto;0
+P2-02-M;no;NORM_02;2.16;;1;1;0;perdida en verificación;Mayor;;Gerencia de Energía e Instalaciones Electromecánicas;;Medio;;0
+P2-02-B;encontrada;NORM_02;4.7;;1;0;0;encontrada;Menor;Crítico;Gerencia de Energía e Instalaciones Electromecánicas;Gerencia de Energía e Instalaciones Electromecánicas;Bajo;Alto;0
+P2-03-A;encontrada;NORM_03;2.8;;1;0;0;encontrada;Crítico;Mayor;Gerencia de Seguridad Operacional y Salud Ocupacional;Gerencia de Seguridad Operacional y Salud Ocupacional;Alto;Alto;0
+P2-03-M;encontrada;NORM_03;2.4;;1;0;0;encontrada;Mayor;Mayor;Gerencia de Seguridad Operacional y Salud Ocupacional;Gerencia de Seguridad Operacional y Salud Ocupacional;Medio;Bajo;0
+P2-03-B;otro artículo;NORM_03;6.2;NORM_05 Art. 3.4;1;1;0;perdida en verificación;Menor;;Gerencia de Seguridad Operacional y Salud Ocupacional;;Bajo;;0
+P2-04-A;encontrada;NORM_04;3.2;;1;0;0;encontrada;Crítico;Crítico;Gerencia de Material Rodante y Equipamiento de Talleres;Gerencia de Material Rodante y Equipamiento de Talleres;Alto;Alto;0
+P2-04-M;encontrada;NORM_04;2.6;;1;0;0;encontrada;Mayor;Mayor;Gerencia de Infraestructura y Vías;Gerencia de Infraestructura y Vías;Medio;Alto;0
+P2-04-B;no;NORM_04;2.13;;0;0;0;no recuperada;Mayor;;Gerencia de Infraestructura y Vías;;Medio;;0
+P2-05-A;otro artículo;NORM_05;1.8;NORM_03 Art. 2.6;0;0;0;no recuperada;Crítico;;Gerencia de Material Rodante y Equipamiento de Talleres;;Alto;;0
+P2-05-M;encontrada;NORM_05;3.5;;1;0;0;encontrada;Mayor;Mayor;Gerencia de Material Rodante y Equipamiento de Talleres;Gerencia de Material Rodante y Equipamiento de Talleres;Medio;Medio;0
+P2-05-B;encontrada;NORM_05;3.8;;1;0;0;encontrada;Menor;Mayor;Gerencia de Material Rodante y Equipamiento de Talleres;Gerencia de Material Rodante y Equipamiento de Talleres;Bajo;Medio;0
