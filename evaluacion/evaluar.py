@@ -156,6 +156,39 @@ def mcnemar_exacto(n10, n01):
     return min(1.0, 2 * sum(math.comb(n, i) for i in range(min(n10, n01) + 1)) / 2 ** n)
 
 
+# --- Desglose informativo de «otra causa» y techo del sistema (no cambian la definición de «encontrada» ni del recall estricto) ---
+
+SUBCAUSAS = ("vetada por cálculo", "descartada por regla 2.5", "descartada por regla 2.7.c", "cita otro artículo", "salió como alerta", "otra")
+
+
+def subcausa_otra_causa(estado: str, como_alerta: bool, brechas_par: list, reclasificados: list) -> str:
+    """Por qué una trampa verificada como Incumple/Revisar y clasificada como riesgo no quedó como brecha con su frase y su artículo. En este orden:
+    vetada por cálculo (una brecha del par quedó «descartada por cálculo»); descartada por regla 2.5 (la clasificación dijo INFORMACION_FALTANTE y el dato no es un ítem del Art. 2.6)
+    o 2.7.c (se exige en una etapa posterior); cita otro artículo (hay brecha con la frase pero con otro artículo); salió como alerta; otra (clasificación incompleta o fallida,
+    brecha cuya cita no contiene la frase, etc.). La vetada va antes que la alerta porque el veto también genera una alerta."""
+    if any(b.get("estado") == ESTADO_DESCARTADA_CALCULO for b in brechas_par):
+        return SUBCAUSAS[0]
+    reglas = {r.get("regla") for r in reclasificados}
+    if "2.5" in reglas:
+        return SUBCAUSAS[1]
+    if "2.7.c" in reglas:
+        return SUBCAUSAS[2]
+    if estado == "otro artículo":
+        return SUBCAUSAS[3]
+    return SUBCAUSAS[4] if como_alerta else SUBCAUSAS[5]
+
+
+def techo_del_sistema(trampas: list):
+    """Máximo que lograría un verificador perfecto con esa recuperación: trampas − no recuperadas − vetadas por cálculo − descartadas por regla 2.5. None si el resultado no trae
+    registro técnico (perdida «n/d»). Las vetadas y las descartadas por 2.5 se cuentan entre las de «otra causa», así que no se restan dos veces."""
+    if any(t["perdida"] == "n/d" for t in trampas):
+        return None
+    no_rec = sum(t["perdida"] == "no recuperada" for t in trampas)
+    vetadas = sum(t.get("subcausa") == SUBCAUSAS[0] for t in trampas)
+    regla_25 = sum(t.get("subcausa") == SUBCAUSAS[1] for t in trampas)
+    return {"total": len(trampas), "no_recuperadas": no_rec, "vetadas": vetadas, "regla_2_5": regla_25, "techo": len(trampas) - no_rec - vetadas - regla_25}
+
+
 # --- Evaluación de un resultado ---
 
 def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
@@ -204,6 +237,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         # pereza de clasificación: la verificación dijo Incumple o Revisar y la clasificación lo pasó a NO_APLICA o CUMPLE
         pereza_c = (estado != "encontrada" and bool(veredictos & {"incumple", "revisar"})
                     and any(norm(r["veredicto"]).replace("_", " ") in ("no aplica", "cumple") for r in reclasificados))
+        brechas_par = [b for b in resultado.get("registro_brechas") or [] if en_seccion(b) and (b.get("norma"), _articulo(b.get("articulo"))) in pares]      # con las vetadas por cálculo
         if estado == "encontrada":
             perdida = "encontrada"
         elif not verificados:
@@ -218,6 +252,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
             perdida = "otra causa"   # verificada como Incumple o Revisar y clasificada como riesgo, pero ninguna brecha cita la trampa (o se descartó)
         t = {"id": fila["id"], "estado": estado, "como_alerta": bool(como_alerta), "por_frase": bool(con_frase), "norma": fila["norma"], "articulo": fila["articulo"],
              "articulo_citado": citado, "verificado": bool(revisados), "perezosa": pereza_v, "perezosa_clasificacion": pereza_c, "perdida": perdida,
+             "subcausa": subcausa_otra_causa(estado, bool(como_alerta), brechas_par, reclasificados) if perdida == "otra causa" else None,
              "veredicto_verificacion": ", ".join(sorted({r["veredicto"] for r in revisados})) or "—",
              "veredicto_clasificacion": ", ".join(sorted({r["veredicto"] for r in reclasificados})) or "—",
              "por_frase_validada": None,
@@ -458,6 +493,12 @@ def _bloque_perdidas(ev):
     L += ["", "| Trampa no encontrada | Dónde se pierde | Artículo | Veredicto de verificación | Veredicto de clasificación |", "|---|---|---|---|---|"]
     L += [f"| {t['id']} | {t['perdida']} | {t['norma']} Art. {t['articulo']} | {t['veredicto_verificacion']} | {t['veredicto_clasificacion']} |"
           for t in ev["trampas"] if t["perdida"] != "encontrada"]
+    if cuentas["otra causa"]:
+        L += ["", "Desglose de «otra causa» (informativo; no cambia la definición de «encontrada»)", "", "| Subcausa | Trampas |", "|---|---|"]
+        L += [f"| {s} | {n} |" for s in SUBCAUSAS if (n := sum(t.get("subcausa") == s for t in ev["trampas"]))]
+    techo = techo_del_sistema(ev["trampas"])
+    L += ["", f"Techo del sistema (trampas − no recuperadas − vetadas por cálculo − descartadas por regla 2.5; lo que lograría un verificador perfecto con esta recuperación): "
+              f"{_con_ic(techo['techo'], techo['total'])}."]
     return L + [""]
 
 

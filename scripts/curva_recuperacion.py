@@ -678,7 +678,8 @@ def _cargar_contexto(rutas: dict) -> dict:
 def _datos_de_embedding(nombre: str, ctx: dict, a, puntuar, directorio_cache: str):
     """(datos, backend, resultado de disponibilidad). Devuelve (None, backend, motivo) si hay que saltear el embedding."""
     fragmentos = ctx["fragmentos"]
-    backend = emb_mod.crear_backend(nombre, {"qwen3-local": a.modelo_ollama, "deepinfra": a.modelo_deepinfra}.get(nombre), a.dim_gemini, directorio_cache)
+    backend = emb_mod.crear_backend(nombre, {"qwen3-local": a.modelo_ollama, "deepinfra": a.modelo_deepinfra}.get(nombre), a.dim_gemini, directorio_cache,
+                                    pausa_s=a.pausa_gemini, lote=a.lote_gemini, reintentos=a.reintentos_gemini)
     ok, motivo = backend.disponible()
     if not ok:
         return None, backend, motivo
@@ -707,6 +708,9 @@ def main(argv=None) -> int:
     p.add_argument("--modelo-ollama", default=config.EMBEDDING_MODELOS["qwen3-local"])
     p.add_argument("--modelo-deepinfra", default=config.EMBEDDING_MODELOS["deepinfra"])
     p.add_argument("--dim-gemini", type=int, default=config.EMBEDDING_DIM_GEMINI)
+    p.add_argument("--pausa-gemini", type=float, default=None, help="segundos entre solicitudes a Gemini (por defecto config.GEMINI_PAUSA_S); con la clave gratuita, 12 con lotes de 20")
+    p.add_argument("--lote-gemini", type=int, default=None, help="textos por solicitud a Gemini (por defecto 20)")
+    p.add_argument("--reintentos-gemini", type=int, default=None, help="reintentos ante 429 o 5xx (por defecto 6); cada espera respeta retry-after / retryDelay")
     p.add_argument("--si", action="store_true", help="no pide confirmación antes de llamar a una API de pago")
     p.add_argument("--permitir-prueba", action="store_true", help="admite P3 y P4 (conjunto de prueba; queda avisado en el informe)")
     p.add_argument("--ranking-chroma", action="store_true", help="bge-m3: ranking con similarity_search_with_score de Chroma (como el pipeline) en vez del camino numpy")

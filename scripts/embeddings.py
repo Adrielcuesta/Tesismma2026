@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 
 import numpy as np
@@ -23,7 +24,8 @@ logger = logging.getLogger(__name__)
 BACKENDS = ("bge-m3", "qwen3-local", "deepinfra", "gemini")
 DIR_CACHE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "evaluacion", "diagnosticos", "emb_cache"))
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:batchEmbedContents"
-ESPERA_MAXIMA_S = 60
+ESPERA_MAXIMA_S = 60            # tope de la espera exponencial
+RETRY_AFTER_MAXIMO_S = 600      # tope de seguridad de lo que pide el servidor (retry-after / retryDelay)
 
 
 def _sha(texto: str) -> str:
@@ -242,19 +244,45 @@ class DeepInfra(_Qwen3):
         return [d.embedding for d in sorted(r.data, key=lambda d: d.index)]
 
 
+def espera_pedida(respuesta):
+    """Segundos que pide el servidor tras un 429 o un 5xx: la cabecera retry-after (en segundos) o, si no, el retryDelay del cuerpo de error de Gemini ('34s'). None si no pide nada
+    (o si retry-after viene como fecha HTTP, que no se interpreta)."""
+    try:
+        return float(respuesta.headers.get("retry-after"))
+    except (TypeError, ValueError, AttributeError):
+        pass
+    try:
+        for detalle in (respuesta.json() or {}).get("error", {}).get("details", []):
+            m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)s\s*", str(detalle.get("retryDelay", "")))
+            if m:
+                return float(m.group(1))
+    except Exception:       # cuerpo vacío, no JSON o con otra forma: no pide nada
+        pass
+    return None
+
+
 class Gemini(Backend):
     """gemini-embedding-2 (Gemini API). Sin task_type: la tarea va en el prefijo del texto. Una solicitud por texto dentro de batchEmbedContents (si se mandan
-    varios textos juntos en una sola entrada, el modelo devuelve UN embedding agregado). La API no informa tokens: el gasto se estima."""
+    varios textos juntos en una sola entrada, el modelo devuelve UN embedding agregado). La API no informa tokens: el gasto se estima.
+    Nivel gratuito: cada lote se guarda en la caché apenas vuelve (se retoma relanzando el mismo comando); ante un 429 o un 5xx se espera lo que pide el servidor (retry-after o
+    retryDelay, hasta RETRY_AFTER_MAXIMO_S) o, si no pide nada, una espera exponencial (2, 4, 8... s, hasta ESPERA_MAXIMA_S); `pausa_s` agrega una pausa fija entre solicitudes
+    (config.GEMINI_PAUSA_S por defecto) para no llegar al límite por minuto. Una solicitud HTTP lleva `lote` textos y el límite cuenta cada texto."""
     nombre = "gemini"
     es_api = True
     lote = 20           # lotes chicos: el nivel gratuito limita solicitudes y tokens por minuto
     reintentos = 6
 
-    def __init__(self, modelo: str = None, dim: int = None, dir_cache: str = DIR_CACHE):
+    def __init__(self, modelo: str = None, dim: int = None, dir_cache: str = DIR_CACHE, pausa_s: float = None, lote: int = None, reintentos: int = None):
         self.dim = dim or config.EMBEDDING_DIM_GEMINI
         super().__init__(f"{modelo or config.EMBEDDING_MODELOS['gemini']}-{self.dim}", dir_cache)
         self.modelo_api = modelo or config.EMBEDDING_MODELOS["gemini"]
         self.precio_usd_m = config.PRECIOS_EMBEDDING_USD_M["gemini"]
+        self.pausa_s = config.GEMINI_PAUSA_S if pausa_s is None else pausa_s
+        if lote:
+            self.lote = lote
+        if reintentos is not None:
+            self.reintentos = reintentos
+        self._hubo_solicitud = False
 
     def formatear_consulta(self, texto: str) -> str:
         return f"task: search result | query: {texto}"
@@ -271,12 +299,18 @@ class Gemini(Backend):
 
     def _embed(self, textos: list):
         cuerpo = {"requests": [{"model": f"models/{self.modelo_api}", "content": {"parts": [{"text": t}]}, "output_dimensionality": self.dim} for t in textos]}
+        if self._hubo_solicitud and self.pausa_s:
+            self.esperar(self.pausa_s)          # pausa fija entre solicitudes (no antes de la primera)
+        self._hubo_solicitud = True
         for intento in range(self.reintentos + 1):
             r = self._post(cuerpo)
             if r.status_code == 429 or r.status_code >= 500:
                 if intento == self.reintentos:
+                    logger.error(f"Gemini respondió {r.status_code} tras {self.reintentos} reintentos: la caché conserva {len(self.cache.vectores)} vectores; "
+                                 "volvé a lanzar el mismo comando para retomar donde quedó.")
                     r.raise_for_status()
-                espera = min(ESPERA_MAXIMA_S, float(r.headers.get("retry-after") or 2 ** (intento + 1)))
+                pedida = espera_pedida(r)
+                espera = min(RETRY_AFTER_MAXIMO_S, pedida) if pedida is not None else min(ESPERA_MAXIMA_S, 2 ** (intento + 1))
                 logger.warning(f"Gemini respondió {r.status_code}: espero {espera:.0f} s (reintento {intento + 1} de {self.reintentos}).")
                 self.esperar(espera)
                 continue
@@ -286,8 +320,8 @@ class Gemini(Backend):
         return [e["values"] for e in r.json()["embeddings"]]
 
 
-def crear_backend(nombre: str, modelo: str = None, dim: int = None, dir_cache: str = DIR_CACHE) -> Backend:
-    """Instancia el backend por nombre; `modelo` y `dim` reemplazan los de config.EMBEDDING_MODELOS / EMBEDDING_DIM_GEMINI."""
+def crear_backend(nombre: str, modelo: str = None, dim: int = None, dir_cache: str = DIR_CACHE, pausa_s: float = None, lote: int = None, reintentos: int = None) -> Backend:
+    """Instancia el backend por nombre; `modelo` y `dim` reemplazan los de config.EMBEDDING_MODELOS / EMBEDDING_DIM_GEMINI. `pausa_s`, `lote` y `reintentos` solo valen para gemini."""
     if nombre == "bge-m3":
         return BgeM3(None, dir_cache)
     if nombre == "qwen3-local":
@@ -295,7 +329,7 @@ def crear_backend(nombre: str, modelo: str = None, dim: int = None, dir_cache: s
     if nombre == "deepinfra":
         return DeepInfra(modelo, dir_cache)
     if nombre == "gemini":
-        return Gemini(modelo, dim, dir_cache)
+        return Gemini(modelo, dim, dir_cache, pausa_s, lote, reintentos)
     raise ValueError(f"Backend de embeddings desconocido: «{nombre}» (hay {', '.join(BACKENDS)}).")
 
 

@@ -222,6 +222,9 @@ EMBEDDING_DIM_GEMINI = 3072
 # USD por millón de tokens (cota superior para la estimación previa: Gemini es gratis en el nivel gratuito). La clave se lee del .env (nunca acá).
 PRECIOS_EMBEDDING_USD_M = {"deepinfra": 0.01, "gemini": 0.20, "Qwen/Qwen3-Embedding-4B": 0.02}
 EMBEDDING_CHARS_POR_TOKEN = 3.5
+# Pausa (segundos) entre solicitudes HTTP a Gemini; 0 = ninguna. Con la clave gratuita (unos 100 textos por minuto, dato de terceros, a verificar en AI Studio) y lotes de 20,
+# 12 s entre solicitudes es el mínimo que respeta ese límite. La curva la pisa con --pausa-gemini.
+GEMINI_PAUSA_S = float(os.environ.get("GEMINI_PAUSA_S", "0") or 0)
 # Instrucción que se antepone SOLO a la consulta en los modelos Qwen3-Embedding (qwen3-local y deepinfra)
 INSTRUCCION_CONSULTA_EMBEDDING = ("Instruct: Given a passage from a technical bid for railway workshop machinery installation, "
                                   "retrieve the internal regulation article that the passage must comply with\nQuery: ")

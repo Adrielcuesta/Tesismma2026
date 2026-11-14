@@ -126,6 +126,60 @@ def test_gemini_se_rinde_tras_los_reintentos(tmp_path):
     assert g.cache.vectores == {}
 
 
+def test_gemini_respeta_el_retry_after_aunque_pase_de_60_s_con_un_tope_de_seguridad(tmp_path):
+    g = emb.Gemini(dir_cache=str(tmp_path), dim=3)
+    esperas = []
+    respuestas = iter([Respuesta(429, cabeceras={"retry-after": "90"}), Respuesta(429, cabeceras={"retry-after": "5000"}), Respuesta(200, {"embeddings": [{"values": [1, 0, 0]}]})])
+    g._post = lambda cuerpo: next(respuestas)
+    g.esperar = esperas.append
+    g.embed_queries(["x"])
+    assert esperas == [90.0, float(emb.RETRY_AFTER_MAXIMO_S)]
+
+
+def test_gemini_toma_el_retry_delay_del_cuerpo_de_error_y_sin_nada_espera_exponencial(tmp_path):
+    cuerpo = {"error": {"code": 429, "details": [{"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "34s"}]}}
+    assert emb.espera_pedida(Respuesta(429, cuerpo)) == 34.0 and emb.espera_pedida(Respuesta(429, cabeceras={"retry-after": "7"})) == 7.0
+    assert emb.espera_pedida(Respuesta(429)) is None and emb.espera_pedida(Respuesta(429, {"error": {"details": "raro"}})) is None
+    assert emb.espera_pedida(Respuesta(429, cabeceras={"retry-after": "Wed, 21 Oct 2026 07:28:00 GMT"})) is None      # fecha HTTP: no se interpreta
+    g = emb.Gemini(dir_cache=str(tmp_path), dim=3)
+    esperas = []
+    respuestas = iter([Respuesta(429, cuerpo), Respuesta(429), Respuesta(429), Respuesta(200, {"embeddings": [{"values": [1, 0, 0]}]})])
+    g._post = lambda c: next(respuestas)
+    g.esperar = esperas.append
+    g.embed_queries(["x"])
+    assert esperas == [34.0, 4.0, 8.0]                                  # lo que pide el servidor y después exponencial (2 ** (intento + 1))
+
+
+def test_gemini_pausa_entre_solicitudes_pero_no_antes_de_la_primera(tmp_path):
+    g = emb.Gemini(dir_cache=str(tmp_path), dim=3, pausa_s=12, lote=1)
+    esperas = []
+    g._post = lambda c: Respuesta(200, {"embeddings": [{"values": [1, 0, 0]}] * len(c["requests"])})
+    g.esperar = esperas.append
+    g.embed_documents(["a", "b", "c"])
+    assert esperas == [12, 12]                                           # tres solicitudes de un texto: dos pausas
+    g.embed_documents(["a", "b", "c"])
+    assert esperas == [12, 12]                                           # todo en caché: sin solicitudes ni pausas
+    assert emb.Gemini(dir_cache=str(tmp_path), dim=3).pausa_s == config.GEMINI_PAUSA_S and emb.crear_backend("gemini", dir_cache=str(tmp_path), pausa_s=3, lote=5, reintentos=2).lote == 5
+
+
+def test_gemini_cache_incremental_si_falla_a_mitad_se_retoma_sin_repetir_lo_hecho(tmp_path):
+    g = emb.Gemini(dir_cache=str(tmp_path), dim=3, lote=2, reintentos=0)
+    pedidos = []
+
+    def post(c):
+        pedidos.append(len(c["requests"]))
+        return Respuesta(200, {"embeddings": [{"values": [1, 0, 0]}] * len(c["requests"])}) if len(pedidos) == 1 else Respuesta(429)
+    g._post, g.esperar = post, lambda s: None
+    with pytest.raises(RuntimeError):
+        g.embed_documents(["a", "b", "c", "d", "e"])                     # el primer lote (a, b) se guardó; el segundo falló con 429
+    otro = emb.Gemini(dir_cache=str(tmp_path), dim=3, lote=2, reintentos=0)         # otro proceso: lee el .npz del disco
+    assert len(otro.cache.vectores) == 2 and len(otro.pendientes([otro.formatear_documento(t) for t in ["a", "b", "c", "d", "e"]])) == 3
+    nuevos = []
+    otro._post = lambda c: (nuevos.append([r["content"]["parts"][0]["text"] for r in c["requests"]]), Respuesta(200, {"embeddings": [{"values": [0, 1, 0]}] * len(c["requests"])}))[1]
+    otro.embed_documents(["a", "b", "c", "d", "e"])
+    assert [t for lote in nuevos for t in lote] == [otro.formatear_documento(t) for t in ["c", "d", "e"]]        # solo lo que faltaba
+
+
 def test_ollama_parsea_embeddings(tmp_path):
     q = emb.Qwen3Local("qwen3-embedding:4b", str(tmp_path))
     pedidos = []
