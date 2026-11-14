@@ -64,3 +64,6 @@ tests/salida/
 
 # Caché del diagnóstico de recuperación (se regenera)
 diagnostico_cache.json
+
+# Cache de embeddings de la curva de recuperacion (texto de la KB embebido)
+evaluacion/diagnosticos/emb_cache/

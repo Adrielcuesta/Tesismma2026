@@ -189,6 +189,16 @@ PRECIOS_NUBE = {
     "deepseek-ai/DeepSeek-V3.2": {"entrada": 0.26, "salida": 0.38},     # juez externo de precisión (evaluacion/juez.py)
 }
 PRESUPUESTO_JUEZ_USD = 1.0  # tope de gasto de una corrida del juez
+
+# --- Backends de embeddings alternativos a BGE-M3 (scripts/embeddings.py; solo la curva de recuperación y, luego, el perfil «elegido») ---
+EMBEDDING_MODELOS = {"qwen3-local": "qwen3-embedding:4b", "deepinfra": "Qwen/Qwen3-Embedding-8B", "gemini": "gemini-embedding-2"}
+EMBEDDING_DIM_GEMINI = 3072
+# USD por millón de tokens (cota superior para la estimación previa: Gemini es gratis en el nivel gratuito). La clave se lee del .env (nunca acá).
+PRECIOS_EMBEDDING_USD_M = {"deepinfra": 0.01, "gemini": 0.20}
+EMBEDDING_CHARS_POR_TOKEN = 3.5
+# Instrucción que se antepone SOLO a la consulta en los modelos Qwen3-Embedding (qwen3-local y deepinfra)
+INSTRUCCION_CONSULTA_EMBEDDING = ("Instruct: Given a passage from a technical bid for railway workshop machinery installation, "
+                                  "retrieve the internal regulation article that the passage must comply with\nQuery: ")
 PRESUPUESTO_USD = 1.5       # tope de gasto acumulado de una corrida: al alcanzarlo se guarda lo hecho y se detiene
 
 # --- Configuración de LLMs ---
