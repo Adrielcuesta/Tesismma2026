@@ -6,6 +6,7 @@ Uso:
   python -m evaluacion.tabla_comparativa --config evaluacion/config_tabla_ejemplo.json [--salida evaluacion/resultados_finales]
 Configuración (JSON): {"configuraciones": {"<nombre>": {"P1": "<ruta json>", "P2": "..."}, ...},
                        "conjuntos": {"<nombre>": ["P1", "P2"], ...}}      # «conjuntos» es opcional (por defecto desarrollo, prueba y total)
+«salida» (opcional) fija la carpeta de salida por defecto, relativa a la raíz del repo (config_reeval.json usa evaluacion/resultados_reeval); --salida la pisa; sin ninguna de las dos: resultados_finales.
 Los conjuntos o las ofertas sin JSON (ruta vacía o inexistente) se omiten con un aviso. Rutas relativas a la carpeta desde la que se corre.
 En lugar de una ruta, una oferta puede ser {"auto": {"carpeta": "<carpeta>", "condicion": "<condicion>"}} (el JSON local más reciente con esa condición) o
 {"auto": {"carpeta": "<carpeta>", "sufijo": "<sufijo>"}} (el más reciente que termina en _<sufijo>.json). Con «sin_rag»: {"P1": "<ruta>", ...} (JSON en modo lista) se genera comparacion_sin_rag.md: la PRIMERA configuración
@@ -39,6 +40,15 @@ def cargar_config(ruta: str) -> dict:
         raise SystemExit(CONFIG_VACIA.format(ruta))
     cfg.setdefault("conjuntos", CONJUNTOS)
     return cfg
+
+
+def carpeta_salida(cfg: dict, salida: str = None) -> str:
+    """--salida explícito > clave «salida» del config (relativa a la raíz del repo) > resultados_finales."""
+    if salida:
+        return salida
+    if cfg.get("salida"):
+        return os.path.join(os.path.dirname(AQUI), cfg["salida"])
+    return SALIDA
 
 
 def resolver_ruta(valor, etiqueta: str = "") -> str:
@@ -638,7 +648,7 @@ def generar(cfg: dict, salida: str, graficos: bool = True) -> dict:
 def main(argv=None):
     p = argparse.ArgumentParser(description="Tabla comparativa y gráficos por configuración y conjunto de ofertas")
     p.add_argument("--config", required=True, help="JSON con las rutas de cada configuración y oferta")
-    p.add_argument("--salida", default=SALIDA)
+    p.add_argument("--salida", default=None, help="carpeta de salida; por defecto la clave «salida» del config (relativa a la raíz del repo) o evaluacion/resultados_finales")
     p.add_argument("--sin-graficos", action="store_true")
     p.add_argument("--resolver", action="store_true", help="solo imprime la configuración con los «auto» resueltos (JSON en ASCII) y sale; lo usa cerrar_evaluacion.ps1")
     a = p.parse_args(argv)
@@ -646,7 +656,8 @@ def main(argv=None):
         print(json.dumps({"configuraciones": resolver_config(cargar_config(a.config))}, ensure_ascii=True))
         return None
     try:
-        r = generar(cargar_config(a.config), a.salida, not a.sin_graficos)
+        cfg = cargar_config(a.config)
+        r = generar(cfg, carpeta_salida(cfg, a.salida), not a.sin_graficos)
     except GrisDistinto as e:
         print(f"ERROR: {e}", file=sys.stderr)
         raise SystemExit(1)

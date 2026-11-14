@@ -1,4 +1,5 @@
 {
+  "salida": "evaluacion/resultados_reeval",
   "configuraciones": {
     "qwen3:8b local (elegida)": {
       "P1": {

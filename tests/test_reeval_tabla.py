@@ -234,3 +234,13 @@ def test_config_reeval_arma_las_tres_configuraciones_elegidas_y_sus_referencias_
     dev, prueba, total = cfg["conjuntos"]
     assert dev == "P1–P2 desarrollo" and prueba.startswith("P3–P4 prueba (segunda evaluación") and "ya fue visto en v1" in prueba and total == "P1–P4 total"
     assert cfg["conjuntos"][dev] == ["P1", "P2"] and cfg["conjuntos"][prueba] == ["P3", "P4"]
+
+
+def test_salida_de_la_reevaluacion_no_es_resultados_finales():
+    reeval = tc.cargar_config(os.path.join(RAIZ, "evaluacion", "config_reeval.json"))
+    final = tc.cargar_config(os.path.join(RAIZ, "evaluacion", "config_final.json"))
+    destino = tc.carpeta_salida(reeval)
+    assert os.path.normpath(destino) == os.path.normpath(os.path.join(RAIZ, "evaluacion", "resultados_reeval"))
+    assert os.path.normpath(destino) != os.path.normpath(tc.SALIDA)
+    assert tc.carpeta_salida(final) == tc.SALIDA                      # v1 sigue escribiendo en resultados_finales
+    assert tc.carpeta_salida(reeval, "otra") == "otra"                # --salida explícito manda
