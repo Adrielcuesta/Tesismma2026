@@ -151,6 +151,19 @@ def test_con_recuperacion_reusada_se_verifican_exactamente_los_pares_del_json(re
     assert [r["veredicto"] for r in datos["registro_tecnico"] if not r.get("etapa")] == ["Incumple", "Cumple"]
 
 
+def test_con_recuperacion_reusada_el_json_guarda_los_parametros_de_la_recuperacion_reusada(reuso, entorno):
+    ruta, _, _ = reuso
+    rec = json.loads(json.dumps(REC))
+    rec["configuracion_analisis"].update({"k_subseccion": 10, "top_n_subseccion": 2, "top_densa_subseccion": 10, "tope_fragmentos_por_seccion": 39, "oraciones_cifras": {"n": 2, "cupo": 15}})
+    ruta.write_text(json.dumps(rec), encoding="utf-8")
+    main._analizar_por_secciones("modelo-falso", False, True, "20260101_000000", None, None, recuperacion_json=str(ruta))
+    [salida] = [r for r in _jsons(entorno, "analisis_riesgos_*.json") if not r.endswith("_parcial.json")]
+    with open(salida, encoding="utf-8") as f:
+        cfg = json.load(f)["configuracion_analisis"]
+    # no los de config.* (el perfil local por defecto): los del JSON de recuperación
+    assert (cfg["k_subseccion"], cfg["top_n_subseccion"], cfg["top_densa_subseccion"], cfg["tope_fragmentos_por_seccion"], cfg["oraciones_cifras"]) == (10, 2, 10, 39, {"n": 2, "cupo": 15})
+
+
 def test_sin_recuperacion_reusada_nada_cambia_en_el_json(entorno):
     _analizar()
     [ruta] = [r for r in _jsons(entorno, "analisis_riesgos_*.json") if not r.endswith("_parcial.json")]

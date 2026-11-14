@@ -375,6 +375,9 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
     return brechas, alertas, registro
 
 
+CLAVES_RECUPERACION = ("k_subseccion", "top_n_subseccion", "top_densa_subseccion", "tope_fragmentos_por_seccion", "oraciones_cifras", "recuperacion_por_subseccion")
+
+
 def _cargar_recuperacion_reusada(ruta: str, secciones: list) -> dict:
     """Pares a verificar tomados de un JSON de scripts.recuperar (en vez de recuperar): {'docs': {id de sección: [Document]}, 'candidatos', 'sha256' del archivo,
     'huella_pares', 'perfil', 'embedding_backend'}. Mismo patrón que scripts.nube: el texto de cada artículo se lee del índice por metadatos, sin embeddings ni
@@ -396,8 +399,9 @@ def _cargar_recuperacion_reusada(ruta: str, secciones: list) -> dict:
     if avisos:
         logger.warning(f"{len(avisos)} artículos con varias partes: el JSON de recuperación no dice cuál se verificó, se usa la primera.")
     cfg = local.get("configuracion_analisis") or {}
+    parametros = {k: cfg[k] for k in CLAVES_RECUPERACION if cfg.get(k) is not None}     # con qué se recuperó: lo que dice el JSON, no la configuración por defecto
     return {"docs": docs, "candidatos": candidatos, "sha256": huella_recuperacion.sha256_archivo(ruta), "huella_pares": huella_recuperacion.huella_de_pares(local["secciones"]),
-            "perfil": cfg.get("perfil_recuperacion"), "embedding_backend": cfg.get("embedding_backend")}
+            "perfil": cfg.get("perfil_recuperacion"), "embedding_backend": cfg.get("embedding_backend"), "parametros": parametros}
 
 
 def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, marca_tiempo, directorio_kb, directorio_proyecto, recuperacion_json=None):
@@ -618,7 +622,8 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
                 "excluir_introduccion": config.EXCLUIR_INTRODUCCION, "calcular_respaldo": config.CALCULAR_RESPALDO, "tiempos_s": tiempos,
                 "tokens_prompt_por_seccion": tokens_prompt,
                 "embedding_backend": (reuso["embedding_backend"] or "bge-m3") if reuso else (config.EMBEDDING_BACKEND if usar_rag else "N/A"),
-                **({"recuperacion_reusada": True, "recuperacion_json_sha256": reuso["sha256"], "huella_pares": reuso["huella_pares"], "perfil_recuperacion": reuso["perfil"]} if reuso else {}),
+                **({"recuperacion_reusada": True, "recuperacion_json_sha256": reuso["sha256"], "huella_pares": reuso["huella_pares"], "perfil_recuperacion": reuso["perfil"],
+                    **reuso["parametros"]} if reuso else {}),      # los parámetros de recuperación del JSON reusado pisan los de arriba (que son los del perfil local)
             })
         return _guardar_y_generar_dashboard(reporte, nombre_pdf, marca_tiempo)
     except Exception as e_cierre:

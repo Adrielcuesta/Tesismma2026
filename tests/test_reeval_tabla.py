@@ -79,6 +79,23 @@ def test_info_de_recuperacion_sale_de_las_secciones_del_json_y_no_depende_de_los
     assert tc.info_recuperacion({})["pares"] == 0
 
 
+def test_la_recuperacion_de_un_json_que_reuso_otra_sale_del_json_de_recuperacion(tmp_path):
+    rec = tmp_path / "P1" / "recuperacion_elegido_P1.json"
+    rec.parent.mkdir()
+    rec.write_text(json.dumps({"configuracion_analisis": {"perfil_recuperacion": "elegido", "embedding_backend": "bge-m3", "k_subseccion": 10, "top_n_subseccion": 2, "top_densa_subseccion": 10,
+                                                          "tope_fragmentos_por_seccion": 39}}), encoding="utf-8")
+    secciones = [{"id": "3", "fragmentos": [{"norma": "N", "articulo": "1", "score": 0.1, "parte": 1}]}]
+    # el JSON de la corrida local guardó los parámetros del perfil por defecto (TOP_N=5, TOP_DENSA=5, tope 25) aunque reusó la recuperación elegida
+    local = {"secciones": secciones, "configuracion_analisis": {"k_subseccion": 10, "top_n_subseccion": 5, "top_densa_subseccion": 5, "tope_fragmentos_por_seccion": 25,
+                                                                 "recuperacion_json_sha256": tc.huella_recuperacion.sha256_archivo(str(rec))}}
+    info = tc.info_recuperacion(local, str(tmp_path))
+    d = tc.descripcion_recuperacion(info)
+    assert (info["top_n"], info["top_densa"], info["tope"], info["perfil"]) == (2, 10, 39, "elegido") and "TOP_N=2" in d and "TOP_DENSA=10" in d and "tope=39" in d and "tope=25" not in d
+    assert tc.info_recuperacion(local)["tope"] == 25                                                   # sin carpeta no busca: queda lo que guardó el JSON
+    otro = {**local, "configuracion_analisis": {**local["configuracion_analisis"], "recuperacion_json_sha256": "00" * 32}}
+    assert tc.info_recuperacion(otro, str(tmp_path))["tope"] == 25                                     # sha256 que no está: queda lo que guardó el JSON
+
+
 def test_descripcion_de_la_recuperacion_dice_embedding_y_k():
     d = tc.descripcion_recuperacion(A["recuperacion"])
     assert "embedding bge-m3" in d and "K_SUBSECCION=10" in d and "TOP_N=5" in d and "tope=25" in d and tc.descripcion_recuperacion(None) == "n/d"
@@ -134,6 +151,35 @@ def test_si_el_gris_no_es_identico_es_un_error(tmp_path):
     assert not (tmp_path / "b.png").exists()
 
 
+def test_cada_embudo_de_la_reevaluacion_lleva_solo_su_grupo_y_el_de_v1_no_exige_el_mismo_gris(tmp_path, monkeypatch):
+    pytest.importorskip("matplotlib")
+    evaluadas = {"8B (elegida)": {"P9": A}, "32B (elegida)": {"P9": B}, "8B": {"P9": C}, "32B": {"P9": A}}
+    filas = tc.calcular_filas(evaluadas, CONJUNTOS)
+    usados = []
+    original = tc.grafico_embudo
+    monkeypatch.setattr(tc, "grafico_embudo", lambda f, ruta, conjunto, aviso="", nombres=None, titulo=None: (usados.append((os.path.basename(ruta), nombres, titulo)), original(f, ruta, conjunto, aviso, nombres, titulo)))
+    assert tc.grafico_embudo_reeval(filas, str(tmp_path / "v1.png"), "P9 solo", ["8B", "32B"], evaluadas, "", "de v1", gris_identico=False) is True      # gris 2 y 1: no es error
+    assert tc.grafico_embudo_reeval(filas, str(tmp_path / "el.png"), "P9 solo", ["8B (elegida)", "32B (elegida)"], evaluadas) is True
+    assert usados[0][1] == ["8B", "32B"] and "de v1" in usados[0][2] and usados[1][1] == ["8B (elegida)", "32B (elegida)"] and "con la recuperación elegida" in usados[1][2]
+    with pytest.raises(tc.GrisDistinto):
+        tc.grafico_embudo_reeval(filas, str(tmp_path / "x.png"), "P9 solo", ["8B", "32B"], evaluadas)
+
+
+def test_las_etiquetas_del_grafico_de_costo_no_se_pisan(tmp_path):
+    plt = pytest.importorskip("matplotlib.pyplot")
+    tc._plt()
+    fig, eje = plt.subplots(figsize=(7, 6))
+    puntos = [(0.0, 0.50, "32B v1"), (0.0, 0.51, "8B v1"), (0.0, 0.52, "32B razon. v1"), (0.01, 0.50, "gpt-oss elegida"), (0.0, 0.50, "32B elegida")]
+    eje.set_xlim(-0.01, 0.1)
+    eje.set_ylim(0, 1)
+    fig.tight_layout()
+    tc._colocar_etiquetas(fig, eje, puntos)
+    renderer = fig.canvas.get_renderer()
+    cajas = [tc._caja_texto(t, renderer) for t in eje.texts]
+    assert len(cajas) == len(puntos) and not any(a.overlaps(b) for i, a in enumerate(cajas) for b in cajas[i + 1:])
+    plt.close(fig)
+
+
 def test_los_graficos_de_antes_despues_criticidad_y_confusion_se_generan(tmp_path):
     pytest.importorskip("matplotlib")
     evaluadas = {"elegida": {"P9": A}, "v1": {"P9": C}}
@@ -167,9 +213,11 @@ def test_generar_con_reeval_escribe_informe_y_todos_los_graficos(monkeypatch, tm
     evaluadas = {"8B (elegida)": {"P9": A}, "32B (elegida)": {"P9": B}, "8B": {"P9": C}, "32B": {"P9": C}}
     monkeypatch.setattr(tc, "evaluar_configuraciones", lambda cfg: evaluadas)
     r = tc.generar(_cfg(["8B (elegida)", "32B (elegida)"], ["8B", "32B"]), str(tmp_path))
-    assert {"a", "b", "c", "d", "e", "f", "b_reeval"} <= set(r["rutas"])
+    assert {"a", "c", "d", "e", "f", "b_reeval", "b_v1"} <= set(r["rutas"]) and "b" not in r["rutas"]       # con la reevaluación el embudo va separado, no mezclado
     assert all(os.path.getsize(p) > 100 for p in r["rutas"].values())
-    assert os.path.basename(r["rutas"]["b_reeval"]) == "grafico_b_embudo_reeval.png" and os.path.basename(r["rutas"]["e"]) == "grafico_e_recuperacion_antes_despues.png"
+    assert os.path.basename(r["rutas"]["b_reeval"]) == "grafico_b_embudo_reeval.png" and os.path.basename(r["rutas"]["b_v1"]) == "grafico_b_embudo_v1.png"
+    assert os.path.basename(r["rutas"]["e"]) == "grafico_e_recuperacion_antes_despues.png"
+    assert not (tmp_path / "grafico_b_embudo.png").exists()
     assert os.path.basename(r["rutas"]["d"]) == "grafico_d_errores_por_criticidad.png" and os.path.basename(r["rutas"]["f"]) == "grafico_f_confusion_clase.png"
     md = (tmp_path / "tabla_comparativa.md").read_text(encoding="utf-8")
     assert "## Recuperación elegida frente a v1" in md and "## Comparabilidad de la recuperación" in md and "AVISO (P9 solo, P9)" in md      # elegidas y v1 comparan pares distintos

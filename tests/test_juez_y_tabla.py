@@ -406,7 +406,9 @@ def test_graficos_se_generan(tmp_path):
 
 
 def test_etiquetas_cortas_solo_para_graficos_y_la_tabla_conserva_el_nombre_largo():
-    assert [tc._corta(n) for n in ("qwen3:8b local", "Qwen3-32B", "Qwen3-32B con razonamiento", "32B con razonamiento + recuperación amplia")] == [
-        "8B local", "32B", "32B razon.", "32B razon. + amplia"]
+    assert [tc._corta(n) for n in ("qwen3:8b local", "Qwen3-32B", "Qwen3-32B con razonamiento", "32B con razonamiento + recuperación amplia", "qwen3:8b local (elegida)", "Qwen3-32B (elegida)",
+                                   "Qwen3-32B con razonamiento (elegida)", "gpt-oss-120b esfuerzo bajo (elegida)")] == [
+        "8B v1", "32B v1", "32B razon. v1", "32B razon. + amplia", "8B elegida", "32B elegida", "32B razon. elegida", "gpt-oss elegida"]
     assert tc._corta("otro nombre") == "otro nombre"
+    assert [tc._etiqueta_x(n) for n in ("Qwen3-32B con razonamiento", "gpt-oss-120b esfuerzo bajo (elegida)", "otro")] == ["32B razon.\nv1", "gpt-oss\nelegida", "otro"]      # la última palabra abajo
     assert "8B local" in tc.tabla_md(_filas())  # la tabla usa el nombre de la configuración tal cual

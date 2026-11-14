@@ -12,11 +12,13 @@ En lugar de una ruta, una oferta puede ser {"auto": {"carpeta": "<carpeta>", "co
 {"auto": {"carpeta": "<carpeta>", "sufijo": "<sufijo>"}} (el más reciente que termina en _<sufijo>.json). Con «sin_rag»: {"P1": "<ruta>", ...} (JSON en modo lista) se genera comparacion_sin_rag.md: la PRIMERA configuración
 contra el sin RAG, con McNemar, para cada conjunto de 2 o más ofertas completo en ambos lados. «modo_generacion» en un «auto» por condición exige además ese modo.
 Reevaluación con la recuperación elegida: {"reeval": {"elegida_vs_v1": {"<configuración con la recuperación elegida>": "<su par de v1>", ...}}} agrega el embudo de la reevaluación
-(grafico_b_embudo_reeval.png; error si el gris no es idéntico entre las configuraciones), el antes/después de la recuperación (grafico_e) y la diferencia contra v1 en la tabla.
+(grafico_b_embudo_reeval.png solo con las elegidas, error si el gris no es idéntico entre ellas; grafico_b_embudo_v1.png solo con las de v1; con «reeval» no se genera el embudo mezclado), el antes/después
+de la recuperación (grafico_e) y la diferencia contra v1 en la tabla.
 Siempre: control de comparabilidad (la huella de pares de cada JSON, calculada de secciones[].fragmentos; si dos configuraciones del mismo gráfico difieren se avisa en el informe y
 en el título), grafico_d_errores_por_criticidad.png y grafico_f_confusion_clase.png (sobre el conjunto más amplio)."""
 import argparse
 import csv
+import glob
 import json
 import os
 import sys
@@ -27,6 +29,7 @@ from . import evaluar as E
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 SALIDA = os.path.join(AQUI, "resultados_finales")
+RESULTADOS = os.path.join(os.path.dirname(AQUI), "datos", "Resultados")      # donde están los JSON de recuperación (recuperacion_*.json)
 CONJUNTOS = {"P1–P2 desarrollo": ["P1", "P2"], "P3–P4 prueba": ["P3", "P4"], "P1–P4 total": ["P1", "P2", "P3", "P4"]}
 CONFIG_VACIA = "No hay configuraciones en {}"
 AZUL, NARANJA, AQUA, AMARILLO, MAGENTA, GRIS, TINTA = "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#9a9a95", "#222222"
@@ -76,10 +79,26 @@ def resolver_config(cfg: dict) -> dict:
     return {nombre: {oferta: resolver_ruta(v, f"{nombre} / {oferta}") for oferta, v in ofertas.items()} for nombre, ofertas in cfg["configuraciones"].items()}
 
 
-def info_recuperacion(resultado: dict) -> dict:
+def parametros_de_recuperacion_reusada(sha256: str, carpeta: str) -> dict:
+    """Parámetros con que se recuperó el JSON de scripts.recuperar (recuperacion_*.json bajo `carpeta`) cuyo sha256 es `sha256`; {} si no está."""
+    for ruta in glob.glob(os.path.join(carpeta, "**", "recuperacion_*.json"), recursive=True):
+        try:
+            if huella_recuperacion.sha256_archivo(ruta) == sha256:
+                with open(ruta, encoding="utf-8") as f:
+                    return json.load(f).get("configuracion_analisis") or {}
+        except (OSError, ValueError):
+            continue
+    return {}
+
+
+def info_recuperacion(resultado: dict, carpeta_recuperaciones: str = None) -> dict:
     """Qué recuperación usó un JSON de análisis: la huella de los pares verificados (de secciones[].fragmentos, así sirve también para v1), cuántos son, el hash del archivo
-    de recuperación reusado (si lo hay) y los parámetros con que se recuperó (embedding, K, top N, top denso, tope)."""
+    de recuperación reusado (si lo hay) y los parámetros con que se recuperó (embedding, K, top N, top denso, tope). Si el JSON reusó una recuperación y se da la carpeta donde buscarla
+    (por sha256), los parámetros salen de ese JSON de recuperación y no de lo que el JSON de análisis guardó (las corridas locales viejas guardaron los del perfil por defecto)."""
     cfg = resultado.get("configuracion_analisis") or {}
+    if cfg.get("recuperacion_json_sha256") and carpeta_recuperaciones:
+        rec = parametros_de_recuperacion_reusada(cfg["recuperacion_json_sha256"], carpeta_recuperaciones)
+        cfg = {**cfg, **{k: rec[k] for k in ("embedding_backend", "k_subseccion", "top_n_subseccion", "top_densa_subseccion", "tope_fragmentos_por_seccion", "perfil_recuperacion") if rec.get(k) is not None}}
     secciones = resultado.get("secciones") or []
     return {"huella_pares": huella_recuperacion.huella_de_pares(secciones), "pares": sum(len(x.get("fragmentos") or []) for x in secciones),
             "sha256": cfg.get("recuperacion_json_sha256"), "embedding": cfg.get("embedding_backend") or "bge-m3", "k_subseccion": cfg.get("k_subseccion"),
@@ -99,7 +118,7 @@ def evaluar_configuraciones(cfg: dict) -> dict:
             if not gt:
                 raise SystemExit(f"No hay trampas de la oferta {oferta} en {E.GROUND_TRUTH}")
             salida[nombre][oferta] = E.evaluar_archivo(ruta, oferta, gt, esp)      # lee <json>_extras.csv y <json>_juez.csv
-            salida[nombre][oferta]["recuperacion"] = info_recuperacion(E._cargar(ruta))
+            salida[nombre][oferta]["recuperacion"] = info_recuperacion(E._cargar(ruta), RESULTADOS)
     return salida
 
 
@@ -215,14 +234,19 @@ def _plt():
     return plt
 
 
-ETIQUETAS_CORTAS = {"qwen3:8b local": "8B local", "Qwen3-32B": "32B", "Qwen3-32B con razonamiento": "32B razon.",
+ETIQUETAS_CORTAS = {"qwen3:8b local": "8B v1", "Qwen3-32B": "32B v1", "Qwen3-32B con razonamiento": "32B razon. v1",
                     "32B con razonamiento + recuperación amplia": "32B razon. + amplia", "qwen3:8b local (elegida)": "8B elegida", "Qwen3-32B (elegida)": "32B elegida",
-                    "Qwen3-32B con razonamiento (elegida)": "32B razon. elegida"}
+                    "Qwen3-32B con razonamiento (elegida)": "32B razon. elegida", "gpt-oss-120b esfuerzo bajo (elegida)": "gpt-oss elegida"}
 
 
 def _corta(nombre: str) -> str:
     """Etiqueta corta para los gráficos (la tabla mantiene el nombre largo); lo que no está en el mapa queda igual."""
     return ETIQUETAS_CORTAS.get(nombre, nombre)
+
+
+def _etiqueta_x(nombre: str) -> str:
+    """Etiqueta corta en dos líneas para el eje X (la última palabra abajo): «32B razon. v1» queda «32B razon.\\nv1»."""
+    return "\n".join(_corta(nombre).rsplit(" ", 1))
 
 
 def _poner_aviso(fig, aviso: str):
@@ -253,9 +277,9 @@ def grafico_recall_falsas(filas: list, ruta: str, dev: str, prueba: str, aviso: 
             errores = [[v - datos[n][ic][0] for v, n in zip(vs, [n for n in nombres if n in datos])], [datos[n][ic][1] - v for v, n in zip(vs, [n for n in nombres if n in datos])]]
             eje.bar(xs, vs, ancho * 0.92, color=color, label=conjunto, yerr=errores, ecolor="#555555", capsize=4)
             for x, v, techo in zip(xs, vs, errores[1]):
-                eje.text(x, v + techo + 0.01, f"{v:.0%}", ha="center", va="bottom", fontsize=13)
+                eje.text(x, v + techo + 0.01, f"{v:.0%}", ha="center", va="bottom", fontsize=13 if len(nombres) <= 4 else 10)      # con muchas configuraciones las barras son angostas
         eje.set_title(titulo, loc="left")
-        eje.set_xticks(range(len(nombres)), [_corta(n).replace(" ", "\n", 1) for n in nombres])
+        eje.set_xticks(range(len(nombres)), [_etiqueta_x(n) for n in nombres], fontsize=12)
         eje.set_ylim(0, 1.15)
         eje.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
         eje.grid(axis="y", color="#e5e5e5")
@@ -295,27 +319,55 @@ def grafico_embudo(filas: list, ruta: str, conjunto: str, aviso: str = "", nombr
     plt.close(fig)
 
 
+OFFSETS_ETIQUETA = [(12, 8), (12, -20), (12, 34), (12, -46), (-12, 8), (-12, -20), (12, 60), (12, -72), (-12, 34), (-12, -46), (12, 86), (12, -98), (-12, 60), (-12, -72)]       # en puntos
+
+
+def _caja_texto(nota, renderer):
+    """Caja del texto de una anotación, sin la línea que la une a su punto (Annotation.get_window_extent la incluye)."""
+    from matplotlib.text import Text
+    return Text.get_window_extent(nota, renderer)
+
+
+def _colocar_etiquetas(fig, eje, puntos: list, fontsize: int = 14):
+    """Anota cada punto (x, y, texto) con el primer desplazamiento de OFFSETS_ETIQUETA cuyo texto no pisa a otro ya colocado (cajas medidas con el renderer)."""
+    renderer = fig.canvas.get_renderer()
+    ocupadas = []
+    for x, y, texto in sorted(puntos, key=lambda p: (-p[1], p[0])):
+        for dx, dy in OFFSETS_ETIQUETA:
+            nota = eje.annotate(texto, (x, y), textcoords="offset points", xytext=(dx, dy), fontsize=fontsize, ha="left" if dx > 0 else "right",
+                                arrowprops={"arrowstyle": "-", "color": "#999999", "linewidth": 0.8, "shrinkA": 0, "shrinkB": 8})      # la línea une cada etiqueta con su punto
+            caja = _caja_texto(nota, renderer)
+            if not any(caja.overlaps(otra) for otra in ocupadas):
+                break
+            if (dx, dy) != OFFSETS_ETIQUETA[-1]:
+                nota.remove()
+        ocupadas.append(caja)
+
+
 def grafico_recall_costo_tiempo(filas: list, ruta: str, conjunto: str, aviso: str = ""):
     plt = _plt()
     datos = _por_configuracion(filas, conjunto)
     colores = [AZUL, NARANJA, AQUA, MAGENTA, AMARILLO, GRIS]
-    fig, ejes = plt.subplots(1, 2, figsize=(16, 7))
+    fig, ejes = plt.subplots(1, 2, figsize=(16, 7.5))
+    paneles = []
     for eje, titulo, x_de, etiqueta_x in ((ejes[0], "Recall frente al costo", lambda f: f["costo_usd"], "Costo (USD)"),
                                            (ejes[1], "Recall frente al tiempo", lambda f: f["tiempo_s"] / 60, "Tiempo (minutos)")):
         for i, (n, f) in enumerate(datos.items()):
             eje.scatter(x_de(f), f["recall"], s=260, color=colores[i % len(colores)], edgecolor="white", linewidth=2, zorder=3)
-            eje.annotate(_corta(n), (x_de(f), f["recall"]), textcoords="offset points", xytext=(12, 8 if i % 2 == 0 else -20), fontsize=14)
         xs = [x_de(f) for f in datos.values()]
         ancho = (max(xs) - min(xs)) or max(xs) or 1
         eje.set_xlim(min(xs) - 0.1 * ancho, max(xs) + 0.7 * ancho)
-        eje.set_title(f"{titulo} ({conjunto})", loc="left", fontsize=16)
+        eje.set_title(f"{titulo}\n{conjunto}", loc="left", fontsize=14)       # dos líneas: el título y, debajo, el conjunto
         eje.set_xlabel(etiqueta_x)
         eje.set_ylabel("Recall estricto")
         eje.set_ylim(0, 1)
         eje.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
         eje.grid(color="#e5e5e5")
         eje.set_axisbelow(True)
+        paneles.append((eje, [(x_de(f), f["recall"], _corta(n)) for n, f in datos.items()]))
     fig.tight_layout(rect=(0, 0, 1, 0.95 if aviso else 1))
+    for eje, puntos in paneles:
+        _colocar_etiquetas(fig, eje, puntos)
     _poner_aviso(fig, aviso)
     fig.savefig(ruta, dpi=200)
     plt.close(fig)
@@ -466,18 +518,19 @@ def diferencias_md(difs: list) -> list:
     return L
 
 
-def grafico_embudo_reeval(filas: list, ruta: str, conjunto: str, nombres: list, evaluadas: dict, aviso: str = "") -> bool:
-    """Una barra por LLM con la recuperación elegida (sin la de v1 ni la amplia). El gris es idéntico en todas por construcción (mismos pares verificados): si no lo es, es un
-    error (GrisDistinto). El título dice qué embedding y qué K. False si no hay ninguna configuración con ese conjunto."""
+def grafico_embudo_reeval(filas: list, ruta: str, conjunto: str, nombres: list, evaluadas: dict, aviso: str = "", etiqueta: str = "con la recuperación elegida", gris_identico: bool = True) -> bool:
+    """Una barra por LLM de un solo grupo de configuraciones (las elegidas, o las de v1 con etiqueta="de v1" y gris_identico=False: no se mezclan). Con la recuperación elegida el
+    gris es idéntico en todas por construcción (mismos pares verificados): si no lo es, es un error (GrisDistinto). El título dice qué embedding y qué K (los del JSON de
+    recuperación). False si no hay ninguna configuración con ese conjunto."""
     datos = _por_configuracion(filas, conjunto)
     nombres = [n for n in nombres if n in datos and not datos[n]["sin_registro"]]
     if not nombres:
         return False
     gris = {n: datos[n]["perdidas"]["no recuperada"] for n in nombres}
-    if len(set(gris.values())) > 1:
+    if gris_identico and len(set(gris.values())) > 1:
         raise GrisDistinto("El gris (trampas no recuperadas) no es idéntico entre las configuraciones con la recuperación elegida: " + ", ".join(f"{n}: {v}" for n, v in gris.items())
                            + ". Verificaron los mismos pares, así que tiene que coincidir: revisá si algún par falló (llamada fallida) o si algún JSON es de otra recuperación.")
-    titulo = f"Dónde se pierde cada trampa con la recuperación elegida ({conjunto})\n{descripcion_recuperacion(_info_de(evaluadas, nombres[0]))}"
+    titulo = f"Dónde se pierde cada trampa {etiqueta} ({conjunto})\n{descripcion_recuperacion(_info_de(evaluadas, nombres[0]))}"
     grafico_embudo(filas, ruta, conjunto, aviso, nombres, titulo)
     return True
 
@@ -538,18 +591,23 @@ def grafico_errores_por_criticidad(evaluadas: dict, ofertas: list, nombres: list
                 x = j + (i - (len(por_config) - 1) / 2) * ancho
                 tasa = err / cant if cant else 0
                 eje.bar(x, tasa, ancho * 0.92, color=colores[i % len(colores)], label=_corta(n) if j == 0 else None)
-                eje.text(x, tasa + 0.01, f"{tasa:.0%}\n{err}/{cant}", ha="center", va="bottom", fontsize=9)
+                texto = f"{err}/{cant}" if len(por_config) > 4 else f"{tasa:.0%}\n{err}/{cant}"      # con muchas configuraciones las barras son angostas: solo x/n (el % se lee en el eje)
+                if tasa > 0.8:          # el eje termina en 100 %: las barras altas llevan el texto adentro
+                    eje.text(x, tasa - 0.01, texto, ha="center", va="top", fontsize=9, bbox={"boxstyle": "round,pad=0.1", "fc": "white", "ec": "none", "alpha": 0.85})
+                else:
+                    eje.text(x, tasa + 0.01, texto, ha="center", va="bottom", fontsize=9)
         eje.set_xticks(range(len(categorias)), categorias)
         eje.set_title(titulo, loc="left")
         eje.set_ylabel("Tasa de error (1 − recall estricto)")
-        eje.set_ylim(0, 1.3)
+        eje.set_ylim(0, 1)
         eje.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
         eje.grid(axis="y", color="#e5e5e5")
         eje.set_axisbelow(True)
-    ejes[0].legend(frameon=False, loc="upper right", ncol=2, fontsize=10)
+    manijas, rotulos = ejes[0].get_legend_handles_labels()
+    fig.legend(manijas, rotulos, frameon=False, loc="lower center", ncol=min(len(rotulos), 4), fontsize=11)      # abajo: con el eje en 100 % arriba no hay lugar
     fig.suptitle(f"Errores por criticidad ({conjunto}); en cada barra: trampas no encontradas / trampas del grupo" + (f"\n{aviso}" if aviso else ""), fontsize=13, y=0.995,
                  color="#b00020" if aviso else TINTA)
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    fig.tight_layout(rect=(0, 0.1, 1, 0.94))
     fig.savefig(ruta, dpi=200)
     plt.close(fig)
     return True
@@ -625,8 +683,10 @@ def generar(cfg: dict, salida: str, graficos: bool = True) -> dict:
             grafico_recall_falsas(filas, rutas["a"], dev, prueba, aviso(dev, prueba))
         amplio = _conjunto_amplio(filas)
         conjunto_c = prueba if any(f["conjunto"] == prueba for f in filas) else amplio
-        rutas["b"], rutas["c"] = os.path.join(salida, "grafico_b_embudo.png"), os.path.join(salida, "grafico_c_recall_costo_tiempo.png")
-        grafico_embudo(filas, rutas["b"], amplio, aviso(amplio))
+        rutas["c"] = os.path.join(salida, "grafico_c_recall_costo_tiempo.png")
+        if not mapa:        # con la reevaluación el embudo va separado (elegidas por un lado, v1 por otro), sin mezclar
+            rutas["b"] = os.path.join(salida, "grafico_b_embudo.png")
+            grafico_embudo(filas, rutas["b"], amplio, aviso(amplio))
         grafico_recall_costo_tiempo(filas, rutas["c"], conjunto_c, aviso(conjunto_c))
         ofertas_amplio = cfg["conjuntos"][amplio]
         completas = [n for n in evaluadas if _evs(evaluadas, n, ofertas_amplio)]
@@ -637,10 +697,14 @@ def generar(cfg: dict, salida: str, graficos: bool = True) -> dict:
             rutas.pop("f")
         if mapa:
             rutas["e"], rutas["b_reeval"] = os.path.join(salida, "grafico_e_recuperacion_antes_despues.png"), os.path.join(salida, "grafico_b_embudo_reeval.png")
+            rutas["b_v1"] = os.path.join(salida, "grafico_b_embudo_v1.png")
             if not grafico_recuperacion_antes_despues(filas, rutas["e"], mapa, {c: cfg["conjuntos"][c] for c in (dev, prueba)}, evaluadas):
                 rutas.pop("e")
+            v1s = [n for n in dict.fromkeys(mapa.values()) if n]
+            if not grafico_embudo_reeval(filas, rutas["b_v1"], amplio, v1s, evaluadas, aviso_comparabilidad(evaluadas, v1s, cfg["conjuntos"][amplio]), "de v1", gris_identico=False):
+                rutas.pop("b_v1")
             # el embudo de la reevaluación va al final: si el gris no es idéntico, GrisDistinto corta después de haber guardado todo lo demás
-            if not grafico_embudo_reeval(filas, rutas["b_reeval"], amplio, [n for n in mapa], evaluadas, aviso(amplio)):
+            if not grafico_embudo_reeval(filas, rutas["b_reeval"], amplio, list(mapa), evaluadas, aviso_comparabilidad(evaluadas, list(mapa), cfg["conjuntos"][amplio])):
                 rutas.pop("b_reeval")
     return {"filas": filas, "rutas": rutas}
 
