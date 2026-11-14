@@ -295,7 +295,22 @@ def test_si_la_calibracion_falla_se_escribe_el_error_y_no_se_genera_ninguna_curv
 
 
 def test_con_la_calibracion_ok_se_generan_csv_md_y_los_tres_graficos(monkeypatch, tmp_path):
+    pytest.importorskip("matplotlib")
+    from matplotlib.axes import Axes
+    escalas, original, grafico = [], Axes.set_xscale, cv.grafico_recall_vs_pares
+
+    def espia_escala(self, valor, *a, **k):
+        escalas.append(valor)
+        return original(self, valor, *a, **k)
+
+    def grafico_espiado(resultados, ruta):
+        monkeypatch.setattr(Axes, "set_xscale", espia_escala)
+        grafico(resultados, ruta)
+        monkeypatch.setattr(Axes, "set_xscale", original)
+
+    monkeypatch.setattr(cv, "grafico_recall_vs_pares", grafico_espiado)
     codigo, salida = _correr(monkeypatch, tmp_path, calibra=True)
+    assert escalas == ["log"] * 3                      # curva_recall_vs_pares: el eje X (pares) en escala log en los tres paneles
     assert codigo == 0
     nombres = {p.name.rsplit("_20", 1)[0] for p in salida.iterdir()}
     assert nombres == {"curva_recuperacion", "curva_recall", "curva_recall_vs_pares", "curva_costo"}

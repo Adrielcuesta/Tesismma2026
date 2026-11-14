@@ -1,0 +1,181 @@
+﻿oferta;tipo;id;nivel;evaluar;curva;seccion;solo_introduccion;conocido;frase
+P1;trampa;P1-01-A;literal;1;1;S5;0;0;posicionar el torno sobre sus apoyos a los 14 días
+P1;trampa;P1-01-M;literal;1;1;S6;0;0;escalera portátil de aluminio
+P1;trampa;P1-01-B;literal;1;1;S6;0;0;prueba de inundación de 24 h
+P1;trampa;P1-02-A;literal;1;1;S8;0;0;jabalina dedicada exclusiva
+P1;trampa;P1-02-M;literal;1;1;S7;0;0;serán IP54
+P1;trampa;P1-02-B;literal;1;1;S8;0;0;marzo de 2025
+P1;trampa;P1-03-A;literal;1;1;S10;0;0;utilización resultante es del 87 %
+P1;trampa;P1-03-M;literal;1;1;S10;0;0;ángulo de 55°
+P1;trampa;P1-03-B;literal;1;1;S10;0;0;48 horas de anticipación
+P1;trampa;P1-04-A;literal;1;1;S12;0;0;ajustada a ± 3 mm
+P1;trampa;P1-04-M;normalizada;1;1;S13;0;0;pasadas de acabado de 0,5 mm
+P1;trampa;P1-04-B;literal;1;1;S12;0;0;lecturas de trocha cada 1,0 m
+P1;trampa;P1-05-A;literal;1;1;S8;0;0;servoválvulas se conectarán directamente
+P1;trampa;P1-05-M;literal;1;1;S12;0;0;se ajustará a 0,05 mm/m
+P1;trampa;P1-05-B;literal;1;1;S8;0;0;plan bienal de calibraciones
+P1;conforme;P1-C01;normalizada;1;1;S4;0;0;hormigón H-35 elaborado en planta, con contenido de cemento Portland de 340 kg/m³, relación agua/cemento 0,45
+P1;conforme;P1-C02;normalizada;1;1;S4;0;0;El recubrimiento de armaduras principales será de 40 mm
+P1;conforme;P1-C03;normalizada;1;1;S4;0;0;se ejecutará contención lateral mediante tablestacado metálico calculado
+P1;conforme;P1-C04;normalizada;1;1;S5;0;0;relación masa de fundación / masa de máquina de 2,5
+P1;conforme;P1-C05;normalizada;1;1;S4;0;0;con registro diario de temperatura ambiente y del hormigón, inicio y fin de cada método de curado
+P1;conforme;P1-C06;literal;1;1;S6;0;0;se liberarán mediante acta firmada por la Inspección y el Jefe de Obra
+P1;conforme;P1-C07;normalizada;1;1;S7;0;0;Poder de corte del interruptor de cabecera ofertado (Icu a 400 V) | 36 kA
+P1;conforme;P1-C08;normalizada;0;1;S7;0;1;Caída de tensión en el tramo terminal | 2,1 %
+P1;conforme;P1-C09;normalizada;0;1;S7;0;1;Conductor de protección PE de la máquina | 25 mm² Cu
+P1;conforme;P1-C10;literal;1;1;S7;0;0;conserva una reserva de potencia del 38 %
+P1;conforme;P1-C11;normalizada;1;1;S7;0;0;cos φ ≥ 0,96 mediante el banco automático escalonado existente
+P1;conforme;P1-C12;normalizada;1;1;S7;0;0;40 % de reserva física en rieles y barras
+P1;conforme;P1-C13;normalizada;1;1;S7;0;0;Los mandos de uso habitual se ubican entre 0,90 m y 1,45 m sobre el NPT
+P1;conforme;P1-C14;literal;1;1;S7;0;0;Las tomas de servicio de la fosa estarán protegidas por interruptores diferenciales de 30 mA
+P1;conforme;P1-C15;literal;1;1;S10;0;0;planchones metálicos certificados de 2,0 × 2,0 m
+P1;conforme;P1-C16;normalizada;1;1;S10;0;0;Durante toda la maniobra estarán presentes en forma continua el Responsable de Higiene y Seguridad
+P1;conforme;P1-C17;literal;1;1;S10;0;0;Se gestionará ante la ART del Consorcio la conformidad escrita del plan
+P1;conforme;P1-C18;normalizada;1;1;S9;0;0;no superior a 82 dB(A), medido a 1,00 m de la envolvente y a 1,50 m sobre el piso
+P1;conforme;P1-C19;normalizada;1;1;S10;0;0;Los ramales se tomarán exclusivamente de los cuatro puntos de izaje indicados por el fabricante
+P1;conforme;P1-C20;literal;1;1;S12;0;0;El desnivel longitudinal de cada carril no superará 1,0 mm/m
+P1;conforme;P1-C21;normalizada;1;1;S12;0;0;El levantamiento completo de trocha y nivelación se repetirá después del endurecimiento del hormigón
+P1;conforme;P1-C22;normalizada;1;1;S12;0;0;Las pasarelas de acceso al pupitre tienen una altura libre de 2,20 m
+P1;conforme;P1-C23;normalizada;1;1;S13;0;0;La recepción provisoria se otorgará únicamente después de aprobado el SAT bajo carga
+P1;conforme;P1-C24;normalizada;1;1;S13;0;0;con 3 pares montados reales provistos por el Comitente
+P1;conforme;P1-C25;literal;1;1;S13;0;0;"Ra ≤ 6,3 μm; 3 trazas por rueda distribuidas a 120°"
+P1;conforme;P1-C26;literal;1;1;S13;0;0;Registro automático con muestreo cada 30 s
+P1;conforme;P1-C27;literal;1;1;S13;0;0;quien firmará el acta SAT como receptor técnico
+P1;conforme;P1-C28;normalizada;1;1;S8;0;0;aplicado en tres pasadas (30 %, 60 % y 100 %) en secuencia cruzada
+P1;conforme;P1-C29;literal;1;1;S8;0;0;El torque de referencia será de 1.136 N·m
+P1;conforme;P1-C30;literal;1;1;S8;0;0;grout epóxico sin contracción de 95 MPa
+P1;conforme;P1-C31;normalizada;1;1;S12;0;0;portones cerrados y registro de temperatura al inicio y al cierre de cada serie, con variación inferior a 1,0 °C
+P1;conforme;P1-C32;literal;1;1;S8;0;0;separación mínima de 250 mm en recorridos paralelos
+P2;trampa;P2-01-A;literal;1;1;S3;0;0;prensa anterior de 22 t
+P2;trampa;P2-01-M;normalizada;1;1;S4;0;0;relación agua/cemento 0,52
+P2;trampa;P2-01-B;literal;1;1;S4;0;0;ensayo esclerométrico a los 28 días
+P2;trampa;P2-02-A;literal;1;1;S6;0;0;será de 25 kA
+P2;trampa;P2-02-M;normalizada;1;1;S6;0;0;es de 4,2 %, dentro del 5 % admisible
+P2;trampa;P2-02-B;normalizada;1;1;S6;0;0;20 % de espacio libre en riel DIN
+P2;trampa;P2-03-A;literal;1;1;S8;0;0;tomando cada una 12 t
+P2;trampa;P2-03-M;literal;1;1;S8;0;0;peso de catálogo de la prensa: 24.000 kg
+P2;trampa;P2-03-B;literal;1;1;S7;0;0;a 3 m del equipo
+P2;trampa;P2-04-A;normalizada;1;1;S10;0;0;prueba de funcionamiento en vacío en sitio
+P2;trampa;P2-04-M;literal;1;1;S5;0;0;desnivel longitudinal de hasta 1,5 mm/m
+P2;trampa;P2-04-B;literal;1;1;S5;0;0;levantamiento realizado antes del hormigonado
+P2;trampa;P2-05-A;literal;1;1;S8;0;0;eslingando desde las columnas guía rectificadas
+P2;trampa;P2-05-M;literal;1;1;S7;0;0;Re ≈ 2.300
+P2;trampa;P2-05-B;normalizada;1;1;S7;0;0;aceite se presente claro
+P2;conforme;P2-C01;normalizada;1;1;S4;0;0;hormigón H-35 con contenido de cemento de 330 kg/m³
+P2;conforme;P2-C02;normalizada;1;1;S4;0;0;El recubrimiento de armaduras será de 40 mm en todas las caras expuestas a derrames de aceite hidráulico
+P2;conforme;P2-C03;normalizada;1;1;S4;0;0;durante 28 días corridos antes de posicionar la prensa y aplicar el torque definitivo de anclajes
+P2;conforme;P2-C04;normalizada;1;1;S4;0;0;Se llevará registro de temperatura ambiente y del hormigón, inicio y fin de cada método de curado e interrupciones
+P2;conforme;P2-C05;normalizada;1;1;S5;0;0;se ubican a 1,80 m del eje de vía
+P2;conforme;P2-C06;literal;1;1;S5;0;0;con tolerancia de ± 1,5 mm (1.433,5 a 1.436,5 mm)
+P2;conforme;P2-C07;normalizada;1;1;S5;0;0;en secciones cada 0,50 m (11 secciones) con tres lecturas independientes por sección
+P2;conforme;P2-C08;normalizada;1;1;S6;0;0;mantiene una reserva de potencia del 41 %
+P2;conforme;P2-C09;normalizada;1;1;S6;0;0;la tensión en bornes durante el arranque es de 0,88·Un
+P2;conforme;P2-C10;literal;1;1;S6;0;0;con grado de protección IP55
+P2;conforme;P2-C11;literal;1;1;S6;0;0;mandos de uso habitual entre 1,10 m y 1,50 m sobre el NPT
+P2;conforme;P2-C12;normalizada;1;1;S6;0;0;Las tomas de mantenimiento estarán protegidas con diferencial de 30 mA
+P2;conforme;P2-C13;normalizada;1;1;S6;0;0;conductor PE de cobre de 16 mm²
+P2;conforme;P2-C14;normalizada;1;1;S6;0;0;con el protocolo de la Resolución SRT 900/2015
+P2;conforme;P2-C15;normalizada;1;1;S7;0;0;serán sometidas a flushing por circulación forzada antes de conectar el bloque de válvulas proporcionales
+P2;conforme;P2-C16;normalizada;1;1;S7;0;0;filtro de relación β5(c) ≥ 200
+P2;conforme;P2-C17;literal;1;1;S7;0;0;con un límite de 200 mg/kg y saturación relativa ≤ 60 %
+P2;conforme;P2-C18;normalizada;1;1;S7;0;0;calibradas según ISO 6789-2 en los últimos 12 meses
+P2;conforme;P2-C19;normalizada;1;1;S7;0;0;torque de referencia de 661 N·m aplicado en tres pasadas (30 %, 60 % y 100 %)
+P2;conforme;P2-C20;normalizada;1;1;S7;0;0;grout epóxico sin contracción de 85 MPa
+P2;conforme;P2-C21;literal;1;1;S7;0;0;se tenderán en bandejas separadas 200 mm
+P2;conforme;P2-C22;normalizada;1;1;S9;0;0;hasta una desviación máxima de 0,02 mm/m
+P2;conforme;P2-C23;literal;1;1;S9;0;0;variación de temperatura inferior a 1,0 °C durante cada serie
+P2;conforme;P2-C24;normalizada;1;1;S8;0;0;con ángulo de 30° respecto de la vertical
+P2;conforme;P2-C25;normalizada;1;1;S8;0;0;presentado con 7 días hábiles de anticipación
+P2;conforme;P2-C26;literal;1;1;S8;0;0;Se solicitará a la ART la conformidad escrita del plan
+P2;conforme;P2-C27;normalizada;1;1;S8;0;0;estarán presentes de manera continua el Responsable de Higiene y Seguridad y el Supervisor de Montaje
+P2;conforme;P2-C28;literal;1;1;S8;0;0;apoyarán sus estabilizadores sobre planchones metálicos certificados
+P3;trampa;P3-01-A;literal;1;1;S4;0;0;taludes naturales 1:0,5
+P3;trampa;P3-01-M;literal;1;1;S4;0;0;bloque de inercia de 45 t
+P3;trampa;P3-01-B;normalizada;1;1;S4;0;0;conformidad verbal del jefe de obra
+P3;trampa;P3-02-A;literal;1;1;S6;0;0;referenciará únicamente a la bancada metálica
+P3;trampa;P3-02-M;literal;1;1;S6;0;0;será de 10 mm² Cu
+P3;trampa;P3-02-B;literal;1;1;S6;0;0;cos φ 0,92
+P3;trampa;P3-03-A;literal;1;1;S8;0;0;contrachapado fenólico de 25 mm
+P3;trampa;P3-03-M;normalizada;1;1;S8;0;0;permanecerá disponible por radio
+P3;trampa;P3-03-B;literal;1;1;S8;0;0;constancia de recepción del sistema se considerará conformidad
+P3;trampa;P3-04-A;literal;1;1;S10;0;0;serán discos patrón
+P3;trampa;P3-04-M;normalizada;1;1;S5;0;0;altura libre de 2,00 m
+P3;trampa;P3-04-B;literal;1;1;S10;0;0;Una traza por rueda
+P3;trampa;P3-05-A;normalizada;1;1;S7;0;0;se apretarán a 2.700 N·m
+P3;trampa;P3-05-M;normalizada;1;1;S7;0;0;mortero cementicio de nivelación de alta resistencia (60 MPa)
+P3;trampa;P3-05-B;literal;1;1;S9;0;0;portón de la nave abierto
+P3;conforme;P3-C01;literal;1;1;S4;0;0;El hormigón será H-35 con 350 kg/m³ de cemento Portland, relación agua/cemento 0,44
+P3;conforme;P3-C02;normalizada;1;1;S4;0;0;El recubrimiento de armaduras será de 40 mm en caras expuestas a refrigerante
+P3;conforme;P3-C03;normalizada;1;1;S4;0;0;El curado se extenderá 28 días corridos antes de posicionar la máquina
+P3;conforme;P3-C04;literal;1;1;S4;0;0;La resistencia se acreditará con probetas ensayadas a 28 días
+P3;conforme;P3-C05;literal;1;1;S4;0;0;no superará 2,5 mm/s RMS
+P3;conforme;P3-C06;normalizada;1;1;S5;0;0;con tolerancia de ± 1,5 mm (998,5 a 1.001,5 mm)
+P3;conforme;P3-C07;literal;1;1;S5;0;0;El levantamiento completo se repetirá tras el endurecimiento de la losa
+P3;conforme;P3-C08;literal;1;1;S5;0;0;El paso de hombre junto a la vía conserva 2,30 m libres
+P3;conforme;P3-C09;normalizada;1;1;S6;0;0;interruptor de cabecera con Icu de 36 kA a 400 V
+P3;conforme;P3-C10;literal;1;1;S6;0;0;La caída de tensión es de 2,4 % en el tramo terminal
+P3;conforme;P3-C11;literal;1;1;S6;0;0;reserva de potencia del 37 %
+P3;conforme;P3-C12;literal;1;1;S6;0;0;Tablero según IEC 61439, IP55
+P3;conforme;P3-C13;normalizada;1;1;S6;0;0;45 % de reserva física
+P3;conforme;P3-C14;normalizada;1;1;S6;0;0;tomas de mantenimiento con diferencial de 30 mA
+P3;conforme;P3-C15;literal;1;1;S6;0;0;separadas 220 mm
+P3;conforme;P3-C16;normalizada;1;1;S7;0;0;régimen turbulento Re ≥ 4.000 en cada ramal
+P3;conforme;P3-C17;normalizada;1;1;S7;0;0;tres muestras consecutivas conformes a ISO 4406 17/15/12, separadas 15 minutos
+P3;conforme;P3-C18;literal;1;1;S7;0;0;con humedad ≤ 200 mg/kg (Karl Fischer)
+P3;conforme;P3-C19;literal;1;1;S8;0;0;Las masas indicadas son masas brutas de izaje
+P3;conforme;P3-C20;literal;1;1;S8;0;0;ángulo de 40° respecto de la vertical
+P3;conforme;P3-C21;literal;1;1;S8;0;0;El plan se presentará con 6 días hábiles de anticipación
+P3;conforme;P3-C22;literal;1;1;S8;0;0;Todos los subconjuntos se izarán exclusivamente desde los puntos de izaje indicados por el fabricante
+P3;conforme;P3-C23;literal;1;1;S9;0;0;con tolerancia final de 0,02 mm/m
+P3;conforme;P3-C24;literal;1;1;S10;0;0;Al menos una de las unidades se mecanizará en el punto de máxima carga de corte
+P3;conforme;P3-C25;literal;1;1;S10;0;0;Registro automático con muestreo de 30 s
+P3;conforme;P3-C26;normalizada;1;1;S10;0;0;el acta será firmada por el responsable de Material Rodante como receptor técnico
+P3;conforme;P3-C27;literal;1;1;S10;0;0;La recepción provisoria se otorgará una vez aprobado el SAT bajo carga
+P3;conforme;P3-C28;literal;1;1;S7;0;0;no superará 83 dB(A) medido a 1,00 m de la envolvente
+P4;trampa;P4-01-A;literal;1;1;S4;0;0;hormigón elaborado H-25
+P4;trampa;P4-01-M;literal;1;1;S4;0;0;recubrimiento de 25 mm
+P4;trampa;P4-01-B;literal;1;1;S4;0;0;consignará la fecha de hormigonado
+P4;trampa;P4-02-A;normalizada;1;1;S6;0;0;diferencial general de 300 mA
+P4;trampa;P4-02-M;literal;1;1;S6;0;0;630 kVA cubre holgadamente
+P4;trampa;P4-02-B;literal;1;1;S6;0;0;a 1,70 m de altura
+P4;trampa;P4-03-A;literal;1;1;S8;0;0;únicamente a su capacidad nominal (100 %)
+P4;trampa;P4-03-M;literal;1;1;S6;0;0;a 0,50 m del recorrido del carro
+P4;trampa;P4-03-B;literal;1;1;S8;0;0;inspección especializada anual
+P4;trampa;P4-04-A;normalizada;1;1;S9;0;0;a 2,0 m de la catenaria
+P4;trampa;P4-04-M;literal;1;1;S11;0;0;firmada por el Jefe de Puesta en Marcha
+P4;trampa;P4-04-B;literal;1;1;S11;0;0;manualmente cada 15 minutos
+P4;trampa;P4-05-A;literal;1;1;S7;0;0;eliminarán por centrifugado
+P4;trampa;P4-05-M;literal;1;1;S6;0;0;separados 50 mm
+P4;trampa;P4-05-B;literal;1;1;S7;0;0;dos pasadas (50 % y 100 %
+P4;conforme;P4-C01;literal;1;1;S4;0;0;se ejecutará con blindaje metálico calculado y aprobado antes de abrir la excavación
+P4;conforme;P4-C02;literal;1;1;S4;0;0;relación agua/cemento 0,46
+P4;conforme;P4-C03;normalizada;1;1;S4;0;0;durante 28 días corridos antes del posicionamiento del torno
+P4;conforme;P4-C04;literal;1;1;S4;0;0;relación masa de fundación / masa de máquina de 2,3
+P4;conforme;P4-C05;normalizada;1;1;S4;0;0;ensayo de penetración de agua según IRAM 1554 sobre probetas, con criterio de aceptación ≤ 30 mm
+P4;conforme;P4-C06;normalizada;1;1;S5;0;0;se liberarán mediante acta firmada por la Inspección del Comitente
+P4;conforme;P4-C07;normalizada;1;1;S5;0;0;con tolerancia de ± 1,5 mm (1.674,5 a 1.677,5 mm), medida en 11 secciones cada 0,50 m, con tres lecturas por sección
+P4;conforme;P4-C08;normalizada;1;1;S5;0;0;Se repetirá el levantamiento completo tras el endurecimiento del hormigón
+P4;conforme;P4-C09;normalizada;1;1;S5;0;0;la altura libre de los pasos peatonales es de 2,15 m
+P4;conforme;P4-C10;normalizada;1;1;S6;0;0;interruptor de cabecera con Icu de 36 kA a 400 V
+P4;conforme;P4-C11;literal;1;1;S6;0;0;grado de protección IP55
+P4;conforme;P4-C12;literal;1;1;S6;0;0;40 % de reserva física y de capacidad de barras
+P4;conforme;P4-C13;normalizada;1;1;S6;0;0;el PE del torno será de cobre de 16 mm²
+P4;conforme;P4-C14;normalizada;1;1;S6;0;0;tras el montaje se emitirá un nuevo protocolo según la Resolución SRT 900/2015
+P4;conforme;P4-C15;literal;1;1;S6;0;0;cos φ ≥ 0,95 con el banco automático escalonado existente
+P4;conforme;P4-C16;literal;1;1;S8;0;0;polipasto de cable con factor de seguridad 6
+P4;conforme;P4-C17;literal;1;1;S8;0;0;frenos dimensionados para retener 150 % de la carga máxima admisible
+P4;conforme;P4-C18;normalizada;1;1;S9;0;0;firmado por Ingeniero Mecánico matriculado y presentado con 5 días hábiles de anticipación, con conformidad escrita de la ART
+P4;conforme;P4-C19;literal;1;1;S9;0;0;ángulo de 35° respecto de la vertical
+P4;conforme;P4-C20;normalizada;1;1;S9;0;0;Los estabilizadores apoyarán sobre planchones metálicos certificados
+P4;conforme;P4-C21;normalizada;1;1;S9;0;0;Estarán presentes de forma continua el Responsable de Higiene y Seguridad y el Supervisor de Montaje
+P4;conforme;P4-C22;normalizada;1;1;S7;0;0;se lavarán por circulación forzada antes de conectar las válvulas proporcionales, con Re ≥ 4.000 en cada ramal
+P4;conforme;P4-C23;normalizada;1;1;S7;0;0;aceptación con tres muestras consecutivas ISO 4406 17/15/12 separadas 10 minutos
+P4;conforme;P4-C24;normalizada;1;1;S7;0;0;con llave dinamométrica calibrada en los últimos 12 meses
+P4;conforme;P4-C25;normalizada;1;1;S7;0;0;El grout bajo placas base será epóxico sin contracción de 90 MPa
+P4;conforme;P4-C26;literal;1;1;S10;0;0;La nivelación final del torno será ≤ 0,02 mm/m
+P4;conforme;P4-C27;normalizada;1;1;S10;0;0;portones cerrados y variación de temperatura ≤ 1,0 °C
+P4;conforme;P4-C28;literal;1;1;S11;0;0;El SAT se ejecutará con tres ejes montados reales de la flota
+P4;conforme;P4-C29;literal;1;1;S11;0;0;Al menos uno se mecanizará en la condición de máxima carga de corte
+P4;conforme;P4-C30;normalizada;1;1;S11;0;0;La rugosidad se medirá con tres trazas por pieza distribuidas a 120°
+P4;conforme;P4-C31;normalizada;1;1;S11;0;0;La recepción provisoria se otorgará una vez aprobado el SAT bajo carga
+P4;conforme;P4-C32;literal;1;1;S7;0;0;no superará 84 dB(A) a 1,00 m de la envolvente

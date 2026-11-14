@@ -68,7 +68,7 @@ def test_la_cola_calcula_pares_razon_y_marca_lo_extrapolado(tmp_path):
     assert (c["p28"]["pares"], c["p29"]["pares"], c["p30"]["pares"]) == (890, 1690, 6200) and not any(c[k]["extrapolado"] for k in ("p28", "p29", "p30"))
     assert c["razon"] == pytest.approx(6200 / 890) and c["incremental"] == pytest.approx((6200 - 890) / 890) and c["p30_puesto"]["interpolado"] and c["razon_puesto"] < c["razon"]
     frase = F.frase_tribunal(c)
-    assert "890 pares" in frase and "6.200 pares" in frase and "7,0 veces" in frase and "extrapolado" not in frase
+    assert "890 pares" in frase and "6.200 pares" in frase and "llegar a 30/30 exige unas 7 veces los pares de las primeras 28, para ganar 6,7 puntos de recall" in frase and "extrapolado" not in frase
     sin_ultima = F.leer_serie(_csv(tmp_path, [p for p in PUNTOS if p[2] < 30]))
     c2 = F.cola(sin_ultima, F.ajustar([r["pares"] for r in sin_ultima], [r["recall"] for r in sin_ultima]))
     assert c2["p30"]["extrapolado"] and c2["p30"]["k"] is None and c2["p30"]["pares"] >= sin_ultima[-1]["pares"] and c2["p30_puesto"] is None

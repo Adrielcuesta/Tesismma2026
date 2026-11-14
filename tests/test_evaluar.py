@@ -77,6 +77,17 @@ def test_trampas_espejo_y_extra():
     assert r["volumen"] == {"brechas": 5, "riesgos agrupados": 4, "solicitudes": 2, "alertas": 1}
 
 
+def test_norm_trata_la_barra_de_las_celdas_como_espacio_y_reconoce_p1_c08_y_p1_c09():
+    assert ev.norm("Caída de tensión en el tramo terminal | 2,1 %") == ev.norm("Caída de tensión en el tramo terminal\n2,1 %") == "caida de tension en el tramo terminal 2,1 %"
+    espejos = [{"proyecto": "Proyecto 9", "seccion": "7", "cita_conforme": "Caída de tensión en el tramo terminal | 2,1 %", "norma": "NORM_04", "articulo": "3.5", "espejo_de_trampa": "P9-01"},
+               {"proyecto": "Proyecto 9", "seccion": "7", "cita_conforme": "Conductor de protección PE de la máquina | 25 mm² Cu", "norma": "NORM_04", "articulo": "3.8", "espejo_de_trampa": "P9-02"}]
+    # la cita de la brecha une las oraciones con espacios: la barra de la celda ya no impide reconocer el caso conforme
+    resultado = {"registro_brechas": [_brecha("Caída de tensión en el tramo terminal 2,1 %", "NORM_04", "3.5"),
+                                      _brecha("Conductor de protección PE de la máquina 25 mm² Cu", "NORM_04", "3.8")]}
+    r = ev.evaluar(resultado, [], espejos, "P9")
+    assert (r["falsas_alarmas"], r["n_espejos"]) == (2, 2) and r["extras"] == []
+
+
 def test_ground_truth_filtra_por_oferta_y_espejos_por_proyecto(tmp_path):
     _escribir(tmp_path / "gt.csv", CABECERA_GT, GT)
     _escribir(tmp_path / "esp.csv", CABECERA_ESP, ESPEJOS)

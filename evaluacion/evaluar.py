@@ -36,8 +36,8 @@ NOTA_FIDELIDAD = "La fidelidad de la cita es del 100 % por diseño: la cita la a
 
 
 def norm(texto) -> str:
-    """Minúsculas, sin acentos y con espacios simples."""
-    t = unicodedata.normalize("NFD", str(texto or ""))
+    """Minúsculas, sin acentos, con «|» (celdas de tabla) y saltos de línea como espacios y espacios simples."""
+    t = unicodedata.normalize("NFD", str(texto or "").replace("|", " "))
     return re.sub(r"\s+", " ", "".join(c for c in t if unicodedata.category(c) != "Mn").lower()).strip()
 
 

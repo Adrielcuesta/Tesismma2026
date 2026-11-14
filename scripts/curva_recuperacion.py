@@ -490,7 +490,8 @@ def grafico_recall_vs_pares(resultados: dict, ruta: str) -> None:
         for nivel in (0.9, 0.95, 1.0):
             eje.axhline(nivel, color="#bbbbbb", linewidth=0.8, linestyle="--")
         eje.set_title(NOMBRES_VARIANTE[variante], loc="left")
-        eje.set_xlabel("Pares a verificar (llamadas al LLM)")
+        eje.set_xscale("log")
+        eje.set_xlabel("Pares a verificar (llamadas al LLM, escala logarítmica)")
         eje.yaxis.set_major_formatter(_pct)
         eje.grid(color="#eeeeee")
     ejes[0].set_ylabel("Recall de trampas (P1 y P2)")

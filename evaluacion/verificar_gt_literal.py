@@ -5,7 +5,7 @@ Lo busca en cuatro niveles y lista los que no se encuentran en forma literal:
   2. normalizada: sin mayúsculas ni acentos, con «|» y saltos de línea de tabla como espacios y espacios colapsados;
   3. alfanumérica: solo letras y números (el criterio con que la curva de recuperación ubica una trampa en su sección);
 y, aparte, dos controles de cómo cuentan los programas:
-  - evaluar.py: ¿la frase (evaluar.norm, que NO quita «|» ni puntuación) está en las oraciones de alguna sección unidas con espacios, como queda la cita de una brecha? (los casos
+  - evaluar.py: ¿la frase (evaluar.norm: minúsculas, sin acentos, «|» y saltos como espacios; conserva la puntuación) está en las oraciones de alguna sección unidas con espacios, como queda la cita de una brecha? (los casos
     conformes solo usan los primeros 60 caracteres, como _frase_espejo). Si no, evaluar.py no puede encontrar esa trampa aunque el sistema cite la oración correcta.
   - curva: ¿la frase (alfanumérica) está en el texto de alguna sección que se verifica (sin la introducción)?
 
@@ -32,7 +32,7 @@ def alfanumerico(texto) -> str:
 
 def normalizada(texto) -> str:
     """Minúsculas, sin acentos, con «|» y saltos de línea como espacios y espacios colapsados."""
-    return E.norm(str(texto or "").replace("|", " "))
+    return E.norm(texto)        # evaluar.norm ya trata «|» y saltos de línea como espacios
 
 
 def nivel_de_coincidencia(frase: str, texto: str) -> str:
@@ -47,7 +47,7 @@ def nivel_de_coincidencia(frase: str, texto: str) -> str:
 
 
 def ve_evaluar(frase: str, es_conforme: bool, secciones: list) -> bool:
-    """¿evaluar.py podría reconocer esta frase en la cita de una brecha? La cita une oraciones de una sección con espacios y se compara con evaluar.norm (que conserva «|» y la puntuación)."""
+    """¿evaluar.py podría reconocer esta frase en la cita de una brecha? La cita une oraciones de una sección con espacios y se compara con evaluar.norm (que trata «|» como espacio y conserva la puntuación)."""
     buscada = E.norm(frase)[:60] if es_conforme else E.norm(frase)
     return any(buscada and buscada in E.norm(" ".join(o for _, o in s["oraciones"])) for s in secciones)
 
@@ -103,7 +103,7 @@ def informe_md(filas: list) -> str:
     no_literales = [f for f in filas if f["nivel"] != NIVELES[0]]
     L = ["# Verificación del ground truth contra el texto de las ofertas", "",
          "Niveles: **literal** (la frase tal cual está en el texto extraído de la oferta), **normalizada** (sin mayúsculas ni acentos, «|» y saltos de línea como espacios), **alfanumérica** "
-         "(solo letras y números; el criterio de la curva). **evaluar.py** dice si `evaluar.norm` (que no quita «|» ni puntuación) encuentra la frase en las oraciones de alguna sección unidas con "
+         "(solo letras y números; el criterio de la curva). **evaluar.py** dice si `evaluar.norm` (que trata «|» como espacio y conserva la puntuación) encuentra la frase en las oraciones de alguna sección unidas con "
          "espacios, como queda la cita de una brecha; en los casos conformes solo cuentan los primeros 60 caracteres. **Curva**: la frase alfanumérica está en una sección que se verifica.", ""]
     L += resumen_md(filas)
     L += [f"## No encontradas en forma literal ({len(no_literales)} de {len(filas)})", ""]

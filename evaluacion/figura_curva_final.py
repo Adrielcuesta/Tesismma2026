@@ -42,7 +42,7 @@ K_REFERENCIA = {6: "regla marginal", 10: "elegido", 15: "codo (Kneedle)"}
 UMBRAL_MARGINAL, PASOS_MARGINAL = 0.5, 3
 PUESTO_ULTIMA_TRAMPA = 175          # P2-04-B está en el puesto 175 del ranking denso (dato del diagnóstico de la curva)
 AZUL, NARANJA, AQUA, AMARILLO, MAGENTA, GRIS, TINTA = "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#9a9a95", "#222222"
-PRIORIDAD_ETIQUETAS = (1, 2, 3, 5, 6, 10, 15, 25, 35, 50, 100, 200, 410)
+PRIORIDAD_ETIQUETAS = (1, 2, 3, 5, 6, 10, 15, 25, 50, 100, 200, 410)          # los únicos K que se rotulan en el panel A (y su orden de prioridad)
 
 
 # --- Datos ---
@@ -239,8 +239,8 @@ def frase_tribunal(c: dict, nombre: str = "BGE-M3") -> str:
     puesto = (f" (≈{miles(c['p30_puesto']['pares'])} si se corta exactamente en el puesto {c['puesto']} de su ranking{', interpolado' if c['p30_puesto']['interpolado'] else ''})"
               if c["p30_puesto"] else "")
     return (f"Con {nombre} en modo solo denso, las primeras {n - 2} de {n} trampas se recuperan verificando {miles(c['p28']['pares'])} pares{marca(c['p28'])}; la trampa {n - 1} exige "
-            f"{miles(c['p29']['pares'])} pares{marca(c['p29'])} y la última, {miles(c['p30']['pares'])} pares{marca(c['p30'])}{puesto}: {_n(c['razon'], 1)} veces los pares de las primeras {n - 2}, "
-            f"para sumar {_n(100 / n, 1)} puntos de recall. Por eso la configuración elegida se detiene antes de esa cola de costo creciente.")
+            f"{miles(c['p29']['pares'])} pares{marca(c['p29'])} y la última, {miles(c['p30']['pares'])} pares{marca(c['p30'])}{puesto}: "
+            f"llegar a {n}/{n} exige unas {_n(c['razon'], 0)} veces los pares de las primeras {n - 2}, para ganar {_n(200 / n, 1)} puntos de recall. Por eso la configuración elegida se detiene antes de esa cola de costo creciente.")
 
 
 # --- Figura ---
@@ -332,7 +332,7 @@ def figura(serie: list, ajuste: dict, fact: dict, ruta_png: str, ks_ref: dict = 
     abajo.spines["bottom"].set_visible(True)
     eje.legend(loc="lower right", frameon=True, framealpha=0.95, fontsize=10.5)
     fig.canvas.draw()
-    puntos = [(r["pares"], r["recall"], f"{r['k']}", r["k"]) for r in serie]
+    puntos = [(r["pares"], r["recall"], f"{r['k']}", r["k"]) for r in serie if r["k"] in PRIORIDAD_ETIQUETAS]
     rotulados = etiquetar_puntos(fig, eje, puntos)
     # Panel B
     g = ganancia_marginal(serie)
@@ -357,7 +357,7 @@ def figura(serie: list, ajuste: dict, fact: dict, ruta_png: str, ks_ref: dict = 
     marg.legend(loc="upper right", frameon=True, framealpha=0.95, fontsize=10.5)
     fig.savefig(ruta_png, dpi=300)
     plt.close(fig)
-    return {"rotulados": rotulados, "total": len(serie)}
+    return {"rotulados": rotulados, "total": len(puntos)}
 
 
 # --- Informe ---
@@ -390,7 +390,7 @@ def informe_md(serie: list, ajuste: dict, fact: dict, c: dict, ks: dict, ruta_cs
          f"{serie[0]['n']} trampas de P1+P2).",
          f"- Figura: `{nombre_png}` (300 dpi). Panel A: recall contra pares verificados (log) con USD y horas en ejes secundarios; panel B: ganancia marginal contra K.",
          *([] if bge else ["- La configuración elegida (28/30, 721 pares) y su validación en P3+P4 son de BGE-M3: no se dibujan con otro embedding, que no tiene perfil elegido."]),
-         f"- Rótulos con el K de cada punto: {figura_info['rotulados']} de {figura_info['total']} (los que no entran sin pisar otro texto quedan sin rótulo; todos los puntos están en el CSV de origen).", "",
+         f"- Rótulos del K solo en {', '.join(str(k) for k in sorted(PRIORIDAD_ETIQUETAS))}: {figura_info['rotulados']} de {figura_info['total']} puestos (los que no entran sin pisar otro texto quedan sin rótulo; todos los puntos están en el CSV de origen).", "",
          "## Factores de costo", "", "| Factor | Valor | Origen |", "|---|---|---|",
          f"| USD por par | {_n(usd, 5)} | {fact['usd'][1]} |", f"| Segundos por par | {_n(seg, 1)} | {fact['seg'][1]} |", "",
          "## Ajuste recall(p) = 1 − a·p^(−b)", "", f"Mínimos cuadrados sobre los {ajuste['n']} puntos de la serie: **a = {_n(ajuste['a'], 4)}**, **b = {_n(ajuste['b'], 4)}**, **R² = {_n(ajuste['r2'], 4)}** (sobre el recall). "
