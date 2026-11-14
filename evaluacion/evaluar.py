@@ -1,5 +1,5 @@
 # evaluacion/evaluar.py
-"""Evaluación determinista de un resultado contra el ground truth v3 y los espejos conformes. Sin LLM.
+"""Evaluación determinista de un resultado contra el ground truth v3 (trampas) y los casos conformes (espejos_conformes.csv). Sin LLM.
 Solo este módulo y los tests leen evaluacion/: nunca un prompt, el índice ni el pipeline.
 
 Uso:
@@ -408,7 +408,7 @@ def tabla_comparacion(con, sin, mcnemar=None) -> str:
         sin_enc = _pct(sin["por_frase"], sin["n_trampas"]) + " por frase, sin validar"
     filas = [
         ("Trampas encontradas", _pct(con["encontradas"], n) + " (frase y artículo)", sin_enc),
-        ("Falsas alarmas (por frase del espejo)", _pct(con["falsas_alarmas"], con["n_espejos"]), _pct(sin["falsas_alarmas"], sin["n_espejos"])),
+        ("Falsas alarmas sobre casos conformes (por frase)", _pct(con["falsas_alarmas"], con["n_espejos"]), _pct(sin["falsas_alarmas"], sin["n_espejos"])),
         ("Riesgos / brechas", str(con["volumen"].get("brechas", con["volumen"].get("riesgos"))), str(sin["volumen"].get("riesgos", sin["volumen"].get("brechas")))),
         ("Riesgos agrupados", str(con["volumen"].get("riesgos agrupados", "—")), "—"),
         ("Solicitudes", str(con["volumen"].get("solicitudes", "—")), "—"),
@@ -424,7 +424,7 @@ PERDIDAS = ("no recuperada", "perdida en verificación", "perdida en clasificaci
 
 
 def _bloque_falsas_y_volumen(ev):
-    L = ["## Falsas alarmas", "", "| Métrica | Valor |", "|---|---|", f"| Espejos marcados | {_con_ic(ev['falsas_alarmas'], ev['n_espejos'])} |", "",
+    L = ["## Falsas alarmas sobre casos conformes", "", "| Métrica | Valor |", "|---|---|", f"| Casos conformes marcados | {_con_ic(ev['falsas_alarmas'], ev['n_espejos'])} |", "",
          "## Volumen", "", "| Concepto | Cantidad |", "|---|---|"]
     return L + [f"| {k.capitalize()} | {v} |" for k, v in ev["volumen"].items()] + [""]
 
@@ -569,12 +569,12 @@ def ruta_juez(ruta_json) -> str:
 
 
 def ruta_juez_espejos(ruta_json) -> str:
-    """CSV del control del juez (brechas que caen sobre espejos conformes): <json sin extensión>_juez_espejos.csv, junto al JSON."""
+    """CSV del control del juez (brechas que caen sobre casos conformes): <json sin extensión>_juez_espejos.csv, junto al JSON."""
     return os.path.splitext(os.path.abspath(ruta_json))[0] + "_juez_espejos.csv"
 
 
 def asignar_control_juez(ev, filas):
-    """ev['control_juez'] = {'n': espejos con veredicto del juez, 'no_valida': cuántos NO_VALIDA}; None si no hay CSV o no hay ningún veredicto."""
+    """ev['control_juez'] = {'n': casos conformes con veredicto del juez, 'no_valida': cuántos NO_VALIDA}; None si no hay CSV o no hay ningún veredicto."""
     juzgadas = [r for r in (filas or []) if r.get("juez_veredicto") in JUEZ_VEREDICTOS]
     ev["control_juez"] = {"n": len(juzgadas), "no_valida": sum(r["juez_veredicto"] == "NO_VALIDA" for r in juzgadas)} if juzgadas else None
 
@@ -643,7 +643,7 @@ def evaluar_archivo(ruta, oferta, gt, espejos, revision=None) -> dict:
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="Evalúa un resultado contra el ground truth v3 y los espejos conformes")
+    p = argparse.ArgumentParser(description="Evalúa un resultado contra el ground truth v3 (trampas) y los casos conformes")
     p.add_argument("--resultado", help="JSON del resultado")
     p.add_argument("--oferta", help="P1, P2, P3 o P4 (con --resultado)")
     p.add_argument("--agregado", nargs="+", metavar="JSON", help="JSON de varias ofertas: las métricas se calculan sobre el total de trampas")
@@ -651,7 +651,7 @@ def main(argv=None):
     p.add_argument("--comparar", nargs="+", metavar="JSON_SIN_RAG", help="resultado(s) sin RAG: agrega la tabla con RAG / sin RAG")
     p.add_argument("--revision-sinrag", nargs="+", metavar="CSV", help="sinrag_coincidencias.csv con 'valido' completo: la fila sin RAG cuenta solo las válidas")
     p.add_argument("--ground-truth", default=GROUND_TRUTH)
-    p.add_argument("--espejos", default=ESPEJOS)
+    p.add_argument("--espejos", "--conformes", dest="espejos", default=ESPEJOS, help="CSV de casos conformes (--conformes es un alias de --espejos)")
     a = p.parse_args(argv)
 
     if a.agregado:

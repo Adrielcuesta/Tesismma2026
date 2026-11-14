@@ -1,15 +1,15 @@
 # evaluacion/juez.py
-"""Juez externo de precisión. Para cada brecha extra de un JSON de análisis (las que no son trampas ni espejos; se calculan acá con las mismas funciones
+"""Juez externo de precisión. Para cada brecha extra de un JSON de análisis (las que no son trampas ni casos conformes; se calculan acá con las mismas funciones
 de evaluar.py, sin depender de que evaluar.py haya corrido antes) pregunta a un modelo de la nube si es VALIDA, NO_VALIDA o DUDOSA según el artículo de la
-KB y el contenido mínimo de la oferta (NORM_07 Art. 2.6). El ground truth y los espejos solo sirven para separar los extras: el juez recibe únicamente
+KB y el contenido mínimo de la oferta (NORM_07 Art. 2.6). El ground truth y los casos conformes solo sirven para separar los extras: el juez recibe únicamente
 oraciones citadas, texto del artículo y título/enunciado/motivo del sistema.
 Escribe <json>_juez.csv junto al JSON (oferta, sección, norma, artículo, cita, título, clase, valido, juez_veredicto, juez_motivo). La columna humana «valido»
 viene de <json>_extras.csv si existe y no se toca. Si el CSV del juez ya existe, las brechas ya juzgadas se conservan (con --rehacer se juzgan de nuevo).
 
 Uso:
-  python -m evaluacion.juez P1=<json> [P2=<json> ...] [--max-items N] [--concurrencia 8] [--rehacer] [--espejos]
-Con --espejos (control del juez) se juzgan, con el mismo prompt y modelo, las brechas que caen sobre frases conformes (espejos de evaluar.py, falsos positivos
-conocidos); se escribe <json>_juez_espejos.csv y se informa cuántas marcó NO_VALIDA (especificidad del juez sobre negativos conocidos).
+  python -m evaluacion.juez P1=<json> [P2=<json> ...] [--max-items N] [--concurrencia 8] [--rehacer] [--conformes]
+Con --conformes (alias --espejos; control del juez) se juzgan, con el mismo prompt y modelo, las brechas que caen sobre casos conformes (de evaluar.py, falsos
+positivos conocidos); se escribe <json>_juez_espejos.csv y se informa cuántas marcó NO_VALIDA (especificidad del juez sobre negativos conocidos).
 La oferta se indica como P#=ruta o se deduce de la ruta (igual que evaluar.py). Clave en el .env: DEEPINFRA_API_KEY."""
 import argparse
 import csv
@@ -140,7 +140,7 @@ def procesar_json(ruta: str, oferta: str, cliente, contenido_minimo, concurrenci
 
 
 def brechas_sobre_espejos(resultado: dict, espejos: list) -> list:
-    """Brechas del registro que caen sobre un espejo conforme (la misma regla de evaluar.py: frase del espejo en la cita y artículo del espejo). Sin repetidas."""
+    """Brechas del registro que caen sobre un caso conforme (la misma regla de evaluar.py: frase del caso en la cita y artículo del caso). Sin repetidas."""
     unicas = {}
     for b in resultado.get("registro_brechas") or []:
         if b.get("estado") == ESTADO_DESCARTADA_CALCULO:
@@ -152,7 +152,7 @@ def brechas_sobre_espejos(resultado: dict, espejos: list) -> list:
 
 
 def procesar_espejos(ruta: str, oferta: str, cliente, contenido_minimo, concurrencia: int, max_items=None, rehacer=False, espejos=None) -> dict:
-    """Control del juez: juzga con el mismo prompt las brechas que caen sobre espejos conformes (falsos positivos conocidos) y escribe <json>_juez_espejos.csv.
+    """Control del juez: juzga con el mismo prompt las brechas que caen sobre casos conformes (falsos positivos conocidos) y escribe <json>_juez_espejos.csv.
     Una brecha marcada NO_VALIDA es un acierto del juez; la especificidad es NO_VALIDA / juzgadas."""
     archivo = ruta_juez_espejos(ruta)
     with open(ruta, encoding="utf-8") as f:
@@ -189,7 +189,7 @@ def procesar_espejos(ruta: str, oferta: str, cliente, contenido_minimo, concurre
 
 def _linea_control(juzgados: int, no_valida: int) -> str:
     esp = f"{no_valida / juzgados:.0%}" if juzgados else "n/d"
-    return f"Control del juez (espejos): {juzgados} juzgados | {no_valida} NO_VALIDA | especificidad {esp}"
+    return f"Control del juez (casos conformes): {juzgados} juzgados | {no_valida} NO_VALIDA | especificidad {esp}"
 
 
 def main_espejos(a, cliente, contenido_minimo) -> bool:
@@ -198,7 +198,7 @@ def main_espejos(a, cliente, contenido_minimo) -> bool:
     for oferta, ruta in [_oferta_de_ruta(r) for r in a.jsons]:
         s = procesar_espejos(ruta, oferta, cliente, contenido_minimo, a.concurrencia, a.max_items, a.rehacer)
         total_j, total_n = total_j + s["juzgados"], total_n + s["no_valida"]
-        print(f"\n{os.path.basename(ruta)}: {_linea_control(s['juzgados'], s['no_valida'])} | brechas sobre espejos {s['items']} | sin veredicto {s['sin_veredicto']}")
+        print(f"\n{os.path.basename(ruta)}: {_linea_control(s['juzgados'], s['no_valida'])} | brechas sobre casos conformes {s['items']} | sin veredicto {s['sin_veredicto']}")
         print(f"  CSV: {s['csv']}" + ("\n  DETENIDA: se alcanzó el freno de gasto; volvé a correr el mismo comando para completar." if s["detenida"] else ""))
         if s["detenida"]:
             print(f"\nTotal de la configuración: {_linea_control(total_j, total_n)}")
@@ -213,7 +213,8 @@ def main(argv=None) -> int:
     p.add_argument("--max-items", type=int, help="juzga solo las primeras N brechas pendientes de cada JSON (prueba de humo)")
     p.add_argument("--concurrencia", type=int, default=config.NUBE_CONCURRENCIA)
     p.add_argument("--rehacer", action="store_true", help="vuelve a juzgar las brechas que ya tienen veredicto")
-    p.add_argument("--espejos", action="store_true", help="control del juez: juzga las brechas que caen sobre espejos conformes (falsos positivos conocidos) y escribe <json>_juez_espejos.csv")
+    p.add_argument("--espejos", "--conformes", dest="espejos", action="store_true",
+                   help="control del juez: juzga las brechas que caen sobre casos conformes (falsos positivos conocidos) y escribe <json>_juez_espejos.csv (--conformes es un alias de --espejos)")
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
     if MODELO not in config.PRECIOS_NUBE:

@@ -94,6 +94,16 @@ def test_precision_con_revision():
     assert ev.calcular_precision(r, rev) == (2 + 1) / 5                 # (trampas encontradas + extras válidos) / brechas
 
 
+def test_conformes_es_alias_de_espejos(tmp_path):
+    _escribir(tmp_path / "gt.csv", CABECERA_GT, GT)
+    _escribir(tmp_path / "esp.csv", CABECERA_ESP, ESPEJOS)
+    res = tmp_path / "resultado.json"
+    res.write_text(json.dumps(RESULTADO), encoding="utf-8")
+    ev.main(["--resultado", str(res), "--oferta", "P9", "--ground-truth", str(tmp_path / "gt.csv"), "--conformes", str(tmp_path / "esp.csv")])
+    md = next(n for n in os.listdir(tmp_path) if n.startswith("evaluacion_P9_") and n.endswith(".md"))
+    assert "| Casos conformes marcados | 1/2 (50%)" in (tmp_path / md).read_text(encoding="utf-8")
+
+
 def test_cli_genera_md_csv_y_extras(tmp_path):
     _escribir(tmp_path / "gt.csv", CABECERA_GT, GT)
     _escribir(tmp_path / "esp.csv", CABECERA_ESP, ESPEJOS)
@@ -149,7 +159,7 @@ def test_comparar_con_y_sin_rag():
     # con RAG: solo el recall estricto; sin RAG: por frase (sin validar). No hay fila «por frase» para la columna con RAG
     assert filas["Trampas encontradas"] == ["2/4 (50%) (frase y artículo)", "2/4 (50%) por frase, sin validar"]
     assert "Trampas encontradas por frase" not in filas and "Recall estricto (frase y artículo)" not in filas
-    assert filas["Falsas alarmas (por frase del espejo)"] == ["1/2 (50%)", "1/2 (50%)"]
+    assert filas["Falsas alarmas sobre casos conformes (por frase)"] == ["1/2 (50%)", "1/2 (50%)"]
     assert filas["Riesgos agrupados"] == ["4", "—"]
     assert "criterio más laxo que el de la columna con RAG: la diferencia es una cota inferior del aporte del RAG" in tabla
 
@@ -232,7 +242,7 @@ def test_otro_articulo_no_esta_en_el_resumen_pero_si_en_el_detalle():
     assert "otro artículo" in fila and "NORM_02 Art. 9.9" in fila
     # el .md solo trae las secciones pedidas
     assert [l for l in md.splitlines() if l.startswith("## ")] == ["## Recuperación", "## Detección", "## Clasificación (de las trampas encontradas)",
-                                                                   "## Fidelidad", "## Recall por clase esperada", "## Recall por nivel esperado", "## Falsas alarmas", "## Volumen", "## Dónde se pierde cada trampa",
+                                                                   "## Fidelidad", "## Recall por clase esperada", "## Recall por nivel esperado", "## Falsas alarmas sobre casos conformes", "## Volumen", "## Dónde se pierde cada trampa",
                                                                    "## Costo computacional", "## Detalle por trampa"]
     assert "100 % por diseño" in md
 
@@ -315,7 +325,8 @@ def test_recall_articulo_y_tasa_de_pereza():
 def test_falsas_alarmas_y_volumen_en_el_informe():
     gt, esp = _datos()
     md = ev.informe_md(ev.evaluar(RESULTADO, gt, esp, "P9"))
-    assert "| Espejos marcados | 1/2 (50%), IC 95 % 9%–91% |" in md
+    assert "| Casos conformes marcados | 1/2 (50%), IC 95 % 9%–91% |" in md
+    assert "espejo" not in md.lower()
     assert "| Brechas | 5 |" in md and "| Riesgos agrupados | 4 |" in md and "| Solicitudes | 2 |" in md and "| Alertas | 1 |" in md
     lista = ev.informe_md(ev.evaluar(LISTA, gt, esp, "P9"))
     assert "## Falsas alarmas" in lista and "| Riesgos | 3 |" in lista

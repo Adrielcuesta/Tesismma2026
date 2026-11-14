@@ -134,12 +134,12 @@ def _miles(v) -> str:
     return "n/d" if not v else f"{v:,.0f}".replace(",", ".")
 
 
-ENCABEZADO = ["Configuración", "Recall estricto (IC 95 %)", "Recall@artículo", "Falsas alarmas", "Brechas / oferta", "Riesgos agrupados / oferta", "Precisión juez estricta",
-              "Precisión juez amplia", "Control del juez (espejos NO_VALIDA)", "Kappa de clase", "Recall de Críticos", "Tiempo (h:mm:ss)", "Costo USD", "Tokens entrada", "Tokens salida"]
+ENCABEZADO = ["Configuración", "Recall estricto (IC 95 %)", "Recall@artículo", "Falsas alarmas sobre casos conformes", "Brechas / oferta", "Riesgos agrupados / oferta", "Precisión juez estricta",
+              "Precisión juez amplia", "Control del juez (casos conformes NO_VALIDA)", "Kappa de clase", "Recall de Críticos", "Tiempo (h:mm:ss)", "Costo USD", "Tokens entrada", "Tokens salida"]
 
 
 def _control_juez(f: dict) -> str:
-    """Especificidad del juez sobre los espejos conformes (falsos positivos conocidos): NO_VALIDA / juzgados."""
+    """Especificidad del juez sobre los casos conformes (falsos positivos conocidos): NO_VALIDA / juzgados."""
     n = f["control_juez_n"]
     return "n/d" if not n else f"{f['control_juez_no_valida']}/{n} ({f['control_juez_no_valida'] / n:.0%})"
 
@@ -159,8 +159,8 @@ def tabla_md(filas: list) -> str:
         L += [f"## {conjunto}", "", "| " + " | ".join(ENCABEZADO) + " |", "|" + "---|" * len(ENCABEZADO)]
         L += ["| " + " | ".join(fila_texto(f)) + " |" for f in filas if f["conjunto"] == conjunto] + [""]
     L += ["Recall estricto: trampa encontrada con su frase y su artículo (o uno equivalente); IC de Wilson al 95 %. Precisión según el juez: (trampas encontradas + extras válidos) / brechas; "
-          "estricta cuenta DUDOSA como no válida, amplia como válida; n/d si faltan veredictos. Control del juez: de las brechas que caen sobre espejos conformes "
-          "(falsos positivos conocidos), cuántas marcó NO_VALIDA (especificidad); n/d si no se corrió «juez --espejos». Costo USD: 0 en la corrida local. Kappa de clase: ponderado cuadrático, sobre las trampas encontradas."]
+          "estricta cuenta DUDOSA como no válida, amplia como válida; n/d si faltan veredictos. Control del juez: de las brechas que caen sobre casos conformes "
+          "(falsos positivos conocidos), cuántas marcó NO_VALIDA (especificidad); n/d si no se corrió «juez --conformes». Falsas alarmas sobre casos conformes: casos conformes marcados como brecha / total de casos conformes. Costo USD: 0 en la corrida local. Kappa de clase: ponderado cuadrático, sobre las trampas encontradas."]
     return "\n".join(L)
 
 
@@ -212,7 +212,7 @@ def grafico_recall_falsas(filas: list, ruta: str, dev: str, prueba: str):
     nombres = list(dict.fromkeys(f["configuracion"] for f in filas))
     fig, ejes = plt.subplots(1, 2, figsize=(16, 7))
     ancho = 0.38
-    for eje, titulo, num, den, ic in ((ejes[0], "Recall estricto", "encontradas", "trampas", "recall_ic"), (ejes[1], "Falsas alarmas (espejos marcados)", "falsas_alarmas", "espejos", "falsas_ic"),):
+    for eje, titulo, num, den, ic in ((ejes[0], "Recall estricto", "encontradas", "trampas", "recall_ic"), (ejes[1], "Falsas alarmas sobre casos conformes", "falsas_alarmas", "espejos", "falsas_ic"),):
         for k, (conjunto, color) in enumerate(((dev, AZUL), (prueba, NARANJA))):
             datos = _por_configuracion(filas, conjunto)
             xs = [i + (k - 0.5) * ancho for i, n in enumerate(nombres) if n in datos]
