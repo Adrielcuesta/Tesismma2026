@@ -1,9 +1,11 @@
-"""Preparación del CSV de extras (evaluacion/preparar_extras.py) con JSON y CSV armados a mano (sin leer datos/)."""
+"""Preparación del CSV de extras (evaluacion/preparar_extras.py) y vuelco de etiquetas (evaluacion/aplicar_etiquetas.py) con JSON y CSV armados a mano (sin leer datos/)."""
 import csv
 import json
+import os
 
 import pytest
 
+from evaluacion import aplicar_etiquetas as AE
 from evaluacion import evaluar as E
 from evaluacion import preparar_extras as PE
 
@@ -12,7 +14,7 @@ LARGO = "Texto del artículo. " * 60                     # 1200 caracteres
 
 def _brecha(n, norma, articulo, cita, seccion="S3", seccion_oferta="3 Sección", **extra):
     return {"id": f"{seccion}|{norma}|{articulo}|{n}", "seccion": seccion, "seccion_oferta": seccion_oferta, "norma": norma, "articulo": articulo, "cita": cita, "oraciones": ["O1", "O2"],
-            "oraciones_texto": {"O1": "Primera oración.", "O2": "Segunda\n oración."}, "texto_articulo": LARGO, "titulo": f"título {n}", "clase": "Mayor",
+            "oraciones_texto": {"O1": "Primera oración.", "O2": "Segunda\n oración."}, "texto_articulo": LARGO, "titulo": f"título {n}", "clase": "Mayor", "fuente": "DESVIO",
             "verificacion_previa": {"veredicto": "Incumple", "explicacion": "no cumple\nel requisito", "discrepancia_numerica": False}, **extra}
 
 
@@ -21,7 +23,7 @@ BRECHAS = [
     _brecha(2, "NORM_02", "5.1", "El plazo es de diez días."),                                  # heredada de otro *_extras.csv
     _brecha(3, "NORM_03", "2.4", "El registro se entrega al final."),                           # pendiente (sin etiqueta previa)
     _brecha(4, "NORM_04", "3.1", "Dos corridas dicen cosas distintas."),                        # conflicto entre archivos: pendiente
-    _brecha(5, "NORM_05", "1.6", "Con etiqueta vacía antes."),                                  # una fila previa sin sí/no no cuenta
+    _brecha(5, "NORM_05", "1.6", "Con etiqueta vacía antes."),                                  # una fila previa sin etiqueta no cuenta
     {**_brecha(6, "NORM_01", "4.2", "Descartada por el cálculo."), "estado": "descartada por cálculo"},     # no es un extra
 ]
 
@@ -55,46 +57,73 @@ def test_clave_de_herencia_ignora_barras_mayusculas_y_el_punto_final_del_articul
     assert PE.clave_herencia("NORM_01", "4.2", "a") != PE.clave_herencia("NORM_02", "4.2", "a")
 
 
+def test_etiquetas_validas_como_las_del_juez_y_marcas_humanas_de_siempre():
+    assert [PE.normalizar_etiqueta(x) for x in ("VALIDA", "valida", "no valida", "NO-VALIDA", "Dudosa", "sí", "", None)] == ["VALIDA", "VALIDA", "NO_VALIDA", "NO_VALIDA", "DUDOSA", "", "", ""]
+    assert PE.etiqueta_de_fila({"valido": "Sí"}) == "VALIDA" and PE.etiqueta_de_fila({"valido": "no"}) == "NO_VALIDA" and PE.etiqueta_de_fila({"etiqueta": "DUDOSA", "valido": ""}) == "DUDOSA"
+    assert PE.etiqueta_de_fila({"valido": ""}) == "" and PE.VALIDO_DE == {"VALIDA": "sí", "NO_VALIDA": "no", "DUDOSA": ""}
+
+
 def test_las_etiquetas_previas_salen_de_los_csv_de_la_carpeta_y_los_conflictos_no_se_heredan(carpeta):
     tmp, _ = carpeta
     e = PE.cargar_etiquetas(str(tmp))
-    assert e[PE.clave_herencia("NORM_01", "4.2", "Caída de tensión en el tramo terminal 2,1 %")]["valor"] == "Sí"
-    assert e[PE.clave_herencia("NORM_02", "5.1", "El plazo es de diez días.")]["fuentes"] == {"analisis_riesgos_P9_otra_corrida_extras.csv": "no"}
+    assert e[PE.clave_herencia("NORM_01", "4.2", "Caída de tensión en el tramo terminal 2,1 %")]["valor"] == "VALIDA"
+    assert e[PE.clave_herencia("NORM_02", "5.1", "El plazo es de diez días.")]["fuentes"] == {"analisis_riesgos_P9_otra_corrida_extras.csv": "NO_VALIDA"}
     conflicto = e[PE.clave_herencia("NORM_04", "3.1", "Dos corridas dicen cosas distintas.")]
-    assert conflicto["valor"] is None and set(conflicto["fuentes"].values()) == {"sí", "no"}
+    assert conflicto["valor"] is None and set(conflicto["fuentes"].values()) == {"VALIDA", "NO_VALIDA"}
     assert PE.clave_herencia("NORM_05", "1.6", "Con etiqueta vacía antes.") not in e
 
 
-def test_prepara_el_csv_con_heredadas_y_pendientes_y_las_columnas_de_ayuda(carpeta):
+def test_prepara_el_csv_con_las_columnas_de_tabla_comparativa_y_las_de_ayuda(carpeta):
     tmp, ruta = carpeta
     r = PE.preparar_oferta("P9", str(ruta), [], [])
     assert (r["estado"], r["extras"], r["heredadas"], r["pendientes"]) == ("creado", 5, 2, 3) and r["ruta"] == E.ruta_extras(str(ruta))
     filas = _leer(r["ruta"])
-    assert list(filas[0]) == PE.COLUMNAS and [f["origen"] for f in filas] == ["heredada", "heredada", "pendiente", "pendiente", "pendiente"]
-    assert [f["valido"] for f in filas] == ["Sí", "no", "", "", ""] and filas[0]["heredada_de"] == "extras_revision.csv"
-    pendiente = filas[2]
-    assert pendiente["veredicto_verificador"] == "Incumple" and pendiente["explicacion_verificador"] == "no cumple el requisito"
-    assert pendiente["oracion_citada"] == "[O1] Primera oración. [O2] Segunda oración." and pendiente["seccion"] == "3 Sección" and pendiente["clase"] == "Mayor"
-    assert PE.LARGO_ARTICULO <= len(pendiente["texto_articulo"]) <= PE.LARGO_ARTICULO + 1 and pendiente["texto_articulo"].endswith("…")       # 600 caracteres y la marca de recorte
-    assert filas[3]["heredada_de"].startswith("conflicto:") and filas[0]["oracion_citada"] == "" and filas[0]["texto_articulo"] == ""     # las heredadas no llevan el contexto
+    assert list(filas[0]) == PE.COLUMNAS and {"oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase", "valido"} <= set(PE.COLUMNAS)
+    assert [f["origen"] for f in filas] == ["heredada", "heredada", "pendiente", "pendiente", "pendiente"]
+    assert [f["etiqueta"] for f in filas] == ["VALIDA", "NO_VALIDA", "", "", ""] and [f["valido"] for f in filas] == ["sí", "no", "", "", ""]
+    assert filas[0]["nota"] == "heredada de extras_revision.csv"
+    p = filas[2]
+    assert (p["id"], p["oferta"], p["seccion"], p["norma"], p["articulo"], p["clase"], p["tipo_brecha"]) == ("S3|NORM_03|2.4|3", "P9", "3 Sección", "NORM_03", "2.4", "Mayor", "DESVIO")
+    assert p["veredicto_verificador"] == "Incumple" and p["explicacion_verificador"] == "no cumple el requisito" and p["cita"] == "El registro se entrega al final."
+    assert PE.LARGO_ARTICULO == 800 and 800 <= len(p["texto_articulo"]) <= 801 and p["texto_articulo"].endswith("…")
+    assert filas[3]["nota"].startswith("conflicto entre etiquetas previas:")
 
 
 def test_el_csv_generado_lo_lee_evaluar_y_con_todo_etiquetado_da_la_precision(carpeta):
     tmp, ruta = carpeta
     r = PE.preparar_oferta("P9", str(ruta), [], [])
-    resultado = E._cargar(str(ruta))
-    ev = E.evaluar(resultado, [], [], "P9")
+    ev = E.evaluar(E._cargar(str(ruta)), [], [], "P9")
     E.asignar_precision(ev, E.leer_csv(r["ruta"]))
     assert ev["precision"] is None                                                       # faltan las pendientes
     filas = _leer(r["ruta"])
     for f in filas:
-        f["valido"] = f["valido"] or "sí"
+        f["etiqueta"], f["valido"] = f["etiqueta"] or "VALIDA", f["valido"] or "sí"
     _escribir(r["ruta"], filas, PE.COLUMNAS)
     E.asignar_precision(ev, E.leer_csv(r["ruta"]))
-    assert (ev["precision_k"], ev["precision_n"]) == (4, 5)                              # 4 válidos de 5 brechas (la vetada por cálculo no cuenta)
+    assert (ev["precision_k"], ev["precision_n"]) == (4, 5)                              # 4 válidas de 5 (la heredada NO_VALIDA no suma); la vetada por cálculo no cuenta como brecha
 
 
-def test_nunca_pisa_un_csv_existente(carpeta):
+def test_las_pendientes_de_todas_las_ofertas_van_a_un_archivo_unificado_sin_rutas_absolutas(carpeta, monkeypatch, tmp_path_factory, capsys):
+    tmp, ruta = carpeta
+    cfg = tmp_path_factory.mktemp("cfg") / "config.json"
+    cfg.write_text(json.dumps({"configuraciones": {"mi config": {"P9": str(ruta), "P8": "no_existe.json"}}}), encoding="utf-8")
+    unificado = tmp_path_factory.mktemp("diag") / "extras_pendientes.csv"
+    monkeypatch.setattr(PE.E, "cargar_gt", lambda oferta: [])
+    monkeypatch.setattr(PE.E, "cargar_espejos", lambda oferta: [])
+    r = PE.main(["--config", "mi config", "--ofertas", "P9", "P8", "--archivo-config", str(cfg), "--pendientes", str(unificado)])
+    salida = capsys.readouterr()
+    assert [x["oferta"] for x in r] == ["P9"] and "P9: 5 extras: 2 heredadas, 3 pendientes" in salida.out and "Total: 5 extras: 2 heredadas, 3 pendientes." in salida.out
+    assert "evaluacion.tabla_comparativa --config evaluacion/config_reeval.json" in salida.out and "P8: no hay JSON" in salida.err
+    filas = _leer(str(unificado))
+    assert list(filas[0]) == PE.COLUMNAS_PENDIENTES and len(filas) == 3 and {f["etiqueta"] for f in filas} == {""} and "valido" not in filas[0] and "origen" not in filas[0]
+    assert all(not os.path.isabs(f["archivo"]) and f["archivo"].endswith("_extras.csv") and "\\" not in f["archivo"] for f in filas)
+    PE.main(["--config", "mi config", "--ofertas", "P9", "--archivo-config", str(cfg), "--pendientes", str(unificado)])
+    assert "ya existe" in capsys.readouterr().out
+    with pytest.raises(SystemExit, match="No hay una configuración"):
+        PE.main(["--config", "otra", "--archivo-config", str(cfg)])
+
+
+def test_nunca_pisa_un_csv_existente_ni_el_unificado(carpeta, tmp_path_factory, monkeypatch):
     tmp, ruta = carpeta
     existente = tmp / (ruta.stem + "_extras.csv")
     existente.write_text("etiquetado a mano\n", encoding="utf-8")
@@ -102,20 +131,77 @@ def test_nunca_pisa_un_csv_existente(carpeta):
     assert r["estado"] == "ya existe" and existente.read_text(encoding="utf-8") == "etiquetado a mano\n"
     with pytest.raises(FileExistsError):
         PE.escribir_csv_nuevo([], str(existente))
-    assert existente.read_text(encoding="utf-8") == "etiquetado a mano\n"
+    unificado = tmp_path_factory.mktemp("diag") / "u.csv"
+    unificado.write_text("etiquetado a mano\n", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        PE._escribir_nuevo([], PE.COLUMNAS_PENDIENTES, str(unificado))
+    assert unificado.read_text(encoding="utf-8") == "etiquetado a mano\n"
 
 
-def test_main_resuelve_la_configuracion_imprime_los_conteos_y_el_comando(carpeta, tmp_path_factory, monkeypatch, capsys):
+# --- aplicar_etiquetas ---
+
+@pytest.fixture
+def con_unificado(carpeta, monkeypatch, tmp_path_factory):
     tmp, ruta = carpeta
-    cfg = tmp_path_factory.mktemp("cfg") / "config.json"
-    cfg.write_text(json.dumps({"configuraciones": {"mi config": {"P9": str(ruta), "P8": "no_existe.json"}}}), encoding="utf-8")
-    monkeypatch.setattr(PE.E, "cargar_gt", lambda oferta: [])
-    monkeypatch.setattr(PE.E, "cargar_espejos", lambda oferta: [])
-    r = PE.main(["--config", "mi config", "--ofertas", "P9", "P8", "--archivo-config", str(cfg)])
-    salida = capsys.readouterr()
-    assert [x["oferta"] for x in r] == ["P9"] and "P9: 5 extras: 2 heredadas, 3 pendientes" in salida.out and "Total: 5 extras: 2 heredadas, 3 pendientes." in salida.out
-    assert "evaluacion.tabla_comparativa --config evaluacion/config_reeval.json" in salida.out and "P8: no hay JSON" in salida.err
-    PE.main(["--config", "mi config", "--ofertas", "P9", "--archivo-config", str(cfg)])
-    assert "ya existe" in capsys.readouterr().out
-    with pytest.raises(SystemExit, match="No hay una configuración"):
-        PE.main(["--config", "otra", "--archivo-config", str(cfg)])
+    r = PE.preparar_oferta("P9", str(ruta), [], [])
+    monkeypatch.setattr(PE, "RAIZ", str(tmp))                                           # las rutas del unificado son relativas a la raíz del repo
+    pendientes = [{**f, "archivo": PE.ruta_relativa(r["ruta"])} for f in _leer(r["ruta"]) if f["origen"] == "pendiente"]
+    unificado = tmp_path_factory.mktemp("diag") / "extras_pendientes.csv"
+    return tmp, r["ruta"], pendientes, unificado
+
+
+def _etiquetar(pendientes, unificado, etiquetas):
+    for f, e in zip(pendientes, etiquetas):
+        f["etiqueta"] = e
+    _escribir(unificado, pendientes, PE.COLUMNAS_PENDIENTES)
+
+
+def test_aplicar_vuelca_las_etiquetas_y_deriva_valido(con_unificado, monkeypatch, capsys):
+    tmp, destino, pendientes, unificado = con_unificado
+    monkeypatch.setattr(AE.PE, "RAIZ", str(tmp))
+    _etiquetar(pendientes, unificado, ["NO_VALIDA", "valida", "DUDOSA"])
+    total = AE.main(["--etiquetas", str(unificado)])
+    assert (total["aplicadas"], total["omitidas"], total["no_encontradas"], total["dudosas_sin_valido"]) == (3, 0, 0, 1)
+    filas = {f["id"]: f for f in _leer(destino)}
+    assert (filas["S3|NORM_03|2.4|3"]["etiqueta"], filas["S3|NORM_03|2.4|3"]["valido"]) == ("NO_VALIDA", "no")
+    assert (filas["S3|NORM_04|3.1|4"]["etiqueta"], filas["S3|NORM_04|3.1|4"]["valido"]) == ("VALIDA", "sí")
+    assert (filas["S3|NORM_05|1.6|5"]["etiqueta"], filas["S3|NORM_05|1.6|5"]["valido"]) == ("DUDOSA", "")
+    assert filas["S3|NORM_01|4.2|1"]["etiqueta"] == "VALIDA" and list(next(iter(filas.values()))) == PE.COLUMNAS         # las heredadas no se tocan y las columnas se conservan
+    assert "DUDOSA con «valido» vacío" in capsys.readouterr().out
+
+
+def test_aplicar_dudosa_cuenta_como_si_o_no_y_la_precision_se_calcula(con_unificado, monkeypatch):
+    tmp, destino, pendientes, unificado = con_unificado
+    monkeypatch.setattr(AE.PE, "RAIZ", str(tmp))
+    _etiquetar(pendientes, unificado, ["VALIDA", "NO_VALIDA", "DUDOSA"])
+    AE.main(["--etiquetas", str(unificado), "--dudosa", "no"])
+    filas = _leer(destino)
+    assert [f["valido"] for f in filas] == ["sí", "no", "sí", "no", "no"] and filas[4]["etiqueta"] == "DUDOSA"
+    ev = E.evaluar(E._cargar(destino[:-len("_extras.csv")] + ".json"), [], [], "P9")
+    E.asignar_precision(ev, E.leer_csv(destino))
+    assert (ev["precision_k"], ev["precision_n"]) == (2, 5)
+
+
+def test_aplicar_no_pisa_etiquetas_existentes_salvo_con_forzar(con_unificado, monkeypatch, capsys):
+    tmp, destino, pendientes, unificado = con_unificado
+    monkeypatch.setattr(AE.PE, "RAIZ", str(tmp))
+    _etiquetar(pendientes, unificado, ["VALIDA", "VALIDA", "VALIDA"])
+    AE.main(["--etiquetas", str(unificado)])
+    _etiquetar(pendientes, unificado, ["NO_VALIDA", "NO_VALIDA", "NO_VALIDA"])
+    total = AE.main(["--etiquetas", str(unificado)])
+    assert (total["aplicadas"], total["omitidas"]) == (0, 3) and [f["etiqueta"] for f in _leer(destino)][2:] == ["VALIDA"] * 3
+    total = AE.main(["--etiquetas", str(unificado), "--forzar"])
+    assert total["aplicadas"] == 3 and [f["etiqueta"] for f in _leer(destino)][2:] == ["NO_VALIDA"] * 3
+    assert "omitidas por tener etiqueta" in capsys.readouterr().out
+
+
+def test_aplicar_cuenta_las_filas_sin_etiqueta_invalidas_y_sin_destino(con_unificado, monkeypatch, capsys):
+    tmp, destino, pendientes, unificado = con_unificado
+    monkeypatch.setattr(AE.PE, "RAIZ", str(tmp))
+    pendientes.append({**pendientes[0], "cita": "una cita que no está en el destino", "etiqueta": "VALIDA"})
+    _etiquetar(pendientes[:3], unificado, ["", "quizás", "VALIDA"])
+    _escribir(unificado, pendientes, PE.COLUMNAS_PENDIENTES)
+    total = AE.main(["--etiquetas", str(unificado)])
+    out = capsys.readouterr().out
+    assert (total["aplicadas"], total["no_encontradas"]) == (1, 1) and "1 filas sin etiqueta y 1 con una etiqueta que no es VALIDA" in out
+    assert [f["etiqueta"] for f in _leer(destino)][2:] == ["", "", "VALIDA"]

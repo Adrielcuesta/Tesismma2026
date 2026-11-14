@@ -249,10 +249,18 @@ def _etiqueta_x(nombre: str) -> str:
     return "\n".join(_corta(nombre).rsplit(" ", 1))
 
 
-def _poner_aviso(fig, aviso: str):
-    """Aviso de comparabilidad (recuperaciones distintas) arriba del gráfico, en rojo."""
-    if aviso:
-        fig.suptitle(aviso, color="#b00020", fontsize=12, y=0.995)
+NOTA_COMPARABILIDAD = "v1 y elegida usan recuperaciones distintas; ver Comparabilidad"
+
+
+def _poner_aviso(fig, aviso: str, eje=None):
+    """Nota al pie, en gris y abajo a la derecha, si las configuraciones del gráfico usan recuperaciones distintas (`aviso` no vacío; el detalle por oferta está en la sección
+    Comparabilidad del informe). Con `eje`, la nota va debajo de ese eje (para los gráficos que se recortan con bbox_inches="tight")."""
+    if not aviso:
+        return
+    if eje is not None:
+        eje.text(1, -0.33, NOTA_COMPARABILIDAD, transform=eje.transAxes, ha="right", va="top", fontsize=11, color="#555555")
+    else:
+        fig.text(0.99, 0.005, NOTA_COMPARABILIDAD, ha="right", va="bottom", fontsize=11, color="#555555")
 
 
 def _por_configuracion(filas: list, conjunto: str) -> dict:
@@ -286,7 +294,7 @@ def grafico_recall_falsas(filas: list, ruta: str, dev: str, prueba: str, aviso: 
         eje.set_axisbelow(True)
     ejes[0].legend(frameon=False, loc="upper left")
     fig.text(0.01, 0.005, "Barras de error: IC 95 % de Wilson.", fontsize=12, color="#555555")
-    fig.tight_layout(rect=(0, 0.03, 1, 0.95 if aviso else 1))
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
     _poner_aviso(fig, aviso)
     fig.savefig(ruta, dpi=200)
     plt.close(fig)
@@ -314,34 +322,55 @@ def grafico_embudo(filas: list, ruta: str, conjunto: str, aviso: str = "", nombr
     eje.xaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
     eje.set_title(titulo or f"Dónde se pierde cada trampa ({conjunto})", loc="left")
     eje.legend(frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.08))
-    _poner_aviso(fig, aviso)
+    _poner_aviso(fig, aviso, eje)
     fig.savefig(ruta, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
-OFFSETS_ETIQUETA = [(12, 8), (12, -20), (12, 34), (12, -46), (-12, 8), (-12, -20), (12, 60), (12, -72), (-12, 34), (-12, -46), (12, 86), (12, -98), (-12, 60), (-12, -72)]       # en puntos
+OFFSETS_ETIQUETA = [(12, 8), (12, -20), (12, 34), (12, -46), (-12, 8), (-12, -20), (12, 60), (12, -72), (-12, 34), (-12, -46), (12, 86), (12, -98), (-12, 60), (-12, -72),
+                    (60, 8), (60, -20), (60, 34), (60, -46), (-60, 8), (-60, -20), (110, 8), (110, -20), (110, 34), (110, -46)]       # en puntos
+RADIO_MARCA_PT = 10         # mitad del lado de la caja que ocupa un punto (círculo de 260 pt² con borde)
 
 
 def _caja_texto(nota, renderer):
     """Caja del texto de una anotación, sin la línea que la une a su punto (Annotation.get_window_extent la incluye)."""
     from matplotlib.text import Text
+    nota.update_positions(renderer)         # sin esto el texto todavía no está en su lugar (queda cerca del origen) y la caja no sirve
     return Text.get_window_extent(nota, renderer)
 
 
 def _colocar_etiquetas(fig, eje, puntos: list, fontsize: int = 14):
-    """Anota cada punto (x, y, texto) con el primer desplazamiento de OFFSETS_ETIQUETA cuyo texto no pisa a otro ya colocado (cajas medidas con el renderer)."""
+    """Anota cada punto (x, y, texto) con el primer desplazamiento de OFFSETS_ETIQUETA cuyo texto cae dentro de los ejes y no pisa a otra etiqueta ya colocada ni a ningún punto
+    (cajas medidas con el renderer). Si ninguno queda libre, el de menos pisadas."""
+    from matplotlib.transforms import Bbox
     renderer = fig.canvas.get_renderer()
+    adentro = eje.get_window_extent(renderer)
+    radio = RADIO_MARCA_PT * fig.dpi / 72
+    marcas = [Bbox.from_extents(px - radio, py - radio, px + radio, py + radio) for px, py in eje.transData.transform([(x, y) for x, y, _ in puntos])]
+    centros = eje.transData.transform([(x, y) for x, y, _ in puntos])
     ocupadas = []
     for x, y, texto in sorted(puntos, key=lambda p: (-p[1], p[0])):
-        for dx, dy in OFFSETS_ETIQUETA:
+        # con puntos casi encimados el de arriba lleva la etiqueta hacia arriba y el de abajo hacia abajo: así las líneas no se cruzan y se sabe de quién es cada una
+        px, py = eje.transData.transform((x, y))
+        cercanos = [c for c in centros if (c != (px, py)).any() and abs(c[0] - px) < 3 * radio and abs(c[1] - py) < 3 * radio]
+        arriba, abajo = sum(c[1] > py for c in cercanos), sum(c[1] < py for c in cercanos)
+        preferir_abajo = arriba > abajo
+        orden = sorted(OFFSETS_ETIQUETA, key=lambda o: (o[1] > 0) if preferir_abajo and arriba != abajo else (o[1] < 0) if arriba != abajo else False)       # estable
+        mejor = None
+        for dx, dy in orden:
             nota = eje.annotate(texto, (x, y), textcoords="offset points", xytext=(dx, dy), fontsize=fontsize, ha="left" if dx > 0 else "right",
                                 arrowprops={"arrowstyle": "-", "color": "#999999", "linewidth": 0.8, "shrinkA": 0, "shrinkB": 8})      # la línea une cada etiqueta con su punto
             caja = _caja_texto(nota, renderer)
-            if not any(caja.overlaps(otra) for otra in ocupadas):
-                break
-            if (dx, dy) != OFFSETS_ETIQUETA[-1]:
+            pisadas = sum(caja.overlaps(otra) for otra in ocupadas + marcas) + (0 if (adentro.x0 <= caja.x0 and caja.x1 <= adentro.x1 and adentro.y0 <= caja.y0 and caja.y1 <= adentro.y1) else 3)
+            if mejor is None or pisadas < mejor[0]:
+                if mejor:
+                    mejor[1].remove()
+                mejor = (pisadas, nota, caja)
+            else:
                 nota.remove()
-        ocupadas.append(caja)
+            if pisadas == 0:
+                break
+        ocupadas.append(mejor[2])
 
 
 def grafico_recall_costo_tiempo(filas: list, ruta: str, conjunto: str, aviso: str = ""):
@@ -365,7 +394,7 @@ def grafico_recall_costo_tiempo(filas: list, ruta: str, conjunto: str, aviso: st
         eje.grid(color="#e5e5e5")
         eje.set_axisbelow(True)
         paneles.append((eje, [(x_de(f), f["recall"], _corta(n)) for n, f in datos.items()]))
-    fig.tight_layout(rect=(0, 0, 1, 0.95 if aviso else 1))
+    fig.tight_layout(rect=(0, 0.04 if aviso else 0, 1, 1))
     for eje, puntos in paneles:
         _colocar_etiquetas(fig, eje, puntos)
     _poner_aviso(fig, aviso)
@@ -535,6 +564,12 @@ def grafico_embudo_reeval(filas: list, ruta: str, conjunto: str, nombres: list, 
     return True
 
 
+def _nombre_y_nota(conjunto: str) -> tuple:
+    """('P3–P4 prueba', 'segunda evaluación: …') para «P3–P4 prueba (segunda evaluación: …)»; la nota es '' si el nombre no lleva paréntesis."""
+    base, _, resto = conjunto.partition(" (")
+    return base, resto.rstrip(")").strip()
+
+
 def grafico_recuperacion_antes_despues(filas: list, ruta: str, mapa: dict, conjuntos: dict, evaluadas: dict) -> bool:
     """El gris de v1 (BGE-M3, K=10) contra el de la recuperación elegida, por conjunto: trampas recuperadas (llegan al verificador) sobre el total y pares por oferta."""
     plt = _plt()
@@ -557,15 +592,18 @@ def grafico_recuperacion_antes_despues(filas: list, ruta: str, mapa: dict, conju
             eje.bar(xs, vs, ancho * 0.92, color=color, label=etiqueta)
             for x, g, v in zip(xs, filas_g, vs):
                 eje.text(x, v, texto(g[i], v), ha="center", va="bottom", fontsize=13)
-        eje.set_xticks(range(len(filas_g)), [g[0].replace(" ", "\n", 1) for g in filas_g])
+        eje.set_xticks(range(len(filas_g)), [_nombre_y_nota(g[0])[0].replace(" ", "\n", 1) for g in filas_g])       # el aparte entre paréntesis va a una nota al pie: pegado al eje se pisa con el vecino
         eje.set_title(titulo, loc="left", fontsize=15)
-        eje.set_ylim(0, max(valor(g[i]) for g in filas_g for i in (1, 2)) * 1.18 or 1)
+        eje.set_ylim(0, max(valor(g[i]) for g in filas_g for i in (1, 2)) * 1.3 or 1)       # aire arriba para la leyenda (no tapa las barras)
         eje.grid(axis="y", color="#e5e5e5")
         eje.set_axisbelow(True)
-    ejes[0].legend(frameon=False, loc="lower right")
+    ejes[0].legend(frameon=False, loc="upper left", ncol=2, fontsize=12)
     primero = next((n for n in elegidas if _info_de(evaluadas, n)), None)
     fig.suptitle(f"Recuperación antes y después. Elegida: {descripcion_recuperacion(_info_de(evaluadas, primero)) if primero else 'n/d'}", fontsize=14, y=0.995)
-    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    notas = [f"{base}: {nota}" for base, nota in (_nombre_y_nota(g[0]) for g in filas_g) if nota]
+    fig.tight_layout(rect=(0, 0.05 if notas else 0, 1, 0.96))
+    if notas:
+        fig.text(0.01, 0.01, " · ".join(notas), fontsize=11, color="#555555", va="bottom")
     fig.savefig(ruta, dpi=200)
     plt.close(fig)
     return True
@@ -604,10 +642,10 @@ def grafico_errores_por_criticidad(evaluadas: dict, ofertas: list, nombres: list
         eje.grid(axis="y", color="#e5e5e5")
         eje.set_axisbelow(True)
     manijas, rotulos = ejes[0].get_legend_handles_labels()
-    fig.legend(manijas, rotulos, frameon=False, loc="lower center", ncol=min(len(rotulos), 4), fontsize=11)      # abajo: con el eje en 100 % arriba no hay lugar
-    fig.suptitle(f"Errores por criticidad ({conjunto}); en cada barra: trampas no encontradas / trampas del grupo" + (f"\n{aviso}" if aviso else ""), fontsize=13, y=0.995,
-                 color="#b00020" if aviso else TINTA)
-    fig.tight_layout(rect=(0, 0.1, 1, 0.94))
+    fig.legend(manijas, rotulos, frameon=False, loc="lower center", bbox_to_anchor=(0.5, 0.035 if aviso else 0), ncol=min(len(rotulos), 4), fontsize=11)      # abajo: con el eje en 100 % arriba no hay lugar
+    fig.suptitle(f"Errores por criticidad ({conjunto}); en cada barra: trampas no encontradas / trampas del grupo", fontsize=13, y=0.995)
+    fig.tight_layout(rect=(0, 0.14 if aviso else 0.1, 1, 0.94))
+    _poner_aviso(fig, aviso)
     fig.savefig(ruta, dpi=200)
     plt.close(fig)
     return True
@@ -645,8 +683,9 @@ def grafico_confusion_clase(evaluadas: dict, ofertas: list, nombres: list, ruta:
         eje.set_xlabel("clase asignada")
         eje.set_ylabel("clase esperada")
         eje.set_title(f"{_corta(n)} ({sum(map(sum, m))} encontradas)", fontsize=13)
-    fig.suptitle(f"Matriz de confusión de la clase ({conjunto})" + (f"\n{aviso}" if aviso else ""), fontsize=14, y=0.995, color="#b00020" if aviso else TINTA)
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    fig.suptitle(f"Matriz de confusión de la clase ({conjunto})", fontsize=14, y=0.995)
+    fig.tight_layout(rect=(0, 0.04 if aviso else 0, 1, 0.94))
+    _poner_aviso(fig, aviso)
     fig.savefig(ruta, dpi=200)
     plt.close(fig)
     return True

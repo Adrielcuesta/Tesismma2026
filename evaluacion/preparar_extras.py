@@ -1,18 +1,22 @@
 # evaluacion/preparar_extras.py
-"""Prepara el <json>_extras.csv de una configuración para etiquetar los extras (brechas que no son trampa ni caso conforme) y calcular la precisión con tabla_comparativa.
+"""Prepara el <json>_extras.csv de una configuración para etiquetar los extras (brechas que no son una trampa encontrada ni caen sobre un caso conforme: la misma lista que
+evaluar.evaluar) y calcular la precisión con tabla_comparativa.
 
 Uso (lo corre el usuario: lee datos/Resultados):
   python -m evaluacion.preparar_extras --config "gpt-oss-120b esfuerzo bajo (elegida)" [--ofertas P3 P4] [--archivo-config evaluacion/config_reeval.json]
-  (--ofertas P1 P2 para las ofertas de desarrollo; por defecto P3 P4)
+                                       [--pendientes evaluacion/diagnosticos/extras_pendientes_gptoss_P3P4.csv]
+  (--ofertas P1 P2 para las de desarrollo; por defecto P3 P4)
 
-Por cada oferta: evalúa el JSON de la configuración (evaluar.evaluar, la misma lista de extras que usa tabla_comparativa) y escribe <json>_extras.csv junto al JSON con las columnas que
-tabla_comparativa lee (oferta, seccion, norma, articulo, cita, titulo, clase, valido) más:
-  origen: «heredada» si una etiqueta previa coincide en norma, artículo y cita normalizada con evaluar.norm; «pendiente» si no (o si las etiquetas previas se contradicen);
-  heredada_de: de qué CSV salió la etiqueta (en las pendientes con conflicto, qué dijo cada uno);
-  para las pendientes, lo necesario para etiquetar sin abrir nada más: veredicto_verificador, explicacion_verificador, oracion_citada (con su ID), texto_articulo (hasta 600 caracteres).
-Las etiquetas previas se buscan en *_extras.csv y extras_revision.csv de la carpeta del JSON (solo las filas con valido sí/no).
-NUNCA pisa un CSV que ya existe: si <json>_extras.csv existe, lo deja como está. Completá «valido» (sí/no) en las pendientes. No corras evaluar.py sobre un CSV ya etiquetado:
-guardar_extras_csv lo reescribe con las 8 columnas de siempre (conserva «valido» pero pierde las columnas de ayuda)."""
+Por cada oferta escribe <json>_extras.csv junto al JSON. Columnas que lee tabla_comparativa (evaluar.evaluar_archivo): oferta, seccion, norma, articulo, cita, titulo, clase y valido (sí/no;
+la clave de cada extra es sección, norma, artículo y cita). Más, para etiquetar sin abrir nada más: id, texto_articulo (hasta 800 caracteres), veredicto_verificador, explicacion_verificador,
+tipo_brecha (la fuente de la clasificación: DESVIO, EXCEPCION_NO_ACREDITADA, INFORMACION_FALTANTE), origen, etiqueta y nota. La cita es el texto completo de las oraciones citadas.
+Etiquetas válidas, como las del juez: VALIDA, NO_VALIDA, DUDOSA. «valido» se deriva de ellas (VALIDA = sí, NO_VALIDA = no; DUDOSA no se puede contar y queda vacío hasta decidirla).
+Herencia: si en la carpeta del JSON hay CSV ya etiquetados (*_extras.csv, extras_revision.csv), se hereda la etiqueta de la fila que coincide en norma, artículo y cita normalizada con
+evaluar.norm (origen «heredada», con el archivo en «nota»); si no, origen «pendiente». Si dos archivos se contradicen no se hereda ninguna y la nota lo dice.
+Las pendientes de todas las ofertas pedidas se juntan en --pendientes (por defecto evaluacion/diagnosticos/extras_pendientes_gptoss_P3P4.csv) para etiquetarlas en un solo archivo;
+aplicar_etiquetas.py vuelca esas etiquetas a cada <json>_extras.csv.
+NUNCA pisa un archivo que ya existe (ni los <json>_extras.csv ni el de pendientes). No corras evaluar.py sobre un CSV ya etiquetado: guardar_extras_csv lo reescribe con sus 8 columnas
+de siempre (conserva «valido» pero pierde las demás)."""
 import argparse
 import csv
 import glob
@@ -22,11 +26,27 @@ import sys
 from . import evaluar as E
 
 AQUI = E.AQUI
+RAIZ = os.path.dirname(AQUI)
 CONFIG_REEVAL = os.path.join(AQUI, "config_reeval.json")
-LARGO_ARTICULO = 600
-COLUMNAS = ["oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase", "origen", "heredada_de", "veredicto_verificador", "explicacion_verificador", "oracion_citada",
-            "texto_articulo", "valido"]
+PENDIENTES = os.path.join(AQUI, "diagnosticos", "extras_pendientes_gptoss_P3P4.csv")
+LARGO_ARTICULO = 800
+ETIQUETAS = ("VALIDA", "NO_VALIDA", "DUDOSA")
+VALIDO_DE = {"VALIDA": "sí", "NO_VALIDA": "no", "DUDOSA": ""}            # lo que lee tabla_comparativa en «valido»
+COLUMNAS = ["id", "oferta", "seccion", "norma", "articulo", "cita", "texto_articulo", "veredicto_verificador", "explicacion_verificador", "tipo_brecha", "clase", "titulo",
+            "origen", "etiqueta", "valido", "nota"]
+COLUMNAS_PENDIENTES = ["archivo"] + [c for c in COLUMNAS if c not in ("origen", "valido")]
 COMANDO_TABLA = r"venv\Scripts\python.exe -m evaluacion.tabla_comparativa --config evaluacion/config_reeval.json"
+
+
+def normalizar_etiqueta(valor) -> str:
+    """VALIDA / NO_VALIDA / DUDOSA a partir de lo escrito («valida», «no valida», «NO-VALIDA»); '' si no es una etiqueta válida."""
+    v = E.norm(valor).upper().replace(" ", "_").replace("-", "_")
+    return v if v in ETIQUETAS else ""
+
+
+def etiqueta_de_fila(fila: dict) -> str:
+    """La etiqueta de una fila de un CSV: la columna «etiqueta» si es válida; si no, «valido» (sí = VALIDA, no = NO_VALIDA, como las marcas humanas de siempre)."""
+    return normalizar_etiqueta(fila.get("etiqueta")) or {"si": "VALIDA", "no": "NO_VALIDA"}.get(E.norm(fila.get("valido")), "")
 
 
 def clave_herencia(norma, articulo, cita) -> tuple:
@@ -35,8 +55,8 @@ def clave_herencia(norma, articulo, cita) -> tuple:
 
 
 def cargar_etiquetas(carpeta: str, excluir: str = None) -> dict:
-    """{clave: {'valor': 'sí'|'no'|None, 'fuentes': {archivo: valor}}} con las filas sí/no de los *_extras.csv y extras_revision.csv de la carpeta. Si dos archivos se contradicen
-    para la misma clave, 'valor' queda en None (conflicto)."""
+    """{clave: {'valor': etiqueta | None, 'fuentes': {archivo: etiqueta}}} con las filas ya etiquetadas de los *_extras.csv y extras_revision.csv de la carpeta. Si dos archivos se
+    contradicen para la misma clave, 'valor' queda en None (conflicto)."""
     excluir = os.path.abspath(excluir) if excluir else None
     archivos = sorted(set(glob.glob(os.path.join(carpeta, "*_extras.csv")) + glob.glob(os.path.join(carpeta, "extras_revision.csv"))))
     etiquetas = {}
@@ -44,26 +64,18 @@ def cargar_etiquetas(carpeta: str, excluir: str = None) -> dict:
         if excluir and os.path.abspath(ruta) == excluir:
             continue
         for r in E.leer_csv(ruta):
-            marca = E.norm(r.get("valido"))
-            if marca not in ("si", "no"):
-                continue
-            e = etiquetas.setdefault(clave_herencia(r.get("norma"), r.get("articulo"), r.get("cita")), {"valor": None, "fuentes": {}})
-            e["fuentes"][os.path.basename(ruta)] = (r.get("valido") or "").strip()
+            et = etiqueta_de_fila(r)
+            if et:
+                etiquetas.setdefault(clave_herencia(r.get("norma"), r.get("articulo"), r.get("cita")), {"valor": None, "fuentes": {}})["fuentes"][os.path.basename(ruta)] = et
     for e in etiquetas.values():
-        distintos = {E.norm(v) for v in e["fuentes"].values()}
-        e["valor"] = next(iter(e["fuentes"].values())) if len(distintos) == 1 else None
+        distintas = set(e["fuentes"].values())
+        e["valor"] = next(iter(distintas)) if len(distintas) == 1 else None
     return etiquetas
 
 
 def _resumen_articulo(texto) -> str:
     plano = " ".join(str(texto or "").split())
     return plano if len(plano) <= LARGO_ARTICULO else plano[:LARGO_ARTICULO].rstrip() + "…"
-
-
-def _oracion_citada(brecha: dict) -> str:
-    textos = brecha.get("oraciones_texto") or {}
-    ids = brecha.get("oraciones") or list(textos)
-    return " ".join(f"[{i}] {' '.join(str(textos[i]).split())}" for i in ids if i in textos) or " ".join(str(brecha.get("cita") or "").split())
 
 
 def brecha_de_cada_extra(extras: list, brechas: list) -> list:
@@ -75,36 +87,50 @@ def brecha_de_cada_extra(extras: list, brechas: list) -> list:
 
 
 def filas_de_extras(extras: list, brechas: list, etiquetas: dict) -> list:
-    """Una fila por extra: heredada (con su etiqueta) o pendiente (con el contexto para etiquetar)."""
+    """Una fila por extra, con el contexto para etiquetarlo: heredada (con su etiqueta) o pendiente."""
     filas = []
     for x, b in zip(extras, brecha_de_cada_extra(extras, brechas)):
+        b = b or {}
+        verificacion = b.get("verificacion_previa") or {}
         fila = {c: "" for c in COLUMNAS}
         fila.update({c: x.get(c) if x.get(c) is not None else "" for c in ("oferta", "seccion", "norma", "articulo", "cita", "titulo", "clase")})
+        fila.update(id=b.get("id") or "", texto_articulo=_resumen_articulo(b.get("texto_articulo")), veredicto_verificador=verificacion.get("veredicto") or "",
+                    explicacion_verificador=" ".join(str(verificacion.get("explicacion") or "").split()), tipo_brecha=b.get("fuente") or "", origen="pendiente")
         previa = etiquetas.get(clave_herencia(x["norma"], x["articulo"], x["cita"]))
         if previa and previa["valor"]:
-            fila.update(origen="heredada", valido=previa["valor"], heredada_de=", ".join(previa["fuentes"]))
-        else:
-            verificacion = (b or {}).get("verificacion_previa") or {}
-            fila.update(origen="pendiente", veredicto_verificador=verificacion.get("veredicto") or "", explicacion_verificador=" ".join(str(verificacion.get("explicacion") or "").split()),
-                        oracion_citada=_oracion_citada(b) if b else " ".join(str(x.get("cita") or "").split()), texto_articulo=_resumen_articulo((b or {}).get("texto_articulo")))
-            if previa:       # etiquetas previas que se contradicen: no se hereda ninguna
-                fila["heredada_de"] = "conflicto: " + "; ".join(f"{a} = {v}" for a, v in previa["fuentes"].items())
+            fila.update(origen="heredada", etiqueta=previa["valor"], valido=VALIDO_DE[previa["valor"]], nota="heredada de " + ", ".join(previa["fuentes"]))
+        elif previa:       # etiquetas previas que se contradicen: no se hereda ninguna
+            fila["nota"] = "conflicto entre etiquetas previas: " + "; ".join(f"{a} = {v}" for a, v in previa["fuentes"].items())
         filas.append(fila)
     return filas
 
 
-def escribir_csv_nuevo(filas: list, ruta: str) -> None:
+def _escribir_nuevo(filas: list, columnas: list, ruta: str) -> None:
     """Escribe el CSV solo si no existe («x» falla si apareció entre medio): nunca pisa."""
     with open(ruta, "x", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=COLUMNAS, delimiter=";")
+        w = csv.DictWriter(f, fieldnames=columnas, delimiter=";", extrasaction="ignore")
         w.writeheader()
         w.writerows(filas)
 
 
+def escribir_csv_nuevo(filas: list, ruta: str) -> None:
+    _escribir_nuevo(filas, COLUMNAS, ruta)
+
+
+def ruta_relativa(ruta: str) -> str:
+    """Ruta relativa a la raíz del repo y con «/» (para que el archivo de pendientes no lleve rutas de la máquina)."""
+    return os.path.relpath(os.path.abspath(ruta), RAIZ).replace("\\", "/")
+
+
+def filas_pendientes(filas: list, ruta_extras: str) -> list:
+    """Las filas pendientes con el archivo de destino (relativo a la raíz del repo), para el CSV unificado."""
+    return [{**f, "archivo": ruta_relativa(ruta_extras)} for f in filas if f["origen"] == "pendiente"]
+
+
 def preparar_oferta(oferta: str, ruta_json: str, gt: list, espejos: list) -> dict:
-    """Prepara el CSV de extras de un JSON. Devuelve {'oferta', 'ruta', 'estado': 'creado' | 'ya existe' | 'sin brechas', 'extras', 'heredadas', 'pendientes'}."""
+    """Prepara el CSV de extras de un JSON. Devuelve {'oferta', 'ruta', 'estado': 'creado' | 'ya existe' | 'sin brechas', 'extras', 'heredadas', 'pendientes', 'filas_pendientes'}."""
     ruta = E.ruta_extras(ruta_json)
-    salida = {"oferta": oferta, "ruta": ruta, "estado": "creado", "extras": 0, "heredadas": 0, "pendientes": 0}
+    salida = {"oferta": oferta, "ruta": ruta, "estado": "creado", "extras": 0, "heredadas": 0, "pendientes": 0, "filas_pendientes": []}
     if os.path.exists(ruta):
         salida["estado"] = "ya existe"
         return salida
@@ -115,15 +141,17 @@ def preparar_oferta(oferta: str, ruta_json: str, gt: list, espejos: list) -> dic
         return salida
     filas = filas_de_extras(ev["extras"], resultado.get("registro_brechas") or [], cargar_etiquetas(os.path.dirname(os.path.abspath(ruta_json)), ruta))
     escribir_csv_nuevo(filas, ruta)
-    salida.update(extras=len(filas), heredadas=sum(f["origen"] == "heredada" for f in filas), pendientes=sum(f["origen"] == "pendiente" for f in filas))
+    salida.update(extras=len(filas), heredadas=sum(f["origen"] == "heredada" for f in filas), pendientes=sum(f["origen"] == "pendiente" for f in filas),
+                  filas_pendientes=filas_pendientes(filas, ruta))
     return salida
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="Prepara el <json>_extras.csv de una configuración para etiquetar sus extras (nunca pisa uno existente)")
+    p = argparse.ArgumentParser(description="Prepara el <json>_extras.csv de una configuración para etiquetar sus extras (nunca pisa un archivo existente)")
     p.add_argument("--config", required=True, help="nombre de la configuración en el archivo de configuración, p. ej. «gpt-oss-120b esfuerzo bajo (elegida)»")
     p.add_argument("--ofertas", nargs="+", default=["P3", "P4"], help="ofertas a preparar (por defecto P3 P4; P1 P2 para las de desarrollo)")
     p.add_argument("--archivo-config", default=CONFIG_REEVAL, help="config de tabla_comparativa de donde salen los JSON (por defecto evaluacion/config_reeval.json)")
+    p.add_argument("--pendientes", default=PENDIENTES, help="CSV unificado con las pendientes de todas las ofertas (no se pisa si existe)")
     a = p.parse_args(argv)
     from . import tabla_comparativa as T
     cfg = T.cargar_config(a.archivo_config)
@@ -141,13 +169,20 @@ def main(argv=None):
         if r["estado"] == "creado":
             print(f"{oferta}: {r['extras']} extras: {r['heredadas']} heredadas, {r['pendientes']} pendientes -> {r['ruta']}")
         elif r["estado"] == "ya existe":
-            print(f"{oferta}: ya existe {r['ruta']}; no se toca.")
+            print(f"{oferta}: ya existe {r['ruta']}; no se toca (sus pendientes no entran al archivo unificado).")
         else:
             print(f"{oferta}: el JSON no tiene brechas (modo lista); no hay extras que etiquetar.")
     creados = [r for r in resultados if r["estado"] == "creado"]
     if creados:
         print(f"Total: {sum(r['extras'] for r in creados)} extras: {sum(r['heredadas'] for r in creados)} heredadas, {sum(r['pendientes'] for r in creados)} pendientes.")
-        print("Completá «valido» (sí/no) en las filas con origen «pendiente» y después corré:\n  " + COMANDO_TABLA)
+        pendientes = [f for r in creados for f in r["filas_pendientes"]]
+        if os.path.exists(a.pendientes):
+            print(f"Ya existe {a.pendientes}: no se toca (borralo o usá --pendientes con otro nombre si querés regenerarlo).")
+        elif pendientes:
+            os.makedirs(os.path.dirname(os.path.abspath(a.pendientes)), exist_ok=True)
+            _escribir_nuevo(pendientes, COLUMNAS_PENDIENTES, a.pendientes)
+            print(f"Pendientes de todas las ofertas ({len(pendientes)}) en {a.pendientes}. Etiquetá la columna «etiqueta» con VALIDA, NO_VALIDA o DUDOSA y volcalas con aplicar_etiquetas.")
+        print("Después de volcar las etiquetas, corré la tabla:\n  " + COMANDO_TABLA)
     return resultados
 
 

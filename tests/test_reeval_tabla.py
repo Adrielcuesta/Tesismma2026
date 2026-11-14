@@ -180,6 +180,66 @@ def test_las_etiquetas_del_grafico_de_costo_no_se_pisan(tmp_path):
     plt.close(fig)
 
 
+def test_las_etiquetas_de_puntos_encimados_quedan_dentro_del_eje_sin_pisar_puntos_y_la_del_de_arriba_arriba():
+    plt = pytest.importorskip("matplotlib.pyplot")
+    tc._plt()
+    fig, eje = plt.subplots(figsize=(7, 6))
+    puntos = [(0.0, 0.633, "8B v1"), (0.0, 0.650, "8B elegida"), (0.31, 0.70, "32B v1"), (0.33, 0.717, "32B elegida"), (0.68, 0.80, "gpt-oss elegida")]
+    eje.scatter([p[0] for p in puntos], [p[1] for p in puntos], s=260)
+    eje.set_xlim(-0.1, 2.2)
+    eje.set_ylim(0, 1)
+    fig.tight_layout()
+    tc._colocar_etiquetas(fig, eje, puntos)
+    renderer = fig.canvas.get_renderer()
+    cajas = {t.get_text(): tc._caja_texto(t, renderer) for t in eje.texts}
+    dentro = eje.get_window_extent(renderer)
+    assert len(cajas) == len(puntos) and not any(a.overlaps(b) for i, a in enumerate(cajas.values()) for b in list(cajas.values())[i + 1:])
+    assert all(dentro.x0 <= c.x0 and c.x1 <= dentro.x1 and dentro.y0 <= c.y0 and c.y1 <= dentro.y1 for c in cajas.values())          # ninguna se sale del eje (ni sobre el eje Y)
+    r = tc.RADIO_MARCA_PT * fig.dpi / 72
+    for x, y, texto in puntos:
+        px, py = eje.transData.transform((x, y))
+        assert not (cajas[texto].x0 < px + r and cajas[texto].x1 > px - r and cajas[texto].y0 < py + r and cajas[texto].y1 > py - r)           # ni sobre su propio punto
+    assert cajas["8B elegida"].y0 > cajas["8B v1"].y1 - 1e-6 or cajas["8B elegida"].y0 > cajas["8B v1"].y0        # el punto de arriba lleva la etiqueta más arriba
+    plt.close(fig)
+
+
+def test_el_aviso_de_comparabilidad_es_una_nota_al_pie_gris_y_no_un_titulo_rojo(tmp_path, monkeypatch):
+    pytest.importorskip("matplotlib")
+    from matplotlib.figure import Figure
+    vistos = []
+    original = Figure.savefig
+    monkeypatch.setattr(Figure, "savefig", lambda self, *a, **k: (vistos.append(([(t.get_text(), t.get_color()) for t in self.texts] + [(x.get_text(), x.get_color()) for e in self.axes for x in e.texts],
+                                                                               self.get_suptitle())), original(self, *a, **k))[1])
+    evaluadas = {"elegida": {"P9": A}, "v1": {"P9": C}}
+    filas = _filas(a=A, c=C)
+    tc.grafico_recall_falsas(filas, str(tmp_path / "a.png"), "P9 solo", "P9 solo", "Atención: x")
+    tc.grafico_embudo(filas, str(tmp_path / "b.png"), "P9 solo", "Atención: x")
+    tc.grafico_recall_costo_tiempo(filas, str(tmp_path / "c.png"), "P9 solo", "Atención: x")
+    tc.grafico_errores_por_criticidad(evaluadas, ["P9"], ["elegida", "v1"], str(tmp_path / "d.png"), "P9 solo", "Atención: x")
+    tc.grafico_confusion_clase(evaluadas, ["P9"], ["elegida", "v1"], str(tmp_path / "f.png"), "P9 solo", "Atención: x")
+    tc.grafico_recall_falsas(filas, str(tmp_path / "sin.png"), "P9 solo", "P9 solo", "")
+    assert len(vistos) == 6
+    for textos, titulo in vistos[:5]:
+        assert (tc.NOTA_COMPARABILIDAD, "#555555") in textos and "Atención" not in titulo and "#b00020" not in {c for _, c in textos}
+    assert not any(t == tc.NOTA_COMPARABILIDAD for t, _ in vistos[5][0]) and tc.NOTA_COMPARABILIDAD == "v1 y elegida usan recuperaciones distintas; ver Comparabilidad"
+
+
+def test_el_grafico_de_antes_despues_separa_el_aparte_del_conjunto_a_una_nota_al_pie(tmp_path, monkeypatch):
+    pytest.importorskip("matplotlib")
+    from matplotlib.figure import Figure
+    assert tc._nombre_y_nota("P3–P4 prueba (segunda evaluación: el conjunto ya fue visto en v1)") == ("P3–P4 prueba", "segunda evaluación: el conjunto ya fue visto en v1")
+    assert tc._nombre_y_nota("P1–P2 desarrollo") == ("P1–P2 desarrollo", "")
+    vistos = []
+    original = Figure.savefig
+    monkeypatch.setattr(Figure, "savefig", lambda self, *a, **k: (vistos.append(([t.get_text() for t in self.texts], [[x.get_text() for x in e.get_xticklabels()] for e in self.axes])), original(self, *a, **k))[1])
+    conjuntos = {"P9 desarrollo": ["P9"], "P9 prueba (segunda evaluación: ya visto en v1)": ["P9"]}
+    evaluadas = {"elegida": {"P9": A}, "v1": {"P9": C}}
+    filas = tc.calcular_filas(evaluadas, conjuntos)
+    assert tc.grafico_recuperacion_antes_despues(filas, str(tmp_path / "e.png"), {"elegida": "v1"}, conjuntos, evaluadas) is True
+    textos, ticks = vistos[0]
+    assert "P9 prueba: segunda evaluación: ya visto en v1" in textos and ticks[0] == ["P9\ndesarrollo", "P9\nprueba"]
+
+
 def test_los_graficos_de_antes_despues_criticidad_y_confusion_se_generan(tmp_path):
     pytest.importorskip("matplotlib")
     evaluadas = {"elegida": {"P9": A}, "v1": {"P9": C}}
