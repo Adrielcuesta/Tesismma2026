@@ -699,14 +699,15 @@ def get_llm_openai_compatible(proveedor: str, modelo: str, razonamiento: bool = 
     if not clave:
         raise ValueError(f"Falta la clave {perfil['api_key_env']} en el archivo .env")
     from langchain_openai import ChatOpenAI
+    fijo = modelo in config.NUBE_MODELOS_RAZONAMIENTO_FIJO      # razonamiento que no se apaga (gpt-oss): sin enable_thinking y con el tope de max_tokens de razonamiento
     return ChatOpenAI(
         model=modelo, api_key=clave, base_url=perfil["base_url"], seed=config.OLLAMA_SEED,
         temperature=config.VERIF_TEMPERATURE if razonamiento else 0,
-        max_tokens=config.NUBE_MAX_TOKENS_THINKING if razonamiento else config.NUBE_MAX_TOKENS,
+        max_tokens=config.NUBE_MAX_TOKENS_THINKING if (razonamiento or fijo) else config.NUBE_MAX_TOKENS,
         max_retries=config.NUBE_MAX_REINTENTOS, timeout=config.NUBE_TIMEOUT_S,
         model_kwargs={"response_format": {"type": "json_schema", "json_schema": {"name": esquema.__name__, "schema": esquema.model_json_schema(), "strict": True}}
                       if esquema is not None else {"type": "json_object"}},
-        extra_body={"chat_template_kwargs": {"enable_thinking": bool(razonamiento)}})
+        extra_body=None if fijo else {"chat_template_kwargs": {"enable_thinking": bool(razonamiento)}})
 
 
 def crear_cadena_rag(llm, vector_db_instance, documentos_precalculados: Optional[List[Document]] = None):

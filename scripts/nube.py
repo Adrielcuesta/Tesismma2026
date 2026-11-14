@@ -6,7 +6,8 @@ El comentario general usa la plantilla (sin llamada al modelo). Las secciones co
 
 Uso:
   python -m scripts.nube --reusar-recuperacion <json_local> [<json_local> ...] [--proveedor deepinfra] [--modelo Qwen/Qwen3-32B]
-         [--max-pares N] [--thinking] [--concurrencia N] [--pdf <oferta> ...]
+         [--max-pares N] [--thinking] [--concurrencia N] [--pdf <oferta> ...] [--estimar]
+--estimar imprime los pares y el costo estimado y sale, sin API. Un modelo de config.NUBE_MODELOS_RAZONAMIENTO_FIJO (gpt-oss) recibe su esfuerzo en un mensaje de sistema.
 Las claves se leen del .env (DEEPINFRA_API_KEY, GROQ_API_KEY)."""
 import argparse
 import datetime
@@ -22,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import openai
 from langchain_core.documents import Document
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableLambda
 
 from . import clasificacion, comentario, config, costo, document_utils, huella_recuperacion, lineamientos, rag_components
@@ -66,9 +67,16 @@ class ClienteNube:
     """Envuelve el cliente del modelo: corta si se agotó el presupuesto, cuenta los tokens de `usage` y los deja en response_metadata con los nombres
     que ya lee main._invocar (prompt_eval_count, eval_count, done_reason). Un 429, un 5xx o un corte de conexión que el cliente no pudo resolver tras sus
     reintentos se informa como LlamadaFallida: el par queda como alerta «tiempo_agotado» (sin un reintento más, el cliente ya reintentó)."""
-    def __init__(self, llm, gasto: Gasto, respaldo=None, nombre: str = ""):
-        """respaldo: cliente con json_object, al que se cae (y se avisa) si el proveedor rechaza el json_schema con un 400 o 422."""
-        self.llm, self.gasto, self.respaldo, self.nombre, self.usa_respaldo = llm, gasto, respaldo, nombre, False
+    def __init__(self, llm, gasto: Gasto, respaldo=None, nombre: str = "", sistema: str = None):
+        """respaldo: cliente con json_object, al que se cae (y se avisa) si el proveedor rechaza el json_schema con un 400 o 422.
+        sistema: mensaje de sistema que se antepone a cada llamada (esfuerzo de razonamiento de los modelos con razonamiento fijo, p. ej. «Reasoning: low»)."""
+        self.llm, self.gasto, self.respaldo, self.nombre, self.usa_respaldo, self.sistema = llm, gasto, respaldo, nombre, False, sistema
+
+    def _con_sistema(self, entrada):
+        if not self.sistema:
+            return entrada
+        mensajes = entrada.to_messages() if hasattr(entrada, "to_messages") else ([HumanMessage(content=entrada)] if isinstance(entrada, str) else list(entrada))
+        return [SystemMessage(content=self.sistema), *mensajes]
 
     @property
     def formato(self) -> str:
@@ -88,7 +96,7 @@ class ClienteNube:
     def invocar(self, entrada, config=None):
         self.gasto.verificar()
         try:
-            mensaje = self._llamar(entrada)
+            mensaje = self._llamar(self._con_sistema(entrada))
         except (openai.RateLimitError, openai.InternalServerError, openai.APIConnectionError) as e:
             raise LlamadaFallida(f"{type(e).__name__}: {str(e)[:120]}") from e
         except openai.LengthFinishReasonError as e:
@@ -207,6 +215,21 @@ def resumen_humo(registro: list, gasto: dict) -> dict:
     return {"pares": len(verif), "json_ok": sum(1 for r in verif if r.get("veredicto")), "json_invalido": len(invalidas), **gasto}
 
 
+# --- Estimación previa de costo (sin API) ---
+
+def estimar_costo(rutas_locales: list, modelo: str, thinking: bool = False) -> dict:
+    """Pares (los fragmentos de secciones[] de cada JSON de recuperación) y costo estimado en USD de verificarlos con `modelo`: tokens por par medidos con Qwen3-32B
+    en v1 (config.NUBE_TOKENS_POR_PAR; con razonamiento si thinking o si el modelo lo tiene fijo) por el precio del modelo. Es una estimación, no un tope."""
+    pares = []
+    for ruta in rutas_locales:
+        with open(ruta, encoding="utf-8") as f:
+            pares.append(len(pares_de_json(json.load(f))))
+    entrada, salida = config.NUBE_TOKENS_POR_PAR["con_razonamiento" if (thinking or modelo in config.NUBE_MODELOS_RAZONAMIENTO_FIJO) else "sin_razonamiento"]
+    precios = config.PRECIOS_NUBE[modelo]
+    por_par = (entrada * precios["entrada"] + salida * precios["salida"]) / 1_000_000
+    return {"pares_por_oferta": pares, "pares": sum(pares), "usd_por_par": por_par, "usd": sum(pares) * por_par, "tokens_por_par": (entrada, salida)}
+
+
 # --- Reporte ---
 
 def sufijo_modelo(proveedor: str, modelo: str) -> str:
@@ -255,7 +278,8 @@ def armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, p
     por_seccion = [r["t_sec"] for _, r in resultados]
     cfg = dict(local.get("configuracion_analisis") or {})
     cfg.update(modelo_llm_usado=f"{proveedor}:{modelo}", display_name_modelo=f"{modelo} ({proveedor}, nube)", temperature=0 if not thinking else config.VERIF_TEMPERATURE,
-               seed=config.OLLAMA_SEED, thinking_verificacion=bool(thinking), recuperacion_reusada=True, max_pares=max_pares,
+               seed=config.OLLAMA_SEED, thinking_verificacion=bool(thinking), razonamiento_esfuerzo=config.NUBE_MODELOS_RAZONAMIENTO_FIJO.get(modelo),
+               recuperacion_reusada=True, max_pares=max_pares,
                huella_pares=huella_recuperacion.huella_de_pares(local.get("secciones") or []),
                llamadas_llm={k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario")},
                llamadas_fallidas=llamadas.get("fallidas", 0), costo_computacional=costo_comp, hardware=hardware, llamadas_detalle=llamadas.detalle,
@@ -316,6 +340,7 @@ def main(argv=None) -> int:
     p.add_argument("--thinking", action="store_true", help="activa el razonamiento (solo para un experimento aparte)")
     p.add_argument("--max-pares", type=int, help="corre solo los primeros N pares de cada oferta (prueba de humo)")
     p.add_argument("--concurrencia", type=int, default=config.NUBE_CONCURRENCIA)
+    p.add_argument("--estimar", action="store_true", help="solo imprime los pares y el costo estimado (sin llamar a la API ni leer la clave) y sale")
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 
@@ -325,10 +350,15 @@ def main(argv=None) -> int:
     if a.pdf and len(a.pdf) != len(a.reusar_recuperacion):
         print("--pdf tiene que traer una oferta por cada JSON de --reusar-recuperacion.", file=sys.stderr)
         return 2
+    if a.estimar:
+        e = estimar_costo(a.reusar_recuperacion, a.modelo, a.thinking)
+        print(f"{a.modelo}{' (razonamiento)' if a.thinking else ''}: {e['pares']} pares ({', '.join(map(str, e['pares_por_oferta']))} por oferta), "
+              f"costo estimado {e['usd']:.2f} USD ({e['tokens_por_par'][0]} + {e['tokens_por_par'][1]} tokens por par; tope de la corrida {config.PRESUPUESTO_USD} USD por invocación)")
+        return 0
     try:
         def cliente_de(esquema):    # json_schema estricto como el format= de Ollama; si el proveedor lo rechaza, cae a json_object
             def llm(e): return rag_components.get_llm_openai_compatible(a.proveedor, a.modelo, razonamiento=a.thinking, esquema=e)
-            return ClienteNube(llm(esquema), gasto, respaldo=llm(None), nombre=esquema.__name__)
+            return ClienteNube(llm(esquema), gasto, respaldo=llm(None), nombre=esquema.__name__, sistema=config.NUBE_MODELOS_RAZONAMIENTO_FIJO.get(a.modelo))
         lin = lineamientos.cargar_lineamientos(config.DIRECTORIO_LINEAMIENTOS)
         config.THINKING_VERIFICACION = a.thinking
         gasto = Gasto(config.PRECIOS_NUBE[a.modelo], config.PRESUPUESTO_USD)

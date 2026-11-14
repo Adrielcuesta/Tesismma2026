@@ -166,3 +166,8 @@ def test_adaptador_de_langchain_expone_model_name_y_las_dos_funciones(tmp_path):
     a = emb.EmbeddingsBackend(Falso(tmp_path))
     assert a.model_name == "falso__m"
     assert len(a.embed_documents(["abc", "de"])) == 2 and len(a.embed_query("abc")) == 3
+
+
+def test_el_precio_del_embedding_de_deepinfra_es_el_del_modelo(tmp_path):
+    assert emb.DeepInfra(modelo="Qwen/Qwen3-Embedding-4B", dir_cache=str(tmp_path)).precio_usd_m == 0.02
+    assert emb.DeepInfra(dir_cache=str(tmp_path)).precio_usd_m == 0.01                      # el 8B, por defecto

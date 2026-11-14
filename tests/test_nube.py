@@ -292,3 +292,71 @@ def test_el_sufijo_distingue_thinking_y_perfil_de_recuperacion_sin_romper_el_nom
     assert nube.sufijo_corrida("deepinfra", "Qwen/Qwen3-32B", True, "local") == "deepinfra-qwen3-32b-thinking-local"
     assert nube.sufijo_corrida("deepinfra", "Qwen/Qwen3-32B", True, "amplio") == "deepinfra-qwen3-32b-thinking-amplio"
     assert nube.sufijo_corrida("deepinfra", "Qwen/Qwen3-32B", True, None, 10) == "deepinfra-qwen3-32b-thinking-humo10"      # JSON local viejo: sin perfil
+
+
+# --- gpt-oss-120b: razonamiento fijo (esfuerzo bajo por mensaje de sistema) y estimación previa de costo ---
+
+GPT_OSS = "openai/gpt-oss-120b"
+
+
+def test_gpt_oss_tiene_precio_razonamiento_fijo_bajo_y_sufijo_de_salida():
+    assert config.PRECIOS_NUBE[GPT_OSS] == {"entrada": 0.037, "salida": 0.17}
+    assert config.NUBE_MODELOS_RAZONAMIENTO_FIJO[GPT_OSS] == "Reasoning: low"
+    assert nube.sufijo_corrida("deepinfra", GPT_OSS, False, "elegido") == "deepinfra-gpt-oss-120b-elegido"
+
+
+def test_el_cliente_de_gpt_oss_no_manda_enable_thinking_y_usa_el_tope_de_razonamiento(monkeypatch):
+    monkeypatch.setenv("DEEPINFRA_API_KEY", "clave-falsa")
+    llm = rag_components.get_llm_openai_compatible("deepinfra", GPT_OSS, esquema=VerificacionArticulo)
+    assert llm.extra_body is None and llm.max_tokens == config.NUBE_MAX_TOKENS_THINKING and llm.temperature == 0 and llm.seed == config.OLLAMA_SEED
+    assert llm.model_kwargs["response_format"]["type"] == "json_schema" and llm.model_kwargs["response_format"]["json_schema"]["strict"] is True
+    qwen = rag_components.get_llm_openai_compatible("deepinfra", "Qwen/Qwen3-32B")
+    assert qwen.extra_body == {"chat_template_kwargs": {"enable_thinking": False}} and qwen.max_tokens == config.NUBE_MAX_TOKENS
+
+
+class LLMRegistra(LLMFalso):
+    def invoke(self, entrada):
+        self.entrada = entrada
+        return super().invoke(entrada)
+
+
+def test_el_mensaje_de_sistema_va_primero_y_el_prompt_queda_igual():
+    from langchain_core.prompts import PromptTemplate
+    llm = LLMRegistra()
+    cliente = nube.ClienteNube(llm, nube.Gasto(PRECIOS, 4.0), sistema="Reasoning: low")
+    (PromptTemplate.from_template("Hola {x}") | cliente.runnable()).invoke({"x": "mundo"})
+    sistema, usuario = llm.entrada
+    assert (sistema.type, sistema.content, usuario.type, usuario.content) == ("system", "Reasoning: low", "human", "Hola mundo")
+    sin = LLMRegistra()
+    nube.ClienteNube(sin, nube.Gasto(PRECIOS, 4.0)).invocar("hola")
+    assert sin.entrada == "hola"                                       # sin «sistema» la entrada no se toca
+
+
+def test_el_respaldo_json_object_tambien_lleva_el_mensaje_de_sistema():
+    pedido = httpx.Request("POST", "http://x")
+    rechazo = openai.BadRequestError("json_schema no soportado", response=httpx.Response(400, request=pedido), body=None)
+    respaldo = LLMRegistra()
+    cliente = nube.ClienteNube(LLMFalso(error=rechazo), nube.Gasto(PRECIOS, 4.0), respaldo=respaldo, sistema="Reasoning: low")
+    cliente.invocar("hola")
+    assert cliente.usa_respaldo and respaldo.entrada[0].content == "Reasoning: low"
+
+
+def test_estimar_costo_cuenta_los_pares_y_usa_el_precio_y_los_tokens_del_modelo(tmp_path):
+    ruta = tmp_path / "rec.json"
+    ruta.write_text(json.dumps(LOCAL), encoding="utf-8")
+    e32 = nube.estimar_costo([str(ruta), str(ruta)], "Qwen/Qwen3-32B")
+    assert e32["pares"] == 8 and e32["pares_por_oferta"] == [4, 4]
+    assert e32["usd_por_par"] == pytest.approx((3457 * 0.08 + 345 * 0.28) / 1e6) and e32["usd"] == pytest.approx(8 * e32["usd_por_par"])
+    pensando = nube.estimar_costo([str(ruta)], "Qwen/Qwen3-32B", thinking=True)
+    assert pensando["tokens_por_par"] == (5085, 1867)
+    oss = nube.estimar_costo([str(ruta)], GPT_OSS)
+    assert oss["tokens_por_par"] == (5085, 1867) and oss["usd_por_par"] == pytest.approx((5085 * 0.037 + 1867 * 0.17) / 1e6)
+
+
+def test_estimar_imprime_pares_y_costo_sin_clave_ni_api(tmp_path, capsys, monkeypatch):
+    monkeypatch.delenv("DEEPINFRA_API_KEY", raising=False)
+    ruta = tmp_path / "rec.json"
+    ruta.write_text(json.dumps(LOCAL), encoding="utf-8")
+    assert nube.main(["--estimar", "--reusar-recuperacion", str(ruta), "--modelo", GPT_OSS]) == 0
+    salida = capsys.readouterr().out
+    assert GPT_OSS in salida and "4 pares" in salida and "USD" in salida

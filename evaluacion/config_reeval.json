@@ -79,6 +79,32 @@
         }
       }
     },
+    "gpt-oss-120b esfuerzo bajo (elegida)": {
+      "P1": {
+        "auto": {
+          "carpeta": "datos/Resultados/P1_oferta_TBP01",
+          "sufijo": "deepinfra-gpt-oss-120b-elegido"
+        }
+      },
+      "P2": {
+        "auto": {
+          "carpeta": "datos/Resultados/P2_oferta_PH400",
+          "sufijo": "deepinfra-gpt-oss-120b-elegido"
+        }
+      },
+      "P3": {
+        "auto": {
+          "carpeta": "datos/Resultados/P3_oferta_TV1600",
+          "sufijo": "deepinfra-gpt-oss-120b-elegido"
+        }
+      },
+      "P4": {
+        "auto": {
+          "carpeta": "datos/Resultados/P4_oferta_TPE800",
+          "sufijo": "deepinfra-gpt-oss-120b-elegido"
+        }
+      }
+    },
     "qwen3:8b local": {
       "P1": "datos/Resultados/P1_oferta_TBP01/analisis_riesgos_P1_oferta_TBP01_20261108_151743_reclasificado.json",
       "P2": "datos/Resultados/P2_oferta_PH400/analisis_riesgos_P2_oferta_PH400_20261108_172507_reclasificado.json",
@@ -114,7 +140,8 @@
     "elegida_vs_v1": {
       "qwen3:8b local (elegida)": "qwen3:8b local",
       "Qwen3-32B (elegida)": "Qwen3-32B",
-      "Qwen3-32B con razonamiento (elegida)": "Qwen3-32B con razonamiento"
+      "Qwen3-32B con razonamiento (elegida)": "Qwen3-32B con razonamiento",
+      "gpt-oss-120b esfuerzo bajo (elegida)": null
     }
   },
   "sin_rag": {

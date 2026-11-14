@@ -221,7 +221,7 @@ class DeepInfra(_Qwen3):
 
     def __init__(self, modelo: str = None, dir_cache: str = DIR_CACHE):
         super().__init__(modelo or config.EMBEDDING_MODELOS["deepinfra"], dir_cache)
-        self.precio_usd_m = config.PRECIOS_EMBEDDING_USD_M["deepinfra"]
+        self.precio_usd_m = config.PRECIOS_EMBEDDING_USD_M.get(self.modelo, config.PRECIOS_EMBEDDING_USD_M["deepinfra"])     # precio propio del modelo si lo hay
         self._cliente_obj = None
 
     def disponible(self) -> tuple:

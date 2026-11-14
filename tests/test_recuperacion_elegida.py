@@ -77,16 +77,21 @@ def test_cargar_indice_kb_sigue_config_embedding_backend_y_devuelve_none_si_el_b
 
 # --- Perfil «elegido» ---
 
-def test_el_perfil_elegido_es_un_relleno_igual_a_local_y_no_se_puede_usar_hasta_cargarlo(restaurar_config):
-    assert config.PERFIL_ELEGIDO_CARGADO is False
-    elegido = dict(config.PERFILES_RECUPERACION["elegido"])
-    assert elegido.pop("EMBEDDING_BACKEND") == "bge-m3" and elegido == config.PERFILES_RECUPERACION["local"]
+def test_el_perfil_elegido_es_el_punto_medido_en_la_curva_y_esta_cargado():
+    assert config.PERFIL_ELEGIDO_CARGADO is True
+    assert config.PERFILES_RECUPERACION["elegido"] == {"EMBEDDING_BACKEND": "bge-m3", "K_SUBSECCION": 10, "TOP_DENSA_SUBSECCION": 10, "TOP_N_SUBSECCION": 0, "VERIFICAR_TOPE": 39,
+                                                       "ORACIONES_CIFRAS": True, "ORACIONES_N": 2, "ORACIONES_CUPO": 15}
+
+
+def test_el_perfil_elegido_sin_cargar_no_se_puede_usar(restaurar_config, monkeypatch):
+    monkeypatch.setattr(config, "PERFIL_ELEGIDO_CARGADO", False)
     with pytest.raises(ValueError, match="relleno"):
         recuperar.aplicar_perfil("elegido")
-    assert config.K_SUBSECCION == 10                                   # no se aplicó nada
+    assert config.K_SUBSECCION == 10 and config.TOP_N_SUBSECCION == 5   # no se aplicó nada
 
 
 def test_recuperar_con_el_perfil_elegido_sin_cargar_termina_con_error_sin_tocar_nada(restaurar_config, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(config, "PERFIL_ELEGIDO_CARGADO", False)
     oferta = tmp_path / "oferta.pdf"
     oferta.write_text("x")
     monkeypatch.setattr(recuperar.document_utils, "extraer_texto_oferta", lambda ruta: pytest.fail("no debe leer la oferta"))
@@ -237,3 +242,13 @@ def test_nube_deja_la_huella_de_pares_en_la_configuracion_del_reporte():
     reporte = nube.armar_reporte(local, [], {}, [], lin, "Qwen/Qwen3-32B", "deepinfra", 8, {"usd": 0.0, "cacheados": 0, "llamadas": 0}, 1.0, False, None, False)
     cfg = reporte.configuracion_analisis
     assert cfg["huella_pares"] == huella_recuperacion.huella_de_pares(secciones) and cfg["embedding_backend"] == "gemini" and cfg["perfil_recuperacion"] == "elegido"
+
+
+def test_script_de_la_nube_corre_32b_gpt_oss_y_32b_con_razonamiento_en_ese_orden_y_confirma_antes_del_ultimo():
+    t = _ps1("correr_reeval_nube.ps1")
+    assert t.index('Id = "i"') < t.index('Id = "ii"') < t.index('Id = "iii"')
+    assert t.index('Modelo = "Qwen/Qwen3-32B"') < t.index('Modelo = "openai/gpt-oss-120b"') < t.rindex('Modelo = "Qwen/Qwen3-32B"')
+    assert 'Id = "ii";  Modelo = "openai/gpt-oss-120b"' in t and 'Id = "iii"; Modelo = "Qwen/Qwen3-32B"' in t and "Thinking = $true; Confirmar = $true" in t
+    assert t.count("Confirmar = $true") == 1 and "[switch]$SinRazonamiento" in t
+    assert "Read-Host" in t and "Gasto-Acumulado" in t and "costo_usd" in t and "-SinRazonamiento" in t
+    assert t.index("$SinRazonamiento) {") < t.index("Confirmar-Razonamiento $c")        # -SinRazonamiento salta antes de preguntar

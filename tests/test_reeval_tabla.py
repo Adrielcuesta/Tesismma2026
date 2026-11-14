@@ -219,14 +219,15 @@ def test_evaluar_configuraciones_agrega_la_recuperacion_de_cada_json(monkeypatch
 
 # --- config_reeval.json ---
 
-def test_config_reeval_arma_las_tres_configuraciones_elegidas_y_sus_referencias_de_v1():
+def test_config_reeval_arma_las_configuraciones_elegidas_y_sus_referencias_de_v1():
     cfg = tc.cargar_config(os.path.join(RAIZ, "evaluacion", "config_reeval.json"))
     with open(os.path.join(RAIZ, "evaluacion", "config_final.json"), encoding="utf-8") as f:
         final = json.load(f)
     mapa = cfg["reeval"]["elegida_vs_v1"]
-    assert len(mapa) == 3 and set(mapa) | set(mapa.values()) == set(cfg["configuraciones"]) and len(cfg["configuraciones"]) == 6
+    assert len(mapa) == 4 and (set(mapa) | set(mapa.values())) - {None} == set(cfg["configuraciones"]) and len(cfg["configuraciones"]) == 7
+    assert mapa["gpt-oss-120b esfuerzo bajo (elegida)"] is None                             # modelo nuevo: sin par de v1
     for elegida, v1 in mapa.items():
-        assert cfg["configuraciones"][v1] == final["configuraciones"][v1]                   # las referencias de v1 son las de config_final.json
+        assert v1 is None or cfg["configuraciones"][v1] == final["configuraciones"][v1]     # las referencias de v1 son las de config_final.json
         assert set(cfg["configuraciones"][elegida]) == {"P1", "P2", "P3", "P4"}
         sufijos = {v["auto"]["sufijo"] for v in cfg["configuraciones"][elegida].values()}
         assert len(sufijos) == 1 and sufijos.pop().endswith("-elegido")

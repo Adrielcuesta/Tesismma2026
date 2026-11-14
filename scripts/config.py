@@ -125,12 +125,13 @@ PERFILES_RECUPERACION = {
               "ORACIONES_CIFRAS": ORACIONES_CIFRAS, "ORACIONES_N": ORACIONES_N, "ORACIONES_CUPO": ORACIONES_CUPO},
     "amplio": {"K_SUBSECCION": 20, "TOP_DENSA_SUBSECCION": 5, "TOP_N_SUBSECCION": 8, "VERIFICAR_TOPE": 30,
                "ORACIONES_CIFRAS": True, "ORACIONES_N": 2, "ORACIONES_CUPO": 10},
-    # «elegido»: la recuperación que sale de la curva (scripts.diagnostico_recuperacion curva); la comparten todos los LLM de la reevaluación. Ahora es un RELLENO igual a
-    # «local»: lo carga el usuario con el bloque que imprime curva_recuperacion_<fecha>.md y después pone PERFIL_ELEGIDO_CARGADO = True. Mientras tanto no se puede usar.
-    "elegido": {"EMBEDDING_BACKEND": "bge-m3", "K_SUBSECCION": K_SUBSECCION, "TOP_DENSA_SUBSECCION": TOP_DENSA_SUBSECCION, "TOP_N_SUBSECCION": TOP_N_SUBSECCION,
-                "VERIFICAR_TOPE": VERIFICAR_TOPE, "ORACIONES_CIFRAS": ORACIONES_CIFRAS, "ORACIONES_N": ORACIONES_N, "ORACIONES_CUPO": ORACIONES_CUPO},
+    # «elegido»: la recuperación que sale de la curva (scripts.diagnostico_recuperacion curva, 2026-11-14); la comparten todos los LLM de la reevaluación.
+    # Solo denso (BGE-M3, K=10, sin reranker en la selección) + oraciones N=2 con cupo 15, sin tope: 28/30 trampas y 721 pares sobre P1+P2 (v1: 24/30 y 516).
+    # VERIFICAR_TOPE = 39, el mayor tamaño de la base de una sección en ese punto: el pipeline reproduce exactamente lo medido en la curva.
+    "elegido": {"EMBEDDING_BACKEND": "bge-m3", "K_SUBSECCION": 10, "TOP_DENSA_SUBSECCION": 10, "TOP_N_SUBSECCION": 0, "VERIFICAR_TOPE": 39,
+                "ORACIONES_CIFRAS": True, "ORACIONES_N": 2, "ORACIONES_CUPO": 15},
 }
-PERFIL_ELEGIDO_CARGADO = False
+PERFIL_ELEGIDO_CARGADO = True
 
 # Embedding con el que se indexa la KB y se busca (scripts.embeddings.BACKENDS): bge-m3 es el de v1 y conserva sus rutas; cada otro backend tiene su propio índice,
 # separado del de BGE-M3, que no se toca. Un perfil de recuperación puede cambiarlo (clave EMBEDDING_BACKEND).
@@ -205,14 +206,21 @@ PRECIOS_NUBE = {
     "Qwen/Qwen3-235B-A22B-Instruct-2507": {"entrada": 0.09, "salida": 0.55},
     "qwen/qwen3.8-27b": {"entrada": 0.80, "salida": 4.00},
     "deepseek-ai/DeepSeek-V3.2": {"entrada": 0.26, "salida": 0.38},     # juez externo de precisión (evaluacion/juez.py)
+    "openai/gpt-oss-120b": {"entrada": 0.037, "salida": 0.17},          # DeepInfra, página del modelo (2026-11-14); los tokens de razonamiento se cobran como salida
 }
+# Modelos con razonamiento que no se puede apagar: no se les manda enable_thinking; el esfuerzo va en un mensaje de sistema (DeepInfra: «Reasoning: low|medium|high»)
+# y max_tokens es el de razonamiento (el razonamiento consume del mismo tope que el JSON).
+NUBE_MODELOS_RAZONAMIENTO_FIJO = {"openai/gpt-oss-120b": "Reasoning: low"}
+# Tokens por par (promedio de P1-P4, 960 pares con la recuperación de v1; incluye verificación y clasificación) medidos con Qwen3-32B en la nube: (entrada, salida).
+# Solo para la estimación previa de costo (scripts.nube --estimar). Con razonamiento fijo se usa la medida con razonamiento: es una cota superior para esfuerzo bajo.
+NUBE_TOKENS_POR_PAR = {"sin_razonamiento": (3457, 345), "con_razonamiento": (5085, 1867)}
 PRESUPUESTO_JUEZ_USD = 1.0  # tope de gasto de una corrida del juez
 
 # --- Backends de embeddings alternativos a BGE-M3 (scripts/embeddings.py; solo la curva de recuperación y, luego, el perfil «elegido») ---
 EMBEDDING_MODELOS = {"qwen3-local": "qwen3-embedding:4b", "deepinfra": "Qwen/Qwen3-Embedding-8B", "gemini": "gemini-embedding-2"}
 EMBEDDING_DIM_GEMINI = 3072
 # USD por millón de tokens (cota superior para la estimación previa: Gemini es gratis en el nivel gratuito). La clave se lee del .env (nunca acá).
-PRECIOS_EMBEDDING_USD_M = {"deepinfra": 0.01, "gemini": 0.20}
+PRECIOS_EMBEDDING_USD_M = {"deepinfra": 0.01, "gemini": 0.20, "Qwen/Qwen3-Embedding-4B": 0.02}
 EMBEDDING_CHARS_POR_TOKEN = 3.5
 # Instrucción que se antepone SOLO a la consulta en los modelos Qwen3-Embedding (qwen3-local y deepinfra)
 INSTRUCCION_CONSULTA_EMBEDDING = ("Instruct: Given a passage from a technical bid for railway workshop machinery installation, "
