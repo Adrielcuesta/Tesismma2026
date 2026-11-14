@@ -16,6 +16,10 @@ Dónde se pierde el artículo (K de la densa, top por subsección y tope por sec
 
     python -m scripts.diagnostico_recuperacion recorte --oferta P1=<oferta_P1.pdf|docx> --oferta P2=<oferta_P2.pdf|docx> [--csv ruta]
 
+Curva de recuperación (recall frente a K y a pares, por embedding, con calibración contra v1; ver scripts/curva_recuperacion.py):
+
+    python -m scripts.diagnostico_recuperacion curva --oferta P1=<oferta_P1.pdf|docx> --oferta P2=<oferta_P2.pdf|docx> [--embedding bge-m3 ...] [--si]
+
 La primera corrida guarda diagnostico_cache.json (30 candidatos densos con sus puntajes y el del reranker, por consulta, y los resultados de las
 consultas por oración); con --usar-cache las configuraciones se derivan de ahí, sin recalcular el reranker. Si la caché es anterior a la versión 2
 (o le faltan las oraciones), esa corrida abre el índice (sin reranker) para completarla y la vuelve a guardar.
@@ -550,6 +554,9 @@ def main(argv=None) -> int:
         return main_hibrida(argv[1:])
     if argv and argv[0] == "recorte":
         return main_recorte(argv[1:])
+    if argv and argv[0] == "curva":
+        from . import curva_recuperacion    # import tardío: curva_recuperacion importa este módulo
+        return curva_recuperacion.main(argv[1:])
     p = argparse.ArgumentParser(description="Diagnóstico de la recuperación por sección (sin LLM).")
     p.add_argument("oferta", help="Ruta de la oferta (.pdf o .docx)")
     p.add_argument("--gt", required=True, help="Ground truth (JSON); solo se usa para las métricas")
