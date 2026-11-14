@@ -4,7 +4,7 @@ lee `scripts.nube --reusar-recuperacion` (secciones con id, titulos y fragmentos
 (rag_components.recuperar_seccion en modo verificación); el perfil solo cambia los parámetros de config.PERFILES_RECUPERACION.
 
 Uso:
-  python -m scripts.recuperar <oferta.pdf|docx> [--perfil-recuperacion local|amplio] [--salida <carpeta>]
+  python -m scripts.recuperar <oferta.pdf|docx> [--perfil-recuperacion local|amplio|elegido] [--salida <carpeta>]
 Escribe <salida>/recuperacion_<perfil>_<oferta>_<fecha_hora>.json (por defecto datos/Resultados/<oferta>/)."""
 import argparse
 import datetime
@@ -14,7 +14,7 @@ import logging
 import os
 import sys
 
-from . import config, document_utils, rag_components, vector_db_manager
+from . import config, document_utils, huella_recuperacion, rag_components, vector_db_manager
 from .schemas import FragmentoRecuperado, FuenteNorma, SeccionInforme
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,9 @@ def aplicar_perfil(nombre: str) -> dict:
     """Pone en config los parámetros del perfil y los devuelve. «local» deja la configuración del pipeline tal como está."""
     if nombre not in config.PERFILES_RECUPERACION:
         raise ValueError(f"Perfil de recuperación desconocido: «{nombre}» (hay {', '.join(sorted(config.PERFILES_RECUPERACION))}).")
+    if nombre == "elegido" and not config.PERFIL_ELEGIDO_CARGADO:
+        raise ValueError("El perfil «elegido» todavía es un relleno: cargá en config.PERFILES_RECUPERACION['elegido'] el bloque que imprime curva_recuperacion_<fecha>.md "
+                         "y poné config.PERFIL_ELEGIDO_CARGADO = True.")
     parametros = dict(config.PERFILES_RECUPERACION[nombre])
     for clave, valor in parametros.items():
         setattr(config, clave, valor)
@@ -58,7 +61,8 @@ def armar_json(nombre_oferta: str, informe: list, perfil: str, parametros: dict)
         "k_subseccion": config.K_SUBSECCION, "top_n_subseccion": config.TOP_N_SUBSECCION, "top_densa_subseccion": config.TOP_DENSA_SUBSECCION,
         "oraciones_cifras": {"n": config.ORACIONES_N, "cupo": config.ORACIONES_CUPO} if config.ORACIONES_CIFRAS else False,
         "tope_fragmentos_por_seccion": config.VERIFICAR_TOPE, "recuperacion_por_subseccion": config.RECUPERACION_POR_SUBSECCION,
-        "reranker": rag_components.RERANKER_MODEL_NAME, "embeddings": config.EMBEDDING_MODEL_NAME_OR_PATH}}
+        "reranker": rag_components.RERANKER_MODEL_NAME, "embeddings": config.EMBEDDING_MODEL_NAME_OR_PATH if config.EMBEDDING_BACKEND == "bge-m3" else config.EMBEDDING_MODELOS.get(config.EMBEDDING_BACKEND, config.EMBEDDING_BACKEND),
+        "embedding_backend": config.EMBEDDING_BACKEND, "huella_pares": huella_recuperacion.huella_de_pares([s.model_dump() for s in informe])}}
 
 
 def ruta_de_salida(pdf: str, perfil: str, carpeta: str = None) -> str:
@@ -79,21 +83,18 @@ def main(argv=None) -> int:
     if not os.path.isfile(a.archivo):
         print(f"No existe el archivo: {a.archivo}", file=sys.stderr)
         return 1
-    parametros = aplicar_perfil(a.perfil_recuperacion)
+    try:
+        parametros = aplicar_perfil(a.perfil_recuperacion)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 2
     secciones = document_utils.dividir_en_secciones(document_utils.extraer_texto_oferta(a.archivo))
     if not secciones:
         print("No se pudo dividir la oferta en secciones.", file=sys.stderr)
         return 1
-    embeddings = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
-    if not embeddings:
-        print("No se pudo inicializar el modelo de embeddings.", file=sys.stderr)
-        return 1
-    vector_db = vector_db_manager.crear_o_cargar_chroma_db(
-        chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA, embedding_function=embeddings,
-        chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, recrear_db_flag=False,
-        collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True)
+    vector_db = vector_db_manager.cargar_indice_kb()       # con el backend de embeddings del perfil (config.EMBEDDING_BACKEND)
     if not vector_db:
-        print("No se pudo cargar el índice de la KB por artículos.", file=sys.stderr)
+        print(f"No se pudo cargar el índice de la KB por artículos (backend de embeddings «{config.EMBEDDING_BACKEND}»).", file=sys.stderr)
         return 1
     informe = recuperar_secciones(vector_db, secciones)
     ruta = ruta_de_salida(a.archivo, a.perfil_recuperacion, a.salida)

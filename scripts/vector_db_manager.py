@@ -110,6 +110,29 @@ def crear_o_cargar_chroma_db(chroma_db_path, docs_base_conocimiento_path, embedd
             logger.error(f"Error crítico al cargar la DB Chroma: {e}", exc_info=True)
             return None
 
+def cargar_indice_kb(carpeta_kb=None, recrear=False, backend=None):
+    """Índice de la KB por artículos con el backend de embeddings indicado (por defecto config.EMBEDDING_BACKEND). bge-m3 es el de siempre (mismas rutas, mismo
+    modelo); los demás tienen su propio índice (config.rutas_indice) y no tocan el de BGE-M3. None si no se pudo (el motivo queda en el log)."""
+    backend = backend or config.EMBEDDING_BACKEND
+    if backend == "bge-m3":
+        embedding_function = get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
+    else:
+        from . import embeddings    # import tardío: BGE-M3 no necesita nada de esto
+        b = embeddings.crear_backend(backend)
+        ok, motivo = b.disponible()
+        if not ok:
+            logger.error(f"El backend de embeddings «{backend}» no está disponible: {motivo}.")
+            return None
+        embedding_function = embeddings.EmbeddingsBackend(b)
+    if not embedding_function:
+        logger.error("No se pudo inicializar el modelo de embeddings.")
+        return None
+    rutas = config.rutas_indice(backend)
+    return crear_o_cargar_chroma_db(
+        chroma_db_path=rutas["path"], docs_base_conocimiento_path=carpeta_kb or config.DIRECTORIO_NORMATIVA, embedding_function=embedding_function,
+        chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, recrear_db_flag=recrear,
+        collection_name=rutas["collection"], manifest_path=rutas["manifest"], por_articulos=True)
+
 def _saltos_de_numeracion(numeros):
     """Huecos entre artículos consecutivos: mismo capítulo con salto > 1, o capítulo nuevo que no empieza en 0/1."""
     saltos = []
@@ -192,7 +215,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="KB ferroviaria por artículos")
     parser.add_argument("--cobertura-gt", metavar="RUTA", help="Lista los pares (norma, artículo) del ground truth que no existen como chunk en la KB")
     parser.add_argument("--resumen", action="store_true", help="Imprime por norma el resultado del chunker, sin embeddings ni indexar")
-    parser.add_argument("--indexar", action="store_true", help="Crea/actualiza el índice en config.CHROMA_DB_PATH_KB (carga el modelo de embeddings)")
+    parser.add_argument("--indexar", action="store_true", help="Crea/actualiza el índice de la KB del backend de embeddings (carga el modelo; con --backend distinto de bge-m3 llama a su API)")
+    parser.add_argument("--backend", default=None, help="backend de embeddings de --indexar (por defecto config.EMBEDDING_BACKEND)")
     args = parser.parse_args()
     if args.cobertura_gt:
         imprimir_cobertura_gt(args.cobertura_gt)
@@ -201,10 +225,6 @@ if __name__ == "__main__":
     elif args.indexar:
         logging.basicConfig(level=logging.INFO)
         config.inicializar_directorios_datos()
-        crear_o_cargar_chroma_db(
-            chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=config.DIRECTORIO_NORMATIVA,
-            embedding_function=get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH),
-            chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, recrear_db_flag=False,
-            collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True)
+        cargar_indice_kb(backend=args.backend)
     else:
         parser.print_help()

@@ -375,9 +375,35 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
     return brechas, alertas, registro
 
 
-def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, marca_tiempo, directorio_kb, directorio_proyecto):
+def _cargar_recuperacion_reusada(ruta: str, secciones: list) -> dict:
+    """Pares a verificar tomados de un JSON de scripts.recuperar (en vez de recuperar): {'docs': {id de sección: [Document]}, 'candidatos', 'sha256' del archivo,
+    'huella_pares', 'perfil', 'embedding_backend'}. Mismo patrón que scripts.nube: el texto de cada artículo se lee del índice por metadatos, sin embeddings ni
+    reranker. Falla si la oferta no se divide en las mismas secciones que la del JSON."""
+    from langchain_core.documents import Document
+    from . import huella_recuperacion, nube      # import tardío: nube importa este módulo
+    with open(ruta, encoding="utf-8") as f:
+        local = json.load(f)
+    if [(s["id"], s["titulos"]) for s in secciones] != [(s["id"], s["titulos"]) for s in local.get("secciones") or []]:
+        raise AnalisisError("La división en secciones de la oferta no coincide con la del JSON de recuperación: no es la misma oferta.")
+    indice = nube.indice_de_articulos(nube._abrir_chroma().get(include=["documents", "metadatas"]))
+    avisos, docs, candidatos = [], {}, {}
+    for s in local["secciones"]:
+        fragmentos = s.get("fragmentos") or []
+        docs[s["id"]] = nube.documentos_de_seccion(fragmentos, indice, avisos)
+        for d, f in zip(docs[s["id"]], fragmentos):
+            d.metadata["relevance_score"] = f.get("score")
+        candidatos[s["id"]] = [Document(page_content="", metadata={"norma": c.get("norma", ""), "articulo": str(c.get("articulo", ""))}) for c in s.get("candidatos") or []]
+    if avisos:
+        logger.warning(f"{len(avisos)} artículos con varias partes: el JSON de recuperación no dice cuál se verificó, se usa la primera.")
+    cfg = local.get("configuracion_analisis") or {}
+    return {"docs": docs, "candidatos": candidatos, "sha256": huella_recuperacion.sha256_archivo(ruta), "huella_pares": huella_recuperacion.huella_de_pares(local["secciones"]),
+            "perfil": cfg.get("perfil_recuperacion"), "embedding_backend": cfg.get("embedding_backend")}
+
+
+def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, marca_tiempo, directorio_kb, directorio_proyecto, recuperacion_json=None):
     """Oferta completa (sin truncar) -> secciones -> por sección: recuperación (K -> rerank top N), CRAG informativo y
-    generación JSON -> validación de fuentes y citas por código -> unión sin tope de riesgos -> resumen final."""
+    generación JSON -> validación de fuentes y citas por código -> unión sin tope de riesgos -> resumen final.
+    recuperacion_json: ruta de un JSON de scripts.recuperar; en lugar de recuperar se verifican exactamente sus pares (solo modo verificación)."""
     t_total = time.perf_counter()
     normalizaciones_al_inicio = normalizaciones_formato()
     tiempos = {}
@@ -385,7 +411,9 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     # sin_rag no tiene artículos que verificar: siempre genera la lista de riesgos
     modo = config.MODO_GENERACION if usar_rag else "lista"
     verificacion = modo == "verificacion"
-    usar_crag = usar_rag and config.USAR_CRAG
+    usar_crag = usar_rag and config.USAR_CRAG and not recuperacion_json
+    if recuperacion_json and not (usar_rag and verificacion):
+        raise AnalisisError("La recuperación reusada solo se aplica al modo verificación con RAG.")
     llamadas = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0})
     logger.info(f"--- ANÁLISIS POR SECCIÓN (Modelo: {selected_llm_model_id}, condición: {condicion}, modo: {modo}) ---")
 
@@ -417,15 +445,14 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
             raise AnalisisError(f"Lineamientos de la empresa: {e}") from e
         logger.info(f"Lineamientos cargados: {len(lin['texto_para_el_modelo'])} caracteres para el modelo, huella {lin['huella'][:12]}.")
     t0 = time.perf_counter()
-    if usar_rag:
+    reuso = None
+    if recuperacion_json:
+        reuso = _cargar_recuperacion_reusada(recuperacion_json, secciones)     # sin embeddings ni reranker: los pares ya están decididos
+        logger.info(f"Recuperación reusada de {os.path.basename(recuperacion_json)} (perfil {reuso['perfil']}, huella de pares {reuso['huella_pares'][:12]}).")
+    elif usar_rag:
         carpeta_kb = directorio_kb or config.DIRECTORIO_NORMATIVA
-        embedding_function = vector_db_manager.get_embedding_function(config.EMBEDDING_MODEL_NAME_OR_PATH)
-        if not embedding_function: raise AnalisisError("No se pudo inicializar el modelo de embeddings.")
-        vector_db = vector_db_manager.crear_o_cargar_chroma_db(
-            chroma_db_path=config.CHROMA_DB_PATH_KB, docs_base_conocimiento_path=carpeta_kb, embedding_function=embedding_function,
-            chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, recrear_db_flag=force_recreate_db or config.RECREAR_DB,
-            collection_name=config.CHROMA_COLLECTION_KB, manifest_path=config.CHROMA_MANIFEST_PATH_KB, por_articulos=True)
-        if not vector_db: raise AnalisisError("No se pudo crear o cargar el índice de la KB por artículos (¿la carpeta de normas tiene PDFs o DOCX con texto?).")
+        vector_db = vector_db_manager.cargar_indice_kb(carpeta_kb, force_recreate_db or config.RECREAR_DB)
+        if not vector_db: raise AnalisisError("No se pudo crear o cargar el índice de la KB por artículos (¿la carpeta de normas tiene PDFs o DOCX con texto, o el modelo de embeddings no se pudo inicializar?).")
         if usar_crag:
             # El evaluador CRAG usa el modelo local fijo, sin formato JSON (responde una sola palabra)
             llm_evaluador = rag_components.get_llm_instance(EVALUADOR_EVIDENCIA_MODEL_ID)
@@ -457,7 +484,10 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
         docs, candidatos, clasif_crag = [], None, None
         if usar_rag:
             t0 = time.perf_counter()
-            candidatos, docs = rag_components.recuperar_seccion(vector_db, seccion, **({"tope": config.VERIFICAR_TOPE, "sin_preambulo": True, "con_union": True, "con_oraciones": True} if verificacion else {}))
+            if reuso:
+                candidatos, docs = reuso["candidatos"].get(id_sec, []), reuso["docs"].get(id_sec, [])
+            else:
+                candidatos, docs = rag_components.recuperar_seccion(vector_db, seccion, **({"tope": config.VERIFICAR_TOPE, "sin_preambulo": True, "con_union": True, "con_oraciones": True} if verificacion else {}))
             t_sec["recuperacion"] = _segundos(t0)
             if usar_crag:
                 # CRAG por sección: solo informa, no bloquea la generación
@@ -587,6 +617,8 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
                 "tokens_generados_por_tipo": _estadisticas_tokens(llamadas),
                 "excluir_introduccion": config.EXCLUIR_INTRODUCCION, "calcular_respaldo": config.CALCULAR_RESPALDO, "tiempos_s": tiempos,
                 "tokens_prompt_por_seccion": tokens_prompt,
+                "embedding_backend": (reuso["embedding_backend"] or "bge-m3") if reuso else (config.EMBEDDING_BACKEND if usar_rag else "N/A"),
+                **({"recuperacion_reusada": True, "recuperacion_json_sha256": reuso["sha256"], "huella_pares": reuso["huella_pares"], "perfil_recuperacion": reuso["perfil"]} if reuso else {}),
             })
         return _guardar_y_generar_dashboard(reporte, nombre_pdf, marca_tiempo)
     except Exception as e_cierre:
@@ -606,18 +638,21 @@ def _run_analysis_impl(
     marca_tiempo: Optional[str] = None,
     directorio_kb: Optional[str] = None,
     directorio_proyecto: Optional[str] = None,
+    recuperacion_json: Optional[str] = None,
+    sufijo_marca: Optional[str] = None,
 ):
     if not is_evaluation_mode: logger.info(f"--- INICIANDO ANÁLISIS (Modelo: {selected_llm_model_id}) ---")
     # Cada ejecución guarda su JSON y su dashboard con esta marca en el nombre, para no
     # pisar los análisis anteriores del mismo proyecto (el log usa la misma marca).
     marca_tiempo = marca_tiempo or datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    if sufijo_marca: marca_tiempo = f"{marca_tiempo}_{sufijo_marca}"      # p. ej. «local-qwen3-8b-elegido»: distingue la corrida con la recuperación elegida
     try:
         config.inicializar_directorios_datos()
 
         # Análisis por sección (índice por artículos). El modo evaluación sigue con el flujo de abajo.
         if config.USAR_KB_ARTICULOS and not is_evaluation_mode:
             return _analizar_por_secciones(
-                selected_llm_model_id, force_recreate_db, usar_rag, marca_tiempo, directorio_kb, directorio_proyecto)
+                selected_llm_model_id, force_recreate_db, usar_rag, marca_tiempo, directorio_kb, directorio_proyecto, recuperacion_json)
 
         if db_connection:
             vector_db = db_connection
@@ -847,8 +882,10 @@ def run_analysis(
     usar_rag: bool = True,
     directorio_kb: Optional[str] = None,
     directorio_proyecto: Optional[str] = None,
+    recuperacion_json: Optional[str] = None,
+    sufijo_marca: Optional[str] = None,
 ):
-    """Punto de entrada público (misma firma de siempre, lo usan app.py y evaluate_rag.py).
+    """Punto de entrada público (misma firma de siempre, lo usan app.py y evaluate_rag.py; recuperacion_json y sufijo_marca son opcionales: scripts.run_oferta).
     En modo app deja un log en la carpeta del dashboard; en modo evaluación no lo hace,
     porque evaluate_rag.py ya guarda su propio log en datos/Resultados/evaluaciones_rag/."""
     handler_log = None if is_evaluation_mode else _iniciar_log_de_analisis(directorio_proyecto)
@@ -864,6 +901,8 @@ def run_analysis(
             marca_tiempo=getattr(handler_log, "marca_tiempo", None),
             directorio_kb=directorio_kb,
             directorio_proyecto=directorio_proyecto,
+            recuperacion_json=recuperacion_json,
+            sufijo_marca=sufijo_marca,
         )
     finally:
         _cerrar_log_de_analisis(handler_log)

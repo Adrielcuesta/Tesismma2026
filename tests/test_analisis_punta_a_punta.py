@@ -103,3 +103,72 @@ def test_un_fallo_al_guardar_el_parcial_no_tapa_el_error_original(entorno, monke
     monkeypatch.setattr(main.report_utils, "formatear_y_guardar_reporte", lambda *a, **kw: (_ for _ in ()).throw(OSError("disco lleno")))
     with pytest.raises(RuntimeError, match="error original"):
         _analizar()
+
+
+# --- Recuperación reusada (run_oferta --reusar-recuperacion): se verifican exactamente los pares del JSON, sin recuperar ni cargar embeddings ---
+
+REC = {"nombre_archivo_original": "oferta_prueba.pdf",
+       "secciones": [{"id": "3", "titulos": ["3 Alcance"], "candidatos": [{"norma": "NORM_01", "articulo": "4.2"}, {"norma": "NORM_01", "articulo": "9.9"}],
+                      "fragmentos": [{"norma": "NORM_01", "articulo": "4.2", "score": 0.91, "parte": 1}]},
+                     {"id": "4", "titulos": ["4 Alcance"], "fragmentos": [{"norma": "NORM_02", "articulo": "5.1", "score": 0.77, "parte": 1}]}],
+       "configuracion_analisis": {"perfil_recuperacion": "elegido", "embedding_backend": "gemini"}}
+
+
+@pytest.fixture
+def reuso(entorno, monkeypatch):
+    from scripts import huella_recuperacion, nube
+    monkeypatch.setattr(rag_components, "recuperar_seccion", lambda *a, **kw: pytest.fail("no debe recuperar: los pares vienen del JSON"))
+    monkeypatch.setattr(vector_db_manager, "cargar_indice_kb", lambda *a, **kw: pytest.fail("no debe abrir el índice de embeddings"))
+    monkeypatch.setattr(vector_db_manager, "get_embedding_function", lambda *a, **kw: pytest.fail("no debe cargar embeddings"))
+    monkeypatch.setattr(rag_components, "_get_reranker_model", lambda *a, **kw: pytest.fail("no debe cargar el reranker"))
+    textos = list(DOCS.values())
+    monkeypatch.setattr(nube, "_abrir_chroma", lambda: SimpleNamespace(get=lambda include: {"documents": [d.page_content for d in textos], "metadatas": [d.metadata for d in textos]}))
+    ruta = entorno / "recuperacion.json"
+    ruta.write_text(json.dumps(REC), encoding="utf-8")
+    vistos = []
+    original = main._verificar_seccion
+
+    def espia(seccion, docs, *a, **kw):
+        vistos.append((seccion["id"], [(d.metadata["norma"], d.metadata["articulo"], d.metadata.get("parte")) for d in docs]))
+        return original(seccion, docs, *a, **kw)
+    monkeypatch.setattr(main, "_verificar_seccion", espia)
+    return ruta, vistos, huella_recuperacion
+
+
+def test_con_recuperacion_reusada_se_verifican_exactamente_los_pares_del_json(reuso, entorno):
+    ruta, vistos, huella = reuso
+    main._analizar_por_secciones("modelo-falso", False, True, "20260101_000000", None, None, recuperacion_json=str(ruta))
+    assert vistos == [("3", [("NORM_01", "4.2", 1)]), ("4", [("NORM_02", "5.1", 1)])]
+    [salida] = [r for r in _jsons(entorno, "analisis_riesgos_*.json") if not r.endswith("_parcial.json")]
+    with open(salida, encoding="utf-8") as f:
+        datos = json.load(f)
+    cfg = datos["configuracion_analisis"]
+    assert cfg["recuperacion_reusada"] is True and cfg["recuperacion_json_sha256"] == huella.sha256_archivo(str(ruta)) and cfg["huella_pares"] == huella.huella_de_pares(REC["secciones"])
+    assert cfg["perfil_recuperacion"] == "elegido" and cfg["embedding_backend"] == "gemini" and cfg["condicion"] == "rag_seccion"
+    # el informe conserva los candidatos y los puntajes del JSON; el registro verifica los mismos pares
+    s3 = next(s for s in datos["secciones"] if s["id"] == "3")
+    assert [(c["norma"], c["articulo"]) for c in s3["candidatos"]] == [("NORM_01", "4.2"), ("NORM_01", "9.9")] and s3["fragmentos"][0]["score"] == 0.91
+    assert [r["veredicto"] for r in datos["registro_tecnico"] if not r.get("etapa")] == ["Incumple", "Cumple"]
+
+
+def test_sin_recuperacion_reusada_nada_cambia_en_el_json(entorno):
+    _analizar()
+    [ruta] = [r for r in _jsons(entorno, "analisis_riesgos_*.json") if not r.endswith("_parcial.json")]
+    with open(ruta, encoding="utf-8") as f:
+        cfg = json.load(f)["configuracion_analisis"]
+    assert cfg["embedding_backend"] == "bge-m3" and "recuperacion_reusada" not in cfg and "recuperacion_json_sha256" not in cfg
+
+
+def test_recuperacion_reusada_de_otra_oferta_o_sin_verificacion_falla(reuso, monkeypatch, tmp_path):
+    ruta, _, _ = reuso
+    otra = json.loads(json.dumps(REC))
+    otra["secciones"][0]["titulos"] = ["3 Otro título"]
+    ruta_otra = tmp_path / "otra.json"
+    ruta_otra.write_text(json.dumps(otra), encoding="utf-8")
+    with pytest.raises(main.AnalisisError, match="no coincide"):
+        main._analizar_por_secciones("modelo-falso", False, True, "20260101_000000", None, None, recuperacion_json=str(ruta_otra))
+    with pytest.raises(main.AnalisisError, match="solo se aplica"):
+        main._analizar_por_secciones("modelo-falso", False, False, "20260101_000000", None, None, recuperacion_json=str(ruta))
+    monkeypatch.setattr(config, "MODO_GENERACION", "lista")
+    with pytest.raises(main.AnalisisError, match="solo se aplica"):
+        main._analizar_por_secciones("modelo-falso", False, True, "20260101_000000", None, None, recuperacion_json=str(ruta))

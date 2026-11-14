@@ -125,7 +125,25 @@ PERFILES_RECUPERACION = {
               "ORACIONES_CIFRAS": ORACIONES_CIFRAS, "ORACIONES_N": ORACIONES_N, "ORACIONES_CUPO": ORACIONES_CUPO},
     "amplio": {"K_SUBSECCION": 20, "TOP_DENSA_SUBSECCION": 5, "TOP_N_SUBSECCION": 8, "VERIFICAR_TOPE": 30,
                "ORACIONES_CIFRAS": True, "ORACIONES_N": 2, "ORACIONES_CUPO": 10},
+    # «elegido»: la recuperación que sale de la curva (scripts.diagnostico_recuperacion curva); la comparten todos los LLM de la reevaluación. Ahora es un RELLENO igual a
+    # «local»: lo carga el usuario con el bloque que imprime curva_recuperacion_<fecha>.md y después pone PERFIL_ELEGIDO_CARGADO = True. Mientras tanto no se puede usar.
+    "elegido": {"EMBEDDING_BACKEND": "bge-m3", "K_SUBSECCION": K_SUBSECCION, "TOP_DENSA_SUBSECCION": TOP_DENSA_SUBSECCION, "TOP_N_SUBSECCION": TOP_N_SUBSECCION,
+                "VERIFICAR_TOPE": VERIFICAR_TOPE, "ORACIONES_CIFRAS": ORACIONES_CIFRAS, "ORACIONES_N": ORACIONES_N, "ORACIONES_CUPO": ORACIONES_CUPO},
 }
+PERFIL_ELEGIDO_CARGADO = False
+
+# Embedding con el que se indexa la KB y se busca (scripts.embeddings.BACKENDS): bge-m3 es el de v1 y conserva sus rutas; cada otro backend tiene su propio índice,
+# separado del de BGE-M3, que no se toca. Un perfil de recuperación puede cambiarlo (clave EMBEDDING_BACKEND).
+EMBEDDING_BACKEND = "bge-m3"
+
+
+def rutas_indice(backend: str = None) -> dict:
+    """{'path', 'collection', 'manifest'} del índice de la KB por artículos para el backend de embeddings (por defecto EMBEDDING_BACKEND)."""
+    backend = backend or EMBEDDING_BACKEND
+    if backend == "bge-m3":
+        return {"path": CHROMA_DB_PATH_KB, "collection": CHROMA_COLLECTION_KB, "manifest": CHROMA_MANIFEST_PATH_KB}
+    ruta = f"{CHROMA_DB_PATH_KB}_{backend}"
+    return {"path": ruta, "collection": f"{CHROMA_COLLECTION_KB}_{backend.replace('-', '_')}", "manifest": ruta + "_manifest.json"}
 # Líneas más cortas que esto (normalizadas, sin dígitos) no se quitan como encabezado/pie en la oferta:
 # "Página 3 de 9" (9) sí se quita; unidades de tablas como "1.600 mm" (4) se conservan
 MIN_LARGO_ENCABEZADO_OFERTA = 6

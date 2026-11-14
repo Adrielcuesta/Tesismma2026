@@ -25,7 +25,7 @@ from langchain_core.documents import Document
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableLambda
 
-from . import clasificacion, comentario, config, costo, document_utils, lineamientos, rag_components
+from . import clasificacion, comentario, config, costo, document_utils, huella_recuperacion, lineamientos, rag_components
 from .main import AnalisisError, Llamadas, LlamadaFallida, _guardar_y_generar_dashboard, _verificar_seccion, _estadisticas_tokens, normalizaciones_formato
 from .schemas import ClasificacionRiesgo, LLMResponse, RiskReport, SeccionInforme, SourceChunk, VerificacionArticulo
 
@@ -256,6 +256,7 @@ def armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, p
     cfg = dict(local.get("configuracion_analisis") or {})
     cfg.update(modelo_llm_usado=f"{proveedor}:{modelo}", display_name_modelo=f"{modelo} ({proveedor}, nube)", temperature=0 if not thinking else config.VERIF_TEMPERATURE,
                seed=config.OLLAMA_SEED, thinking_verificacion=bool(thinking), recuperacion_reusada=True, max_pares=max_pares,
+               huella_pares=huella_recuperacion.huella_de_pares(local.get("secciones") or []),
                llamadas_llm={k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario")},
                llamadas_fallidas=llamadas.get("fallidas", 0), costo_computacional=costo_comp, hardware=hardware, llamadas_detalle=llamadas.detalle,
                tokens_generados_por_tipo=_estadisticas_tokens(llamadas), tiempos_s={"total": round(tiempo_total, 2), "por_seccion": por_seccion})
@@ -296,6 +297,7 @@ def correr_oferta(ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, li
     reporte = armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, proveedor, concurrencia, gasto_oferta, time.perf_counter() - t0,
                             thinking, max_pares, detenida, normalizaciones_formato() - normalizaciones_antes,
                             {"verificacion": cliente_verif.formato, "clasificacion": cliente_clasif.formato})
+    reporte.configuracion_analisis["recuperacion_json_sha256"] = huella_recuperacion.sha256_archivo(ruta_local)      # el archivo de recuperación que se reusó
     perfil = (local.get("configuracion_analisis") or {}).get("perfil_recuperacion")    # solo los JSON de scripts.recuperar lo traen
     sufijo = sufijo_corrida(proveedor, modelo, thinking, perfil, max_pares)
     marca = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{sufijo}"

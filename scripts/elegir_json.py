@@ -1,6 +1,6 @@
 # scripts/elegir_json.py
 """Elige, en la carpeta de resultados de una oferta, el JSON de analisis mas reciente con una condicion dada (configuracion_analisis.condicion),
-sin mirar el nombre del archivo. Excluye los reclasificados, los parciales y los de la nube (deepinfra).
+sin mirar el nombre del archivo. Excluye los reclasificados, los parciales, los de la nube (deepinfra) y los de la recuperación elegida (elegido).
 
 Uso:
   python -m scripts.elegir_json <carpeta> [--condicion sin_rag] [--modo-generacion verificacion|lista]
@@ -11,7 +11,7 @@ import json
 import os
 import sys
 
-EXCLUIDOS = ("reclasificado", "parcial", "deepinfra")
+EXCLUIDOS = ("reclasificado", "parcial", "deepinfra", "-elegido")   # «elegido»: corridas locales con la recuperación elegida (se piden por sufijo)
 
 
 def _campo_de(ruta: str, campo: str):

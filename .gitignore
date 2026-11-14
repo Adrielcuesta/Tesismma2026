@@ -24,6 +24,8 @@ datos/ChromaDB_Test_Super_Minimal/
 datos/ChromaDB_V1_manifest.json
 datos/ChromaDB_KB_Ferroviaria/
 datos/ChromaDB_KB_Ferroviaria_manifest.json
+datos/ChromaDB_KB_Ferroviaria_*/
+datos/ChromaDB_KB_Ferroviaria_*_manifest.json
 
 # KB y proyecto subidos desde la app
 datos/BaseConocimiento_Usuario/

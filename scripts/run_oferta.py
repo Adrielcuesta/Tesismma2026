@@ -1,10 +1,12 @@
 # scripts/run_oferta.py
 """Analiza una oferta desde la consola e imprime el tiempo por etapa.
 
-    python -m scripts.run_oferta <archivo.pdf|docx> [--modelo ID] [--sin-rag] [--sin-reranker] [--oferta P1]
+    python -m scripts.run_oferta <archivo.pdf|docx> [--modelo ID] [--sin-rag] [--sin-reranker] [--oferta P1] [--reusar-recuperacion <json de scripts.recuperar>]
 
 Reutiliza run_analysis: el JSON (con timestamp) y el dashboard quedan en datos/Resultados/<oferta>/.
 Imprime el volumen (brechas, riesgos, solicitudes, alertas), el tiempo por etapa y el comando de evaluar.py con la ruta del JSON.
+Con --reusar-recuperacion no se recupera: se verifican exactamente los pares del JSON de scripts.recuperar (sin cargar embeddings ni reranker) y la corrida queda
+con el sufijo «local-<modelo>-<perfil>» (p. ej. «local-qwen3-8b-elegido») para poder pedirla por sufijo en la tabla comparativa.
 """
 import argparse
 import glob
@@ -32,8 +34,11 @@ ETAPAS = [
 
 
 def _buscar_json(ruta_html: str):
-    """El JSON de la corrida comparte carpeta y timestamp con el dashboard (dashboard_<base>_<fecha>_<hora>.html)."""
+    """El JSON de la corrida comparte carpeta y marca con el dashboard (dashboard_<base>_<marca>.html -> analisis_riesgos_<base>_<marca>.json; la marca puede llevar sufijo)."""
     carpeta, nombre = os.path.split(ruta_html)
+    directo = os.path.join(carpeta, nombre.replace("dashboard_", "analisis_riesgos_", 1)[:-len(".html")] + ".json")
+    if os.path.isfile(directo):
+        return directo
     timestamp = "_".join(os.path.splitext(nombre)[0].split("_")[-2:])
     candidatos = glob.glob(os.path.join(carpeta, f"analisis_riesgos_*_{timestamp}.json"))
     return candidatos[0] if candidatos else None
@@ -45,6 +50,11 @@ def _oferta_de(archivo: str, oferta: str = None) -> str:
         return oferta
     m = re.search(r"(?<![A-Za-z0-9])P([1-4])(?![0-9])", os.path.basename(archivo), re.IGNORECASE)
     return f"P{m.group(1)}" if m else "<P1|P2|P3|P4>"
+
+
+def sufijo_local(modelo: str, perfil) -> str:
+    """Sufijo de la corrida local con recuperación reusada: «local-<modelo>-<perfil>», solo [a-z0-9.-] (evaluar.py deduce la oferta del nombre)."""
+    return re.sub(r"[^a-z0-9.\-]+", "-", f"local-{modelo}".lower()).strip("-") + (f"-{perfil}" if perfil else "")
 
 
 def comando_evaluar(ruta_json: str, oferta: str) -> str:
@@ -70,6 +80,7 @@ def main(argv=None) -> int:
     parser.add_argument("--modelo", default=config.OLLAMA_MODEL, help=f"Modelo de generación (por defecto {config.OLLAMA_MODEL})")
     parser.add_argument("--sin-rag", action="store_true", help="Condición sin_rag: sin recuperar fragmentos de la KB")
     parser.add_argument("--sin-reranker", action="store_true", help="Condición rag_seccion_sin_reranker")
+    parser.add_argument("--reusar-recuperacion", metavar="JSON", help="JSON de scripts.recuperar: verifica exactamente esos pares, sin recuperar (solo modo verificación)")
     parser.add_argument("--oferta", help="P1, P2, P3 o P4 (para el comando de evaluar.py; por defecto se deduce del nombre del archivo)")
     args = parser.parse_args(argv)
 
@@ -78,13 +89,24 @@ def main(argv=None) -> int:
         return 1
     if args.sin_reranker:
         config.USE_RERANKER = False
+    extra = {}
+    if args.reusar_recuperacion:
+        if args.sin_rag:
+            print("--reusar-recuperacion no se combina con --sin-rag.", file=sys.stderr)
+            return 1
+        if not os.path.isfile(args.reusar_recuperacion):
+            print(f"No existe el JSON de recuperación: {args.reusar_recuperacion}", file=sys.stderr)
+            return 1
+        with open(args.reusar_recuperacion, encoding="utf-8") as f:
+            perfil = (json.load(f).get("configuracion_analisis") or {}).get("perfil_recuperacion")
+        extra = {"recuperacion_json": os.path.abspath(args.reusar_recuperacion), "sufijo_marca": sufijo_local(args.modelo, perfil)}
 
     t0 = time.perf_counter()
     # run_analysis recibe una carpeta con la oferta: se copia el archivo a una carpeta temporal
     with tempfile.TemporaryDirectory() as carpeta_tmp:
         shutil.copy(args.archivo, carpeta_tmp)
         try:
-            ruta_html_rel = run_analysis(args.modelo, usar_rag=not args.sin_rag, directorio_proyecto=carpeta_tmp)
+            ruta_html_rel = run_analysis(args.modelo, usar_rag=not args.sin_rag, directorio_proyecto=carpeta_tmp, **extra)
         except AnalisisError as e:
             print(f"Error en el análisis: {e}", file=sys.stderr)
             return 1
