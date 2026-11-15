@@ -294,7 +294,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         "responsable_ok": sum(t["responsable_obtenido"] == t["responsable_esperado"] for t in encontradas),
         "nivel_ok": sum(t["nivel_obtenido"] == t["nivel_esperado"] for t in encontradas),
         "confusion": confusion, "n_espejos": len(espejos), "falsas_alarmas": falsas, "espejos": marcados,
-        "extras": extras, "volumen": volumen, "n_riesgo": len(items), "precision": None, "precision_k": None, "precision_n": None,
+        "extras": extras, "volumen": volumen, "n_riesgo": len(items), "precision": None, "precision_k": None, "precision_n": None, "extras_etiquetados": 0,
         "juez": None, "pares_juez_humano": [], "control_juez": None}
 
 
@@ -319,10 +319,17 @@ def calcular_precision(ev, revision):
     return c[0] / c[1] if c else None
 
 
+def contar_etiquetados(ev, revision) -> int:
+    """Extras de la oferta con «valido» sí/no en la revisión."""
+    por_clave = {_clave_extra(r.get("seccion"), r.get("norma"), r.get("articulo"), r.get("cita")): norm(r.get("valido")) for r in revision or []}
+    return sum(por_clave.get(_clave_extra(x["seccion"], x["norma"], x["articulo"], x["cita"])) in ("si", "no") for x in ev["extras"])
+
+
 def asignar_precision(ev, revision):
     c = conteo_precision(ev, revision) if ev["modo"] == "brechas" else None
     ev["precision_k"], ev["precision_n"] = c if c else (None, None)
     ev["precision"] = c[0] / c[1] if c else None
+    ev["extras_etiquetados"] = contar_etiquetados(ev, revision)
 
 
 def revision_con_marcas_juez(revision, juez_rows):
@@ -399,6 +406,7 @@ def combinar(evs):
               coincidencias=[x for e in evs for x in e["coincidencias"]], hay_registro=all(e["hay_registro"] for e in evs),
               por_frase_validada=todo("por_frase_validada"), precision_k=todo("precision_k"), precision_n=todo("precision_n"))
     ev["precision"] = ev["precision_k"] / ev["precision_n"] if ev["precision_n"] else None
+    ev["extras_etiquetados"] = sum(e.get("extras_etiquetados", 0) for e in evs)
     ev["juez"] = None if any(e["juez"] is None for e in evs) else {k: sum(e["juez"][k] for e in evs) for k in ("estricta", "amplia", "n")}
     ev["control_juez"] = None if any(e.get("control_juez") is None for e in evs) else {k: sum(e["control_juez"][k] for e in evs) for k in ("n", "no_valida")}
     ev["pares_juez_humano"] = [x for e in evs for x in e["pares_juez_humano"]]

@@ -390,6 +390,37 @@ def test_tabla_calcula_metricas_y_omite_conjuntos_incompletos():
     assert "## P9 solo" in md and "1/2 (50%" in md and "1:02:05" in md
 
 
+def _con_etiquetas(valores):
+    """_evaluado() con los dos extras etiquetados con `valores` (None = sin etiquetar)."""
+    e = _evaluado()
+    filas = [{"seccion": x["seccion"], "norma": x["norma"], "articulo": x["articulo"], "cita": x["cita"], "valido": v or ""} for x, v in zip(e["extras"], valores)]
+    ev.asignar_precision(e, filas)
+    return e
+
+
+def test_tabla_precision_humana_y_extras_etiquetados_por_conjunto():
+    completo = tc.calcular_filas({"cfg": {"P8": _con_etiquetas(["sí", "no"]), "P9": _con_etiquetas(["sí", "sí"])}}, {"P8–P9": ["P8", "P9"]})[0]
+    assert completo["precision_humana"] == pytest.approx((2 + 3) / 6)             # 2 trampas encontradas + 3 extras válidos, de 6 brechas
+    assert (completo["extras_etiquetados"], completo["extras_total"]) == (4, 4)
+    fila = tc.fila_texto(completo)
+    assert fila[tc.ENCABEZADO.index("Precisión humana")] == "83%" and fila[tc.ENCABEZADO.index("Extras etiquetados")] == "4/4"
+    md = tc.tabla_md([completo])
+    assert "precisión humana 83% = (2 trampas encontradas + 3 extras válidos) / 6 brechas; extras etiquetados 4/4" in md
+    incompleto = tc.calcular_filas({"cfg": {"P8": _con_etiquetas(["sí", "no"]), "P9": _con_etiquetas(["sí", None])}}, {"P8–P9": ["P8", "P9"]})[0]
+    assert incompleto["precision_humana"] is None and (incompleto["extras_etiquetados"], incompleto["extras_total"]) == (3, 4)
+    fila = tc.fila_texto(incompleto)
+    assert fila[tc.ENCABEZADO.index("Precisión humana")] == "n/d (cobertura 3/4)" and fila[tc.ENCABEZADO.index("Extras etiquetados")] == "3/4"
+    assert "precisión humana n/d: hay 3 de 4 extras etiquetados" in tc.tabla_md([incompleto])
+
+
+def test_tabla_precision_humana_en_el_csv(tmp_path):
+    filas = tc.calcular_filas({"cfg": {"P9": _con_etiquetas(["sí", "no"])}, "sin": {"P9": _evaluado()}}, {"P9": ["P9"]})
+    tc.guardar_csv(filas, str(tmp_path / "t.csv"))
+    por_cfg = {f["configuracion"]: f for f in _leer(str(tmp_path / "t.csv"))}
+    assert float(por_cfg["cfg"]["precision_humana"]) == pytest.approx(2 / 3) and (por_cfg["cfg"]["extras_etiquetados"], por_cfg["cfg"]["extras_total"]) == ("2", "2")
+    assert por_cfg["sin"]["precision_humana"] == "" and por_cfg["sin"]["extras_etiquetados"] == "0"      # sin etiquetas: vacío y 0/2
+
+
 def test_tabla_guarda_csv(tmp_path):
     tc.guardar_csv(_filas(), str(tmp_path / "t.csv"))
     filas = _leer(str(tmp_path / "t.csv"))
