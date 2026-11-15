@@ -353,3 +353,56 @@ def test_salida_de_la_reevaluacion_no_es_resultados_finales():
     assert os.path.normpath(destino) != os.path.normpath(tc.SALIDA)
     assert tc.carpeta_salida(final) == tc.SALIDA                      # v1 sigue escribiendo en resultados_finales
     assert tc.carpeta_salida(reeval, "otra") == "otra"                # --salida explícito manda
+
+
+# --- Perfil de recuperación, IC de Wilson y recall por oferta (solo se agregan: no cambia ningún número de la tabla) ---
+
+def _por_oferta(e, oferta, perfil="elegido"):
+    import copy
+    copia = copy.deepcopy(e)
+    copia["oferta"], copia["recuperacion"]["perfil"] = oferta, perfil
+    ev.asignar_precision(copia, [])          # sin extras: la precisión es (encontradas + 0) / brechas
+    return copia
+
+
+def test_el_formato_del_intervalo_es_valor_y_corchetes_en_puntos():
+    assert tc._pct_ic(47, 60) == "78 % [66–87]"
+    assert tc._pct_ic(0, 0) == "n/d" and tc._pct_ic(None, 10) == "n/d"
+
+
+def test_las_filas_traen_perfil_recall_por_oferta_y_el_ic_de_la_precision():
+    filas = tc.calcular_filas({"cfg": {"P3": _por_oferta(A, "P3"), "P4": _por_oferta(B, "P4")}}, {"P3+P4": ["P3", "P4"]})
+    (f,) = filas
+    assert f["perfil_recuperacion"] == "elegido" and f["recall_por_oferta"] == [("P3", 2, 4), ("P4", 1, 4)]
+    assert (f["precision_humana_k"], f["precision_humana_n"]) == (3, 3) and f["precision_humana_ic"] == ev.wilson(3, 3)
+    mixto = tc.calcular_filas({"cfg": {"P3": _por_oferta(A, "P3"), "P4": _por_oferta(B, "P4", perfil=None)}}, {"P3+P4": ["P3", "P4"]})
+    assert mixto[0]["perfil_recuperacion"] == "mixto"
+
+
+def test_la_seccion_de_intervalos_da_total_p3p4_falsas_precision_y_rango_por_oferta():
+    evaluadas = {"cfg": {"P1": _por_oferta(A, "P1"), "P3": _por_oferta(A, "P3"), "P4": _por_oferta(B, "P4")}}
+    filas = tc.calcular_filas(evaluadas, {"P3+P4": ["P3", "P4"], "total": ["P1", "P3", "P4"]})
+    md = "\n".join(tc.seccion_intervalos_md(filas))
+    lo, hi = ev.wilson(5, 12)
+    assert "## Intervalos de confianza (Wilson 95 %) y recall por oferta" in md
+    assert f"| cfg | P1+P3+P4 | {5 / 12 * 100:.0f} % [{lo * 100:.0f}–{hi * 100:.0f}] | {tc._pct_ic(3, 8)} | {tc._pct_ic(0, 3)} | {tc._pct_ic(5, 5)} |" in md
+    assert "P1 2/4, P3 2/4, P4 1/4 (rango 25–50 %)" in md
+    # sin etiquetas completas la precisión queda n/d y la tabla original no cambia
+    filas[1]["precision_humana"] = None
+    assert "| n/d | P1 2/4" in "\n".join(tc.seccion_intervalos_md(filas))
+    assert "Intervalos de confianza" not in tc.tabla_md(filas)
+
+
+def test_el_csv_agrega_las_columnas_nuevas_al_final_sin_mover_las_anteriores(tmp_path):
+    import csv as _csv
+    filas = tc.calcular_filas({"cfg": {"P3": _por_oferta(A, "P3"), "P4": _por_oferta(B, "P4")}}, {"P3+P4": ["P3", "P4"]})
+    ruta = tmp_path / "t.csv"
+    tc.guardar_csv(filas, str(ruta))
+    with open(ruta, encoding="utf-8-sig", newline="") as fh:
+        lector = _csv.DictReader(fh, delimiter=";")
+        (fila,) = list(lector)
+        campos = lector.fieldnames
+    assert campos[:3] == ["configuracion", "conjunto", "ofertas"] and campos[-len(tc.CAMPOS_AGREGADOS):] == tc.CAMPOS_AGREGADOS
+    assert campos.index("perdida_otra_causa") == len(campos) - len(tc.CAMPOS_AGREGADOS) - 1
+    assert (fila["perfil_recuperacion"], fila["recall_por_oferta"], fila["recall_oferta_min"], fila["recall_oferta_max"]) == ("elegido", "P3 2/4; P4 1/4", "0.25", "0.5")
+    assert float(fila["precision_humana_ic_inf"]) == pytest.approx(ev.wilson(3, 3)[0]) and fila["encontradas"] == "3" and fila["recall"] == "0.375"

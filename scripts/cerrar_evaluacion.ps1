@@ -2,20 +2,23 @@
 # Cierra la evaluacion de todas las configuraciones de un archivo de configuracion (el mismo de evaluacion\tabla_comparativa.py):
 #   Para cada configuracion:
 #     1. evaluar --resultado de cada oferta con JSON (genera <json>_extras.csv).
-#     2. juez externo sobre todas las ofertas de la configuracion (un solo comando, un solo freno de gasto; genera <json>_juez.csv),
+#     2. (solo con -ConJuez) juez externo sobre todas las ofertas de la configuracion (un solo comando, un solo freno de gasto; genera <json>_juez.csv),
 #        y despues el mismo juez con --espejos (control sobre falsos positivos conocidos; genera <json>_juez_espejos.csv).
-#     3. evaluar --resultado de nuevo (ahora con precision segun el juez, F1/F2 y kappa).
+#     3. (solo con -ConJuez) evaluar --resultado de nuevo (ahora con precision segun el juez, F1/F2 y kappa).
+#   El juez (DeepSeek-V3.2) esta APAGADO por defecto. Motivo: descartado: en el control con casos conformes tuvo especificidad del 41 %;
+#   la precision se mide con etiqueta humana (<json>_extras.csv). El codigo del juez (evaluacion\juez.py) se conserva y se activa con -ConJuez.
 #   Al final: tabla comparativa y graficos en evaluacion\resultados_finales\.
 #   Las ofertas sin JSON (ruta vacia, inexistente o un "auto" sin resultado todavia) se omiten y queda avisado.
 #
 # Uso, desde la raiz del repositorio:
-#   powershell -ExecutionPolicy Bypass -File .\scripts\cerrar_evaluacion.ps1 -Config evaluacion\config_tabla.json [-SoloHumo]
+#   powershell -ExecutionPolicy Bypass -File .\scripts\cerrar_evaluacion.ps1 -Config evaluacion\config_tabla.json [-ConJuez] [-SoloHumo]
 #
-# -SoloHumo corre el juez con --max-items 5 por JSON (prueba de humo, gasto minimo).
+# -ConJuez activa el juez externo (gasta API, tope PRESUPUESTO_JUEZ_USD); sin el, no se llama a ninguna API.
+# -SoloHumo (junto con -ConJuez) corre el juez con --max-items 5 por JSON (prueba de humo, gasto minimo).
 # Toda la salida va a datos\Resultados\cerrar_evaluacion_<fecha>.txt (Tee-Object) y a la consola (Out-Host).
 # Las funciones no devuelven nada: el estado queda en variables $script:. Si una etapa falla, queda en el log y se sigue.
 # El script es ASCII a proposito: PowerShell 5.1 lee mal los acentos de un archivo sin BOM.
-param([string]$Config, [switch]$SoloHumo)
+param([string]$Config, [switch]$ConJuez, [switch]$SoloHumo)
 
 $ErrorActionPreference = "Continue"
 $script:raiz = Split-Path -Parent $PSScriptRoot
@@ -105,6 +108,7 @@ function Juzgar-Ofertas {
 
 $relojTotal = [System.Diagnostics.Stopwatch]::StartNew()
 Escribir-Log ("Cierre de evaluacion{0}. Log: {1}" -f $(if ($SoloHumo) { " (solo humo)" } else { "" }), $script:log)
+if (-not $ConJuez) { Escribir-Log "Juez externo apagado (usar -ConJuez para activarlo): la precision se mide con etiqueta humana." }
 
 if (-not $Config -or -not (Test-Path $Config)) {
     Escribir-Log ("FALLO: indica -Config <json> con una ruta que exista (recibido: '{0}')." -f $Config)
@@ -119,8 +123,10 @@ else {
         else {
             $jsons = $script:jsons
             Medir-Etapa ("evaluar (1) {0}" -f $nombre) { Evaluar-Ofertas $nombre $jsons }
-            Medir-Etapa ("juez {0}" -f $nombre) { Juzgar-Ofertas $nombre $jsons }
-            Medir-Etapa ("evaluar (2) {0}" -f $nombre) { Evaluar-Ofertas $nombre $jsons }
+            if ($ConJuez) {
+                Medir-Etapa ("juez {0}" -f $nombre) { Juzgar-Ofertas $nombre $jsons }
+                Medir-Etapa ("evaluar (2) {0}" -f $nombre) { Evaluar-Ofertas $nombre $jsons }
+            }
         }
     }
     Medir-Etapa "tabla comparativa" {

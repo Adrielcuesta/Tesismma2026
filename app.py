@@ -15,12 +15,12 @@ if PROJECT_ROOT not in sys.path:
 
 try:
     from scripts.main import run_analysis, AnalisisError
-    from scripts import config
+    from scripts import config, recuperar
     from scripts.descargar_modelo import descargar_modelo
 except ImportError as e:
     logging.basicConfig(level=logging.ERROR)
     logging.error(f"Error crítico al importar módulos necesarios: {e}")
-    run_analysis, AnalisisError, config, descargar_modelo = None, Exception, None, None
+    run_analysis, AnalisisError, config, descargar_modelo, recuperar = None, Exception, None, None, None
 
 # --- Creación y Configuración de la App Flask ---
 app = Flask(__name__)
@@ -217,7 +217,8 @@ def home():
     if run_analysis is None or config is None:
         flash("Error crítico: La aplicación no está configurada correctamente. Revise los logs del servidor.", "error")
 
-    llm_models_for_template = getattr(config, 'LLM_MODELS', {})
+    # El MVP ofrece gpt-oss-120b (DeepInfra, por defecto) y el modelo local; el resto de LLM_MODELS queda fuera de la interfaz
+    llm_models_for_template = {m: config.LLM_MODELS[m] for m in config.MODELOS_APP if m in config.LLM_MODELS} if config else {}
     return render_template_string(HOME_PAGE_HTML, footer_info=FOOTER_INFO, llm_models=llm_models_for_template, CURRENT_YEAR=CURRENT_YEAR)
 
 @app.route('/analyze', methods=['POST'])
@@ -289,7 +290,9 @@ def analyze_route():
             return redirect(url_for('home'))
 
     try:
-        app.logger.info(f"Llamando a run_analysis() con modelo='{selected_llm_model_id}'")
+        # El MVP corre siempre el perfil de recuperación elegido (config.PERFIL_APP_DEFECTO), con cualquiera de los dos modelos
+        recuperar.aplicar_perfil(config.PERFIL_APP_DEFECTO)
+        app.logger.info(f"Llamando a run_analysis() con modelo='{selected_llm_model_id}' y perfil de recuperación '{config.PERFIL_APP_DEFECTO}'")
 
         dashboard_relative_path = run_analysis(
             selected_llm_model_id=selected_llm_model_id,

@@ -45,11 +45,11 @@ def _buscar_json(ruta_html: str):
 
 
 def _oferta_de(archivo: str, oferta: str = None) -> str:
-    """P1..P4 indicado o deducido del nombre del archivo; si no, un marcador para completar."""
+    """P1..P5 indicado o deducido del nombre del archivo; si no, un marcador para completar."""
     if oferta:
         return oferta
-    m = re.search(r"(?<![A-Za-z0-9])P([1-4])(?![0-9])", os.path.basename(archivo), re.IGNORECASE)
-    return f"P{m.group(1)}" if m else "<P1|P2|P3|P4>"
+    m = re.search(r"(?<![A-Za-z0-9])P([1-5])(?![0-9])", os.path.basename(archivo), re.IGNORECASE)
+    return f"P{m.group(1)}" if m else "<P1|P2|P3|P4|P5>"
 
 
 def sufijo_local(modelo: str, perfil) -> str:

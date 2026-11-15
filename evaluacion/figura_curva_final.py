@@ -34,9 +34,10 @@ CONFIG_VALIDACION = ("Qwen3-32B (elegida)", "gpt-oss-120b esfuerzo bajo (elegida
 # Sobre P1+P2 da 28/30 trampas y 721 pares verificados (evaluacion/diagnosticos/curva_recuperacion_2026-11-14.md y el commit); el cupo 15 y el tope 39 no están en la serie
 # graficada (cupo 8), por eso es una constante y no una fila del CSV.
 ELEGIDA = {"aciertos": 28, "total": 30, "pares": 721, "k": 10}
-# Validación de la elegida sobre P3+P4 (conjunto de prueba, segunda evaluación): 26/30 trampas. Dato dado por el autor de la tesis tras la reevaluación; sus pares salen de la
-# tabla comparativa si están, y si no se dibuja sobre los pares de la elegida en P1+P2.
-VALIDACION = {"aciertos": 26, "total": 30}
+# La validación de la elegida sobre P3+P4 (segunda evaluación) NO es una constante: se lee de la tabla comparativa de la reevaluación (leer_validacion): el Recall@artículo
+# («recall_articulo» sobre «trampas») de la recuperación elegida, que tiene que ser el mismo en todas las filas con perfil_recuperacion «elegido» y ofertas P3+P4.
+# Si la tabla no existe, no hay esas filas o no coinciden, falla con un mensaje claro.
+PERFIL_VALIDACION = "elegido"
 # K de referencia (curva_recuperacion_2026-11-14.md): regla marginal (< 0,5 trampas por cada 100 pares durante 3 pasos), elegido y codo de Kneedle
 K_REFERENCIA = {6: "regla marginal", 10: "elegido", 15: "codo (Kneedle)"}
 UMBRAL_MARGINAL, PASOS_MARGINAL = 0.5, 3
@@ -185,14 +186,45 @@ def pares_de_validacion(filas: list, configuraciones: tuple = CONFIG_VALIDACION)
     return None
 
 
-def factores(ruta_tabla: str, usd_arg=None, seg_arg=None) -> dict:
-    """{'usd': (valor, origen), 'seg': (valor, origen), 'pares_validacion': (pares, origen) | None}. Prioridad: argumento, tabla, valor por defecto."""
+def leer_validacion(filas: list, ruta_tabla: str = ""):
+    """({'aciertos', 'total'}, origen): Recall@artículo de la recuperación elegida en P3+P4 según la tabla comparativa. Es una propiedad de la recuperación, no del LLM:
+    se leen TODAS las filas con perfil_recuperacion «elegido» y ofertas P3+P4 y tienen que dar el mismo recall_articulo / trampas; si alguna difiere, no trae el valor
+    («n/d») o no hay ninguna, falla con un mensaje claro (no hay valor por defecto)."""
+    destino = ruta_tabla or "la tabla comparativa"
+    if not filas:
+        raise SystemExit(f"No se puede leer la validación en P3+P4: no existe la tabla comparativa «{ruta_tabla}» (o está vacía). Generala con "
+                         "evaluacion.tabla_comparativa --config evaluacion/config_reeval.json, o indicá otra con --tabla.")
+    if "perfil_recuperacion" not in filas[0]:
+        raise SystemExit(f"No se puede leer la validación en P3+P4: {destino} no trae la columna «perfil_recuperacion»; regenerala con evaluacion.tabla_comparativa.")
+    elegidas = [f for f in filas if (f.get("perfil_recuperacion") or "") == PERFIL_VALIDACION and (f.get("ofertas") or "") == "P3+P4"]
+    if not elegidas:
+        raise SystemExit(f"No se puede leer la validación en P3+P4: {destino} no tiene una fila con perfil_recuperacion «{PERFIL_VALIDACION}» y ofertas P3+P4.")
+    valores = {}
+    for f in elegidas:
+        aciertos, total = _valor(f.get("recall_articulo")), _valor(f.get("trampas"))
+        if aciertos is None or not total:
+            raise SystemExit(f"No se puede leer la validación en P3+P4: «{f.get('configuracion')}» (perfil {PERFIL_VALIDACION}, P3+P4) no trae «recall_articulo» y «trampas» "
+                             "(con «n/d» no se calcula: el resultado tiene que traer registro técnico).")
+        valores.setdefault((int(aciertos), int(total)), []).append(f.get("configuracion"))
+    if len(valores) > 1:
+        detalle = "; ".join(f"{a}/{t}: {', '.join(nombres)}" for (a, t), nombres in sorted(valores.items()))
+        raise SystemExit(f"El Recall@artículo de la recuperación elegida en P3+P4 no es el mismo en todas las configuraciones con perfil {PERFIL_VALIDACION} ({detalle}). "
+                         "Con los mismos pares tiene que coincidir: revisá pares fallidos o con tiempo agotado.")
+    (aciertos, total), nombres = next(iter(valores.items()))
+    return ({"aciertos": aciertos, "total": total},
+            f"Recall@artículo de la recuperación elegida: {aciertos}/{total}, igual en las {len(nombres)} configuraciones con perfil {PERFIL_VALIDACION} y ofertas P3+P4 "
+            f"({', '.join(nombres)}), de {destino}")
+
+
+def factores(ruta_tabla: str, usd_arg=None, seg_arg=None, con_validacion: bool = False) -> dict:
+    """{'usd': (valor, origen), 'seg': (valor, origen), 'pares_validacion': (pares, origen) | None, 'validacion': ({'aciertos', 'total'}, origen) | None}.
+    Prioridad: argumento, tabla, valor por defecto. Con `con_validacion` la validación en P3+P4 es obligatoria y se lee de la tabla (leer_validacion); sin ella, `validacion` es None."""
     filas = _filas_tabla(ruta_tabla) if ruta_tabla and os.path.isfile(ruta_tabla) else []
     usd = (usd_arg, "argumento --usd-por-par") if usd_arg is not None else (factor_por_par(filas, CONFIG_USD, "costo_usd")
                                                                            or (USD_POR_PAR_DEFECTO, "valor por defecto (la tabla no tiene costo y pares de gpt-oss elegida)"))
     seg = (seg_arg, "argumento --seg-por-par") if seg_arg is not None else (factor_por_par(filas, CONFIG_SEG, "tiempo_s")
                                                                            or (SEG_POR_PAR_DEFECTO, "valor por defecto (la tabla no tiene tiempo y pares del 8B local)"))
-    return {"usd": usd, "seg": seg, "pares_validacion": pares_de_validacion(filas)}
+    return {"usd": usd, "seg": seg, "pares_validacion": pares_de_validacion(filas), "validacion": leer_validacion(filas, ruta_tabla) if con_validacion else None}
 
 
 def _n(v, d: int = 0) -> str:
@@ -305,8 +337,9 @@ def figura(serie: list, ajuste: dict, fact: dict, ruta_png: str, ks_ref: dict = 
         eje.scatter([eleg["pares"]], [eleg["aciertos"] / eleg["total"]], marker="*", s=420, color=MAGENTA, edgecolor="white", linewidth=1.2, zorder=6,
                     label=f"Elegida: {eleg['aciertos']}/{eleg['total']} con {eleg['pares']} pares (K=10, cupo 15, tope 39)")
         x_val = pares_validacion or eleg["pares"]
-        eje.scatter([x_val], [VALIDACION["aciertos"] / VALIDACION["total"]], marker="D", s=170, color=AQUA, edgecolor="white", linewidth=1.2, zorder=6,
-                    label=f"Validación P3+P4: {VALIDACION['aciertos']}/{VALIDACION['total']}" + ("" if pares_validacion else " (sobre los pares de P1+P2)"))
+        val = fact["validacion"][0]
+        eje.scatter([x_val], [val["aciertos"] / val["total"]], marker="D", s=170, color=AQUA, edgecolor="white", linewidth=1.2, zorder=6,
+                    label=f"Validación P3+P4: {val['aciertos']}/{val['total']}" + ("" if pares_validacion else " (sobre los pares de P1+P2)"))
     eje.set_xscale("log")
     eje.set_xlabel("Pares verificados (escala log)")
     eje.set_ylabel("Recall de trampas")
@@ -404,11 +437,14 @@ def informe_md(serie: list, ajuste: dict, fact: dict, c: dict, ks: dict, ruta_cs
     if bge:
         from_wilson = _wilson(ELEGIDA["aciertos"], ELEGIDA["total"])
         L.append(fila("**configuración elegida** (constante)", "10 (cupo 15, tope 39)", ELEGIDA["pares"], ELEGIDA["aciertos"], ELEGIDA["total"], *from_wilson))
-        v = _wilson(VALIDACION["aciertos"], VALIDACION["total"])
-        L.append(f"| validación de la elegida en P3+P4 (constante) | — | {_miles(pv[0])} | {VALIDACION['aciertos']}/{VALIDACION['total']} ({_pc(VALIDACION['aciertos'] / VALIDACION['total'])}; {_pc(v[0])}–{_pc(v[1])}) | "
-                 f"{_n(pv[0] * usd, 2)} | {_n(pv[0] * seg / 3600, 1)} |" if pv else f"| validación de la elegida en P3+P4 (constante) | — | n/d | {VALIDACION['aciertos']}/{VALIDACION['total']} ({_pc(v[0])}–{_pc(v[1])}) | n/d | n/d |")
-        L += ["", "Origen de las constantes: la elegida (28/30, 721 pares, K=10, cupo 15, tope 39) es la del commit 9e7a8ab y del informe de la curva; el 26/30 en P3+P4 es la validación de la elegida"
-              + (f" y dibuja en {_miles(pv[0])} pares ({pv[1]})." if pv else " (sin pares en la tabla comparativa: se dibuja sobre los pares de P1+P2)."), "",
+        val, val_origen = fact["validacion"]
+        va, vt = val["aciertos"], val["total"]
+        v = _wilson(va, vt)
+        L.append(f"| validación de la elegida en P3+P4 (leída de la tabla) | — | {_miles(pv[0])} | {va}/{vt} ({_pc(va / vt)}; {_pc(v[0])}–{_pc(v[1])}) | "
+                 f"{_n(pv[0] * usd, 2)} | {_n(pv[0] * seg / 3600, 1)} |" if pv else f"| validación de la elegida en P3+P4 (leída de la tabla) | — | n/d | {va}/{vt} ({_pc(v[0])}–{_pc(v[1])}) | n/d | n/d |")
+        L += ["", "Origen de los datos: la elegida (28/30, 721 pares, K=10, cupo 15, tope 39) es la del commit 9e7a8ab y del informe de la curva (constante); la validación en P3+P4 "
+              f"({va}/{vt}) se lee de la tabla comparativa: {val_origen}"
+              + (f"; se dibuja en {_miles(pv[0])} pares ({pv[1]})." if pv else " (sin pares en la tabla comparativa: se dibuja sobre los pares de P1+P2)."), "",
               "## Verificación de los K de referencia", "", f"- Regla marginal calculada aquí: K = {ks['umbral']} (esperado {min(ks_ref, key=lambda k: k)}).", f"- Codo de Kneedle calculado aquí: K = {ks['codo']} (esperado {max(ks_ref)}).", ""]
     else:
         L += ["", f"Los K de referencia son los que da la propia serie de {nombre_embedding(embedding)}: regla marginal K = {ks['umbral']}, codo de Kneedle K = {ks['codo']}.", ""]
@@ -446,7 +482,7 @@ def sufijo_de(embedding: str) -> str:
 def generar(ruta_csv: str, ruta_tabla: str, salida: str, usd_arg=None, seg_arg=None, embedding: str = "bge-m3", sufijo: str = None) -> dict:
     serie = leer_serie(ruta_csv, {**SERIE, "embedding": embedding})
     ajuste = ajustar([r["pares"] for r in serie], [r["recall"] for r in serie])
-    fact = factores(ruta_tabla, usd_arg, seg_arg)
+    fact = factores(ruta_tabla, usd_arg, seg_arg, con_validacion=(embedding == "bge-m3"))      # la validación solo se dibuja con BGE-M3
     c = cola(serie, ajuste, PUESTO_ULTIMA_TRAMPA if embedding == "bge-m3" else None)      # el puesto 175 de P2-04-B es del ranking de BGE-M3
     ks = {"umbral": k_por_umbral(serie), "codo": k_codo(serie)}
     os.makedirs(salida, exist_ok=True)

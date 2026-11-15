@@ -94,8 +94,10 @@ def _validar_normalizando(texto: str, esquema):
     return esquema.model_validate(datos)
 
 
-def _parsear_respuesta_llm(raw: str, llm, esquema=LLMResponse):
-    """Parsea y valida la respuesta del LLM contra `esquema`. Si falla, hace UN reintento mostrándole el error."""
+def _parsear_respuesta_llm(raw: str, llm, esquema=LLMResponse, llamadas=None, par=None, etiqueta=""):
+    """Parsea y valida la respuesta del LLM contra `esquema`. Si falla, hace UN reintento mostrándole el error.
+    Ese reintento es una llamada más al modelo: si se pasa `llamadas`, se cuenta en llamadas['correccion_formato'] y, si es una Llamadas, se registra en su detalle
+    (con `par` y `etiqueta`), de modo que el desglose V + C + M + F y el costo computacional la incluyan."""
     try:
         return _validar_normalizando(raw, esquema)
     except (json.JSONDecodeError, ValidationError) as e:
@@ -107,7 +109,16 @@ def _parsear_respuesta_llm(raw: str, llm, esquema=LLMResponse):
             "Devolvé ÚNICAMENTE el objeto JSON corregido, respetando exactamente el esquema pedido, "
             "sin texto adicional."
         )
-        respuesta = llm.invoke(prompt_reintento)
+        if llamadas is not None:
+            llamadas["correccion_formato"] = llamadas.get("correccion_formato", 0) + 1
+        t0 = time.perf_counter()
+        try:
+            respuesta = llm.invoke(prompt_reintento)
+        except Exception:
+            _registrar_llamada(llamadas, "correccion_formato", par, etiqueta, t0, 0, 0, 1, False)
+            raise
+        metadatos = getattr(respuesta, "response_metadata", None) or {}
+        _registrar_llamada(llamadas, "correccion_formato", par, etiqueta, t0, metadatos.get("prompt_eval_count") or 0, metadatos.get("eval_count") or 0, 1, True)
         raw_reintento = getattr(respuesta, "content", respuesta)
         return _validar_normalizando(raw_reintento, esquema)
 
@@ -159,10 +170,10 @@ def _segundos(t0: float) -> float:
     return round(time.perf_counter() - t0, 2)
 
 
-def _guardar_y_generar_dashboard(reporte: RiskReport, nombre_pdf: str, marca_tiempo: str) -> str:
-    """Guarda el JSON y el dashboard del reporte en datos/Resultados/<proyecto>/ y devuelve la ruta relativa del HTML."""
+def _guardar_y_generar_dashboard(reporte: RiskReport, nombre_pdf: str, marca_tiempo: str, carpeta_base: str = None) -> str:
+    """Guarda el JSON y el dashboard del reporte en <carpeta_base>/<proyecto>/ (por defecto datos/Resultados/<proyecto>/) y devuelve la ruta relativa del HTML."""
     nombre_base = "".join(c for c in os.path.splitext(nombre_pdf)[0] if c.isalnum() or c in (' ', '_')).rstrip()
-    carpeta = os.path.join(config.DIRECTORIO_RESULTADOS_BASE, nombre_base)
+    carpeta = os.path.join(carpeta_base or config.DIRECTORIO_RESULTADOS_BASE, nombre_base)
     os.makedirs(carpeta, exist_ok=True)
     ruta_json = report_utils.formatear_y_guardar_reporte(reporte, nombre_pdf, carpeta, sufijo_nombre=f"_{marca_tiempo}")
     if not ruta_json: raise AnalisisError("No se pudo guardar el reporte JSON.")
@@ -283,7 +294,7 @@ def _generar_lista(cadena, entrada, llm, id_sec, llamadas):
     try:
         mensaje = _invocar(cadena, entrada, f"{id_sec} (lista de riesgos)", llamadas, "lista")
         raw = getattr(mensaje, "content", mensaje)
-        return _parsear_respuesta_llm(raw, llm).riesgos_identificados, mensaje
+        return _parsear_respuesta_llm(raw, llm, llamadas=llamadas, etiqueta=f"{id_sec} (lista de riesgos)").riesgos_identificados, mensaje
     except _FALLOS_DE_TIEMPO:
         logger.warning(f"{id_sec}: la sección queda sin riesgos, el modelo no respondió en el tiempo límite.")
         return [], None
@@ -310,7 +321,8 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
                                f"{id_sec} {meta['norma']} Art. {meta['articulo']} (verificación)", llamadas, "verificacion",
                                par=f"{id_sec}|{meta['norma']}|{meta['articulo']}")
             razon = {"razonamiento": _razonamiento(mensaje)} if config.THINKING_VERIFICACION else {}
-            original = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_verif, VerificacionArticulo)
+            original = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_verif, VerificacionArticulo, llamadas=llamadas,
+                                              par=f"{id_sec}|{meta['norma']}|{meta['articulo']}", etiqueta=f"{id_sec} {meta['norma']} Art. {meta['articulo']} (corrección de formato)")
         except _FALLOS_DE_TIEMPO:
             # no hay oraciones identificadas: el par se verificó contra toda la sección, que es la cita
             registro.append({**meta, "veredicto": None, "oraciones": [], "estado": "tiempo_agotado", "motivo": MOTIVO_TIEMPO_AGOTADO})
@@ -339,7 +351,8 @@ def _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, llm_verif, ll
                                                "verificacion": v.model_dump_json(exclude_none=True)},
                                f"{id_sec} {norma} Art. {articulo} (clasificación)", llamadas, "clasificacion",
                                par=f"{id_sec}|{norma}|{articulo}")
-            c = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_clasif, ClasificacionRiesgo)
+            c = _parsear_respuesta_llm(getattr(mensaje, "content", mensaje), llm_clasif, ClasificacionRiesgo, llamadas=llamadas,
+                                       par=f"{id_sec}|{norma}|{articulo}", etiqueta=f"{id_sec} {norma} Art. {articulo} (corrección de formato)")
         except _FALLOS_DE_TIEMPO:
             registro.append({**meta, "veredicto": v.veredicto, "oraciones": v.oraciones, "estado": "tiempo_agotado", "motivo": MOTIVO_TIEMPO_AGOTADO})
             alertas.append(_alerta_sin_respuesta(seccion, textos, norma, articulo, v.oraciones))
@@ -418,7 +431,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
     usar_crag = usar_rag and config.USAR_CRAG and not recuperacion_json
     if recuperacion_json and not (usar_rag and verificacion):
         raise AnalisisError("La recuperación reusada solo se aplica al modo verificación con RAG.")
-    llamadas = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0})
+    llamadas = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0, "correccion_formato": 0})
     logger.info(f"--- ANÁLISIS POR SECCIÓN (Modelo: {selected_llm_model_id}, condición: {condicion}, modo: {modo}) ---")
 
     pdf_path = document_utils.obtener_ruta_pdf_proyecto(directorio_proyecto or config.DIRECTORIO_PROYECTO_ANALIZAR)
@@ -615,7 +628,7 @@ def _analizar_por_secciones(selected_llm_model_id, force_recreate_db, usar_rag, 
                 "verif_temperature": config.VERIF_TEMPERATURE if verificacion and config.THINKING_VERIFICACION else "N/A",
                 "verif_top_p": config.VERIF_TOP_P if verificacion and config.THINKING_VERIFICACION else "N/A",
                 "verif_top_k": config.VERIF_TOP_K if verificacion and config.THINKING_VERIFICACION else "N/A",
-                "llamadas_llm": {k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario")} if verificacion else {"lista": llamadas["lista"]},
+                "llamadas_llm": {k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario", "correccion_formato")} if verificacion else {"lista": llamadas["lista"], "correccion_formato": llamadas["correccion_formato"]},
                 "llamadas_fallidas": llamadas.get("fallidas", 0),
                 "costo_computacional": costo_computacional, "hardware": hardware, "llamadas_detalle": llamadas.detalle,
                 "tokens_generados_por_tipo": _estadisticas_tokens(llamadas),

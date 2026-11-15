@@ -79,7 +79,7 @@ def test_la_cola_calcula_pares_razon_y_marca_lo_extrapolado(tmp_path):
 
 def _tabla(tmp_path, filas):
     ruta = tmp_path / "tabla.csv"
-    campos = ["configuracion", "conjunto", "ofertas", "pares_por_oferta", "tiempo_s", "costo_usd"]
+    campos = ["configuracion", "conjunto", "ofertas", "pares_por_oferta", "tiempo_s", "costo_usd", "recall_articulo", "trampas", "perfil_recuperacion"]
     with open(ruta, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=campos, delimiter=";")
         w.writeheader()
@@ -102,6 +102,47 @@ def test_los_factores_salen_de_la_tabla_con_el_conjunto_mas_amplio(tmp_path):
     assert forzado["usd"] == (0.01, "argumento --usd-por-par") and forzado["seg"][0] == 30
 
 
+def _fila_val(nombre, recall_articulo="26", trampas="30", perfil="elegido", ofertas="P3+P4"):
+    return {"configuracion": nombre, "conjunto": "P3-P4 prueba", "ofertas": ofertas, "pares_por_oferta": 306.5, "recall_articulo": recall_articulo, "trampas": trampas,
+            "perfil_recuperacion": perfil}
+
+
+def _tabla_con_validacion(tmp_path, recall_articulo="26", trampas="30"):
+    return _tabla(tmp_path, [_fila_val("Qwen3-32B (elegida)", recall_articulo, trampas), _fila_val("modelo-x (otra)", recall_articulo, trampas)])
+
+
+def test_la_validacion_en_p3_p4_es_de_la_recuperacion_elegida_y_no_depende_del_nombre_del_llm(tmp_path):
+    assert not hasattr(F, "VALIDACION")
+    filas = F._filas_tabla(_tabla(tmp_path, [_fila_val("cualquier nombre", "27"), _fila_val("otro LLM", "27"),
+                                             _fila_val("v1 sin perfil", "20", perfil=""), _fila_val("elegida en dev", "29", ofertas="P1+P2")]))
+    val, origen = F.leer_validacion(filas, "tabla.csv")
+    assert val == {"aciertos": 27, "total": 30} and "igual en las 2 configuraciones" in origen and "cualquier nombre, otro LLM" in origen
+    assert F.factores(_tabla_con_validacion(tmp_path), con_validacion=True)["validacion"][0] == {"aciertos": 26, "total": 30}
+    assert F.factores(_tabla_con_validacion(tmp_path))["validacion"] is None                 # sin pedirla (otros embeddings) no se lee
+
+
+def test_si_dos_configuraciones_con_perfil_elegido_difieren_falla_y_nombra_ambas(tmp_path):
+    distintas = _tabla(tmp_path, [_fila_val("A (elegida)", "26"), _fila_val("B (elegida)", "25")])
+    with pytest.raises(SystemExit, match=r"no es el mismo.*25/30: B \(elegida\).*26/30: A \(elegida\)"):
+        F.factores(distintas, con_validacion=True)
+
+
+def test_sin_tabla_sin_filas_elegidas_o_con_nd_la_validacion_falla_con_un_mensaje_claro(tmp_path):
+    with pytest.raises(SystemExit, match="no existe la tabla comparativa"):
+        F.factores(str(tmp_path / "no_existe.csv"), con_validacion=True)
+    solo_dev = _tabla(tmp_path, [_fila_val("X (elegida)", "28", ofertas="P1+P2")])
+    with pytest.raises(SystemExit, match="no tiene una fila con perfil_recuperacion"):
+        F.factores(solo_dev, con_validacion=True)
+    with pytest.raises(SystemExit, match="no trae «recall_articulo»"):
+        F.factores(_tabla(tmp_path, [_fila_val("X (elegida)", "26"), _fila_val("Y (elegida)", "n/d")]), con_validacion=True)
+    vieja = tmp_path / "vieja.csv"
+    vieja.write_text("configuracion;conjunto;ofertas;recall_articulo;trampas\nX;p;P3+P4;26;30\n", encoding="utf-8-sig")
+    with pytest.raises(SystemExit, match="no trae la columna «perfil_recuperacion»"):
+        F.factores(str(vieja), con_validacion=True)
+    with pytest.raises(SystemExit):
+        F.generar(_csv(tmp_path), str(tmp_path / "no_existe.csv"), str(tmp_path / "salida"))        # con BGE-M3 la figura exige la validación
+
+
 def test_sin_datos_en_la_tabla_se_usan_los_valores_por_defecto_y_el_md_lo_dice(tmp_path):
     f = F.factores(str(tmp_path / "no_existe.csv"))
     assert f["usd"][0] == F.USD_POR_PAR_DEFECTO and f["seg"][0] == F.SEG_POR_PAR_DEFECTO and "por defecto" in f["usd"][1] and "por defecto" in f["seg"][1] and f["pares_validacion"] is None
@@ -111,7 +152,7 @@ def test_sin_datos_en_la_tabla_se_usan_los_valores_por_defecto_y_el_md_lo_dice(t
 
 def test_generar_escribe_png_a_300_dpi_y_md_con_la_frase(tmp_path):
     pytest.importorskip("matplotlib")
-    r = F.generar(_csv(tmp_path), str(tmp_path / "no_existe.csv"), str(tmp_path / "salida"))
+    r = F.generar(_csv(tmp_path), _tabla_con_validacion(tmp_path), str(tmp_path / "salida"))
     from matplotlib import image
     assert image.imread(r["png"]).shape[1] > 5000                       # 21 pulgadas a 300 dpi
     md = open(r["md"], encoding="utf-8").read()
@@ -129,7 +170,7 @@ def test_con_otro_embedding_se_grafica_su_serie_sin_la_elegida_ni_el_puesto_175(
     assert "(gemini__gemini-embedding-2-3072)" in md and "no se dibujan con otro embedding" in md and "configuración elegida** (constante)" not in md and "en el puesto exacto" not in md
     assert r["cola"]["p30_puesto"] is None and "Con gemini__gemini-embedding-2-3072 en modo solo denso" in md and "K propios" not in md
     assert set(F.ks_de_referencia(r["serie"], "gemini__x")) <= {r2["k"] for r2 in r["serie"]} and F.ks_de_referencia(r["serie"], "bge-m3") == F.K_REFERENCIA
-    con_bge = F.generar(ruta, str(tmp_path / "no_existe.csv"), str(tmp_path / "salida2"))
+    con_bge = F.generar(ruta, _tabla_con_validacion(tmp_path), str(tmp_path / "salida2"))
     assert con_bge["png"].endswith("figura_curva_final.png") and "en el puesto exacto 175" in open(con_bge["md"], encoding="utf-8").read()
 
 

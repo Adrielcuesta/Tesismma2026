@@ -371,6 +371,19 @@ def test_script_cerrar_evaluacion_es_ascii_y_llama_a_los_modulos_en_orden():
     assert texto.index("evaluacion.juez") < texto.index('"--espejos"') < texto.index("evaluacion.tabla_comparativa")      # el control corre después del juez normal
 
 
+def test_script_cerrar_evaluacion_deja_el_juez_detras_de_con_juez_apagado_por_defecto():
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts", "cerrar_evaluacion.ps1")
+    with open(ruta, encoding="ascii") as f:
+        lineas = f.read().splitlines()
+    texto = chr(10).join(lineas)
+    param = next(l for l in lineas if l.startswith("param("))
+    assert "[switch]$ConJuez" in param and "$ConJuez =" not in param                                       # parametro del script, sin valor por defecto
+    assert "especificidad del 41 %" in texto and "etiqueta humana" in texto                                # el motivo queda escrito
+    llamada = texto.index('Medir-Etapa ("juez {0}"')
+    assert texto.rindex("if ($ConJuez)", 0, llamada) > texto.rindex("evaluar (1)", 0, llamada)               # la etapa del juez solo corre dentro de if ($ConJuez)
+    assert os.path.isfile(os.path.join(os.path.dirname(ruta), "..", "evaluacion", "juez.py"))              # el codigo del juez no se borra
+
+
 # --- tabla comparativa ---
 
 def _filas():

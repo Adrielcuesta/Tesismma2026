@@ -1,5 +1,5 @@
 # evaluacion/aplicar_etiquetas.py
-"""Vuelca las etiquetas del CSV unificado de pendientes (evaluacion/diagnosticos/extras_pendientes_gptoss_P3P4.csv, de preparar_extras) a cada <json>_extras.csv.
+"""Vuelca las etiquetas del CSV unificado de pendientes (evaluacion/diagnosticos/extras_pendientes_<configuración>_<ofertas>.csv, de preparar_extras) a cada <json>_extras.csv.
 
 Uso:
   python -m evaluacion.aplicar_etiquetas [--etiquetas <csv unificado>] [--dudosa sí|no] [--forzar]
@@ -77,7 +77,7 @@ def aplicar_en_archivo(ruta: str, etiquetadas: list, forzar: bool = False, dudos
 
 def main(argv=None):
     p = argparse.ArgumentParser(description="Vuelca las etiquetas del CSV unificado de pendientes a cada <json>_extras.csv (no pisa etiquetas salvo con --forzar)")
-    p.add_argument("--etiquetas", default=PE.PENDIENTES, help="CSV unificado de preparar_extras, con la columna «etiqueta» completa")
+    p.add_argument("--etiquetas", required=True, help="CSV unificado de preparar_extras, con la columna «etiqueta» completa")
     p.add_argument("--dudosa", choices=["sí", "si", "no"], default=None, help="cómo cuenta DUDOSA en «valido» (por defecto queda vacío)")
     p.add_argument("--forzar", action="store_true", help="reemplaza las etiquetas que ya existen en los <json>_extras.csv")
     a = p.parse_args(argv)

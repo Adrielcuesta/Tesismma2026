@@ -69,7 +69,8 @@ def test_sin_rag_imprime_los_riesgos_de_la_lista(simulado, capsys):
 def test_oferta_se_deduce_del_nombre_o_queda_para_completar():
     assert run_oferta._oferta_de("datos/Oferta_P3_final.pdf") == "P3"
     assert run_oferta._oferta_de("P4.docx") == "P4"
-    assert run_oferta._oferta_de("Oferta_taller.pdf") == "<P1|P2|P3|P4>"
+    assert run_oferta._oferta_de("datos/P5_oferta_X.docx") == "P5"
+    assert run_oferta._oferta_de("Oferta_taller.pdf") == "<P1|P2|P3|P4|P5>"
     assert run_oferta._oferta_de("Oferta_taller.pdf", "P2") == "P2"
 
 

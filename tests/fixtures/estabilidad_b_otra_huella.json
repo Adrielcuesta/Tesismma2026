@@ -1,0 +1,97 @@
+{
+  "configuracion_analisis": {
+    "modelo_llm_usado": "modelo-y",
+    "perfil_recuperacion": "elegido"
+  },
+  "secciones": [
+    {
+      "id": "S1",
+      "titulos": [
+        "1 Obra"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_01",
+          "articulo": "1.1",
+          "parte": 1
+        },
+        {
+          "norma": "NORM_02",
+          "articulo": "2.1",
+          "parte": 1
+        },
+        {
+          "norma": "NORM_04",
+          "articulo": "1.6",
+          "parte": 1
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "titulos": [
+        "2 Montaje"
+      ],
+      "fragmentos": [
+        {
+          "norma": "NORM_03",
+          "articulo": "3.1",
+          "parte": 1
+        },
+        {
+          "norma": "NORM_05",
+          "articulo": "4.1",
+          "parte": 1
+        }
+      ]
+    }
+  ],
+  "registro_tecnico": [],
+  "riesgos": [
+    {
+      "id": "R1"
+    },
+    {
+      "id": "R2"
+    }
+  ],
+  "registro_brechas": [
+    {
+      "id": "S1|NORM_01|1.1",
+      "seccion": "S1",
+      "norma": "NORM_01",
+      "articulo": "1.1",
+      "cita": "El hormigón se curará 3 días.",
+      "clase": "Mayor",
+      "nivel": "Medio",
+      "responsable": "Gerencia X",
+      "titulo": "t"
+    },
+    {
+      "id": "S2|NORM_03|3.1",
+      "seccion": "S2",
+      "norma": "NORM_03",
+      "articulo": "3.1",
+      "cita": "Se izará con un solo equipo.",
+      "clase": "Mayor",
+      "nivel": "Medio",
+      "responsable": "Gerencia X",
+      "titulo": "t"
+    },
+    {
+      "id": "S2|NORM_05|9.9",
+      "seccion": "S2",
+      "norma": "NORM_05",
+      "articulo": "9.9",
+      "cita": "Otra frase sin relación.",
+      "clase": "Mayor",
+      "nivel": "Medio",
+      "responsable": "Gerencia X",
+      "titulo": "t",
+      "estado": "descartada por cálculo"
+    }
+  ],
+  "resumen_ejecutivo": {
+    "decision": "Aceptable con condiciones"
+  }
+}

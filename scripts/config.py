@@ -232,6 +232,12 @@ PRESUPUESTO_USD = 1.5       # tope de gasto acumulado de una corrida: al alcanza
 
 # --- Configuración de LLMs ---
 LLM_MODELS = {
+    # --- Modelo del MVP (app.py): gpt-oss-120b con el perfil de recuperación elegido; el clave del .env es DEEPINFRA_API_KEY ---
+    "openai/gpt-oss-120b": {
+        "provider": "deepinfra",
+        "display_name": "gpt-oss-120b (DeepInfra, perfil elegido)",
+        "api_key_env": "DEEPINFRA_API_KEY"
+    },
     # --- Modelos disponibles ---
     "gemini-3.5-flash": {
         "provider": "google",
@@ -275,6 +281,11 @@ LLM_MODELS = {
         "api_key_env": "COHERE_API_KEY"
     }
 }
+
+# --- MVP (app.py): perfil de recuperación y modelos que ofrece la interfaz; el primero es el modelo por defecto, el local queda como opción ---
+PERFIL_APP_DEFECTO = "elegido"
+MODELO_APP_DEFECTO = "openai/gpt-oss-120b"
+MODELOS_APP = (MODELO_APP_DEFECTO, OLLAMA_MODEL)
 
 # --- Información de la Tesis ---
 INFO_TESIS = {

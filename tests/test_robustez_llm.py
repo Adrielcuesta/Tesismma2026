@@ -188,3 +188,38 @@ def test_estadisticas_max_y_promedio_por_tipo():
     from scripts.main import _estadisticas_tokens
     assert _estadisticas_tokens({"eval_count": {"verificacion": [100, 300], "clasificacion": []}}) == {"verificacion": {"n": 2, "max": 300, "promedio": 200.0}}
     assert _estadisticas_tokens({}) == {}
+
+
+# --- La llamada de corrección de formato se cuenta aparte (V + C + M + F) ---
+
+def test_correccion_de_formato_se_cuenta_aparte_y_entra_en_el_costo():
+    from scripts import costo
+    from scripts.main import Llamadas
+    llamadas = Llamadas({"verificacion": 0, "clasificacion": 0, "correccion_formato": 0})
+    invalido = SimpleNamespace(content="esto no es json", response_metadata={})
+    corregido = SimpleNamespace(content=VERIF.content, response_metadata={"prompt_eval_count": 300, "eval_count": 40})
+    llm_verif, cc = Cadena(corregido), Cadena(_clasif())
+    _verificar_seccion(SECCION, [_doc()], Cadena(invalido), cc, llm_verif, cc, LIN, {}, llamadas)
+    assert llm_verif.llamadas == 1 and llamadas["correccion_formato"] == 1
+    assert llamadas["verificacion"] == 1 and llamadas["clasificacion"] == 1            # la corrección no se suma a otra clave
+    (f,) = [d for d in llamadas.detalle if d["tipo"] == "correccion_formato"]
+    assert f["par"] == "3|NORM_01|4.2" and (f["prompt_eval_count"], f["eval_count"], f["intentos"], f["exitosa"]) == (300, 40, 1, True)
+    c = costo.resumen_costo(llamadas.detalle, 5.0, "m", {})
+    assert c["llamadas_correccion_formato"] == 1 and c["llamadas_totales"] == 3 and c["tokens_entrada_total"] >= 300
+
+
+def test_respuesta_valida_no_cuenta_correccion_de_formato():
+    from scripts.main import Llamadas
+    llamadas = Llamadas({"verificacion": 0, "clasificacion": 0, "correccion_formato": 0})
+    cc = Cadena(_clasif())
+    _verificar_seccion(SECCION, [_doc()], Cadena(VERIF), cc, cc, cc, LIN, {}, llamadas)
+    assert llamadas["correccion_formato"] == 0 and not [d for d in llamadas.detalle if d["tipo"] == "correccion_formato"]
+
+
+def test_correccion_de_formato_que_falla_tambien_se_cuenta_y_se_registra_como_fallida():
+    from scripts.main import Llamadas, _parsear_respuesta_llm
+    from scripts.schemas import VerificacionArticulo
+    llamadas = Llamadas({"correccion_formato": 0})
+    with pytest.raises(httpx.ReadTimeout):
+        _parsear_respuesta_llm("no es json", Cadena(_lento()), VerificacionArticulo, llamadas=llamadas, par="S1|N|1")
+    assert llamadas["correccion_formato"] == 1 and llamadas.detalle[0]["exitosa"] is False

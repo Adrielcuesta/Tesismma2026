@@ -205,3 +205,39 @@ def test_aplicar_cuenta_las_filas_sin_etiqueta_invalidas_y_sin_destino(con_unifi
     out = capsys.readouterr().out
     assert (total["aplicadas"], total["no_encontradas"]) == (1, 1) and "1 filas sin etiqueta y 1 con una etiqueta que no es VALIDA" in out
     assert [f["etiqueta"] for f in _leer(destino)][2:] == ["", "", "VALIDA"]
+
+
+# --- nombre del archivo de pendientes según la configuración y las ofertas ---
+
+def test_el_nombre_de_las_pendientes_sale_de_la_configuracion_y_las_ofertas():
+    assert PE.nombre_pendientes("gpt-oss-120b esfuerzo bajo (elegida)", ["P1", "P2"]) == "extras_pendientes_gpt-oss-120b-esfuerzo-bajo-elegida_P1P2.csv"
+    assert PE.nombre_pendientes("qwen3:8b local (elegida)", ["P4", "P3"]) == "extras_pendientes_qwen3-8b-local-elegida_P3P4.csv"          # las ofertas van ordenadas
+    assert PE.ruta_pendientes("m", ["P1"], "carpeta") == os.path.join("carpeta", "extras_pendientes_m_P1.csv")
+
+
+def test_sin_salida_el_archivo_se_nombra_por_ofertas_y_no_se_pisa_sin_forzar(carpeta, monkeypatch, tmp_path_factory, capsys):
+    tmp, ruta = carpeta
+    cfg = tmp_path_factory.mktemp("cfg") / "config.json"
+    cfg.write_text(json.dumps({"configuraciones": {"mi config": {"P9": str(ruta)}}}), encoding="utf-8")
+    diag = tmp_path_factory.mktemp("diag")
+    monkeypatch.setattr(PE, "DIAGNOSTICOS", str(diag))
+    monkeypatch.setattr(PE.E, "cargar_gt", lambda oferta: [])
+    monkeypatch.setattr(PE.E, "cargar_espejos", lambda oferta: [])
+    PE.main(["--config", "mi config", "--ofertas", "P9", "--archivo-config", str(cfg)])
+    esperado = diag / "extras_pendientes_mi-config_P9.csv"
+    assert esperado.is_file() and len(_leer(str(esperado))) == 3
+    assert not (diag / "extras_pendientes_gptoss_P3P4.csv").exists()                         # ya no hay un nombre fijo
+    # un archivo existente de pendientes no se pisa sin --forzar
+    esperado.write_text("previo", encoding="utf-8")
+    os.remove(E.ruta_extras(str(ruta)))                                                       # para que haya pendientes que escribir otra vez
+    capsys.readouterr()
+    PE.main(["--config", "mi config", "--ofertas", "P9", "--archivo-config", str(cfg)])
+    assert esperado.read_text(encoding="utf-8") == "previo" and "--forzar" in capsys.readouterr().out
+    # con --forzar sí, y con --salida (o su alias --pendientes) se fuerza el nombre
+    os.remove(E.ruta_extras(str(ruta)))
+    PE.main(["--config", "mi config", "--ofertas", "P9", "--archivo-config", str(cfg), "--forzar"])
+    assert esperado.read_text(encoding="utf-8-sig").startswith("archivo;") and len(_leer(str(esperado))) == 3
+    os.remove(E.ruta_extras(str(ruta)))
+    otro = diag / "otro.csv"
+    PE.main(["--config", "mi config", "--ofertas", "P9", "--archivo-config", str(cfg), "--salida", str(otro)])
+    assert otro.is_file()

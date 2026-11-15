@@ -1,0 +1,5 @@
+﻿id;oferta;seccion;fragmento_trampa;norma;articulo;articulos_equivalentes;clase;responsable;nivel
+P9-01-A;P9;1 Obra;el hormigón se curará 3 días;NORM_01;1.1;;Mayor;Gerencia X;Medio
+P9-02-A;P9;1 Obra;la jabalina será compartida;NORM_02;2.1;;Mayor;Gerencia X;Medio
+P9-03-A;P9;2 Montaje;se izará con un solo equipo;NORM_03;3.1;;Mayor;Gerencia X;Medio
+P9-04-A;P9;2 Montaje;los bulones se apretarán a mano;NORM_05;4.1;;Mayor;Gerencia X;Medio

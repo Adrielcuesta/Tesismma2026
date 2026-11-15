@@ -1,0 +1,132 @@
+[
+  {
+    "id": "P5-NC-01",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_01",
+    "articulo": "5.2",
+    "veredicto_esperado": "cumple_excepcion_acreditada",
+    "cita": "Se adjunta como Anexo B el informe de capacidad portante y aptitud de servicio IC-2026-118, firmado por Ingeniero Civil habilitado",
+    "seccion": "3.5 Implantación del almacén de herramientas",
+    "motivo": "Losa existente con informe firmado por Ingeniero Civil (espejo de P2-01-A)."
+  },
+  {
+    "id": "P5-NC-02",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_03",
+    "articulo": "2.6",
+    "veredicto_esperado": "cumple_excepcion_acreditada",
+    "cita": "el eslingado trabajará con ramales a 50° respecto de la vertical",
+    "seccion": "5.2 Maniobras",
+    "motivo": "> 45° con cálculo específico, tablas del fabricante y autorización expresa (espejo de P1-03-M)."
+  },
+  {
+    "id": "P5-NC-03",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_01",
+    "articulo": "7.3",
+    "veredicto_esperado": "cumple_excepcion_acreditada",
+    "cita": "relación masa de fundación / masa de máquina de 1,6",
+    "seccion": "3.4 Diseño dinámico de la bancada",
+    "motivo": "Relación < 2 justificada por análisis dinámico validado (espejo de P3-01-M)."
+  },
+  {
+    "id": "P5-NC-04",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_04",
+    "articulo": "1.10",
+    "veredicto_esperado": "no_aplica_condicion_ausente",
+    "cita": "La nave no está electrificada",
+    "seccion": "2.2 Condiciones del sitio",
+    "motivo": "Sin catenaria ni conductores aéreos: el requisito de 3,00 m no se activa."
+  },
+  {
+    "id": "P5-NC-05",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_01",
+    "articulo": "6.3",
+    "veredicto_esperado": "no_aplica_condicion_ausente",
+    "cita": "sin fosa de operación ni fosa de viruta",
+    "seccion": "2.2 Condiciones del sitio",
+    "motivo": "Sin fosa: no aplican escaleras de escape (espejo de P1-01-M)."
+  },
+  {
+    "id": "P5-NC-06",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_05",
+    "articulo": "3.7",
+    "veredicto_esperado": "cumple",
+    "cita": "no incluye servoválvulas",
+    "seccion": "4.5 Circuito hidráulico",
+    "motivo": "Solo válvulas proporcionales: objetivo 17/15/12 correcto; 16/14/11 no aplica."
+  },
+  {
+    "id": "P5-NC-07",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_02",
+    "articulo": "3.13",
+    "veredicto_esperado": "cumple_frontera",
+    "cita": "Interruptor de cabecera ofertado (Icu a 400 V) | 25 kA",
+    "seccion": "4.1 Alimentación eléctrica",
+    "motivo": "Icc 24,6 kA < 25,1 kA: 25 kA admisible (prueba de comparación numérica)."
+  },
+  {
+    "id": "P5-NC-08",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_02",
+    "articulo": "2.16",
+    "veredicto_esperado": "cumple_frontera",
+    "cita": "Caída de tensión en el tramo terminal | 3,0 %",
+    "seccion": "4.1 Alimentación eléctrica",
+    "motivo": "3,0 % ≤ 3 % terminal y 4,8 % ≤ 5 % acumulada (frontera)."
+  },
+  {
+    "id": "P5-NC-09",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_04",
+    "articulo": "1.6",
+    "veredicto_esperado": "cumple_frontera",
+    "cita": "con una altura libre de 2,10 m",
+    "seccion": "4.2 Tablero de la máquina",
+    "motivo": "2,10 m = mínimo; no inferior (frontera)."
+  },
+  {
+    "id": "P5-NC-10",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_04",
+    "articulo": "2.3; 2.5; 2.6",
+    "veredicto_esperado": "no_aplica_sin_actividad",
+    "cita": "La oferta no incluye trabajos sobre la vía 2",
+    "seccion": "2.2 Condiciones del sitio",
+    "motivo": "Sin obras de vía: no aplican trocha ni nivelación de aproximación."
+  },
+  {
+    "id": "P5-NC-11",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_04",
+    "articulo": "3.8",
+    "veredicto_esperado": "cumple",
+    "cita": "Al menos dos de ellos se mecanizarán en la condición de máxima carga de corte",
+    "seccion": "7.1 Unidades y condición de carga",
+    "motivo": "Espejo de P1-04-M."
+  },
+  {
+    "id": "P5-NC-12",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_04",
+    "articulo": "3.20",
+    "veredicto_esperado": "no_aplica_etapa_posterior",
+    "cita": null,
+    "seccion": null,
+    "motivo": "La oferta no menciona la firma del acta SAT: silencio sobre etapa posterior (NORM_07 Art. 2.7 c)."
+  },
+  {
+    "id": "P5-NC-13",
+    "proyecto": "Proyecto 5",
+    "norma": "NORM_01",
+    "articulo": "4.1",
+    "veredicto_esperado": "no_aplica_etapa_posterior",
+    "cita": null,
+    "seccion": null,
+    "motivo": "La oferta no menciona registros de curado: silencio sobre etapa posterior (NORM_07 Art. 2.7 c)."
+  }
+]

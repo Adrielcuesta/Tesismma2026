@@ -131,7 +131,11 @@ def metricas(evs: list) -> dict:
     criticos = next(((nn, r) for v, nn, r, _ in E.recall_por(t["trampas"], "clase_esperada", E.CLASES) if v == "Crítico"), (0, 0))
     j = t.get("juez")
     no_registro = not t["hay_registro"]
+    perfiles = {(e.get("recuperacion") or {}).get("perfil") for e in evs}
     return {
+        "perfil_recuperacion": next(iter(perfiles)) if len(perfiles) == 1 else "mixto",
+        "recall_por_oferta": [(e["oferta"], e["encontradas"], e["n_trampas"]) for e in evs],
+        "precision_humana_n": t["precision_n"], "precision_humana_ic": E.wilson(t["precision_k"], t["precision_n"]) if t["precision"] is not None else None,
         "ofertas": "+".join(e["oferta"] for e in evs), "trampas": n, "encontradas": enc, "recall": enc / n, "recall_ic": E.wilson(enc, n),
         "recall_articulo": None if no_registro else t["recall_articulo"], "falsas_alarmas": t["falsas_alarmas"], "espejos": t["n_espejos"],
         "falsas_ic": E.wilson(t["falsas_alarmas"], t["n_espejos"]),
@@ -236,17 +240,60 @@ def tabla_md(filas: list) -> str:
     return "\n".join(L)
 
 
+def _pct_ic(k, n) -> str:
+    """«78 % [66–87]»: proporción e IC 95 % de Wilson, en puntos enteros; n/d sin denominador."""
+    ic = E.wilson(k, n) if n and k is not None else None
+    return "n/d" if ic is None else f"{k / n * 100:.0f} % [{ic[0] * 100:.0f}–{ic[1] * 100:.0f}]"
+
+
+def _rango_recall_oferta(f: dict):
+    """(mínimo, máximo) del recall por oferta de una fila; None si no hay ofertas con trampas."""
+    rs = [enc / n for _, enc, n in f.get("recall_por_oferta") or [] if n]
+    return (min(rs), max(rs)) if rs else None
+
+
+def _recall_por_oferta(f: dict) -> str:
+    rango = _rango_recall_oferta(f)
+    if rango is None:
+        return "n/d"
+    return ", ".join(f"{o} {enc}/{n}" for o, enc, n in f["recall_por_oferta"]) + f" (rango {rango[0] * 100:.0f}–{rango[1] * 100:.0f} %)"
+
+
+def seccion_intervalos_md(filas: list) -> list:
+    """Por configuración: IC 95 % de Wilson del recall total, del recall en P3+P4, de las falsas alarmas y de la precisión humana, y el recall por oferta con su rango.
+    Total = el conjunto con más ofertas de la configuración. Solo agrega: no cambia ningún número de la tabla."""
+    L = ["## Intervalos de confianza (Wilson 95 %) y recall por oferta", "",
+         "| Configuración | Conjunto total | Recall total | Recall P3+P4 | Falsas alarmas | Precisión humana | Recall por oferta (rango) |", "|---|---|---|---|---|---|---|"]
+    for nombre in dict.fromkeys(f["configuracion"] for f in filas):
+        propias = [f for f in filas if f["configuracion"] == nombre]
+        total = max(propias, key=lambda f: len(f["ofertas"].split("+")))
+        prueba = next((f for f in propias if f["ofertas"] == "P3+P4"), None)
+        precision = _pct_ic(total["precision_humana_k"], total["precision_humana_n"]) if total["precision_humana"] is not None else "n/d"
+        L.append(f"| {nombre} | {total['ofertas']} | {_pct_ic(total['encontradas'], total['trampas'])} | {_pct_ic(prueba['encontradas'], prueba['trampas']) if prueba else 'n/d'} | "
+                 f"{_pct_ic(total['falsas_alarmas'], total['espejos'])} | {precision} | {_recall_por_oferta(total)} |")
+    L += ["", "Formato: valor [IC 95 % de Wilson], en puntos. Recall total, falsas alarmas, precisión humana y recall por oferta salen del conjunto total de cada configuración "
+          "(columna «Conjunto total»); Recall P3+P4, del conjunto P3+P4. El rango es el recall mínimo y máximo entre ofertas. Precisión humana n/d si faltan extras por etiquetar.", ""]
+    return L
+
+
+# columnas que se agregaron después de la primera versión: van al final para no mover ninguna de las anteriores
+CAMPOS_AGREGADOS = ["perfil_recuperacion", "precision_humana_n", "precision_humana_ic_inf", "precision_humana_ic_sup", "recall_por_oferta", "recall_oferta_min", "recall_oferta_max"]
+
+
 def guardar_csv(filas: list, ruta: str):
     campos = ["configuracion", "conjunto", "ofertas", "trampas", "encontradas", "recall", "recall_ic_inf", "recall_ic_sup", "recall_articulo", "falsas_alarmas", "espejos",
               "falsas_ic_inf", "falsas_ic_sup", "brechas_por_oferta", "brechas_total", "pares_por_oferta", "riesgos_agrupados_por_oferta", "precision_humana", "precision_humana_k", "extras_etiquetados", "extras_total", "precision_juez_estricta", "precision_juez_amplia", "control_juez_n", "control_juez_no_valida",
-              "kappa_clase", "criticos_n", "criticos_encontrados", "tiempo_s", "costo_usd", "tokens_entrada", "tokens_salida"] + [f"perdida_{k.replace(' ', '_')}" for k in COLORES_PERDIDA]
+              "kappa_clase", "criticos_n", "criticos_encontrados", "tiempo_s", "costo_usd", "tokens_entrada", "tokens_salida"] + [f"perdida_{k.replace(' ', '_')}" for k in COLORES_PERDIDA] + CAMPOS_AGREGADOS
     with open(ruta, "w", encoding="utf-8-sig", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=campos, delimiter=";")
         w.writeheader()
         for f in filas:
             ic, fic = f["recall_ic"] or (None, None), f["falsas_ic"] or (None, None)
+            pic, rango = f.get("precision_humana_ic") or (None, None), _rango_recall_oferta(f) or (None, None)
             w.writerow({**{k: ("" if f.get(k) is None else f[k]) for k in campos if k in f}, "recall_ic_inf": ic[0], "recall_ic_sup": ic[1], "falsas_ic_inf": fic[0], "falsas_ic_sup": fic[1],
-                        **{f"perdida_{k.replace(' ', '_')}": v for k, v in f["perdidas"].items()}})
+                        **{f"perdida_{k.replace(' ', '_')}": v for k, v in f["perdidas"].items()},
+                        "precision_humana_ic_inf": pic[0], "precision_humana_ic_sup": pic[1],
+                        "recall_por_oferta": "; ".join(f"{o} {enc}/{n}" for o, enc, n in f.get("recall_por_oferta") or []), "recall_oferta_min": rango[0], "recall_oferta_max": rango[1]})
 
 
 # --- Gráficos (matplotlib se importa acá: el resto del módulo no lo necesita) ---
@@ -727,7 +774,7 @@ def generar(cfg: dict, salida: str, graficos: bool = True) -> dict:
     rutas = {"md": os.path.join(salida, "tabla_comparativa.md"), "csv": os.path.join(salida, "tabla_comparativa.csv")}
     mapa = (cfg.get("reeval") or {}).get("elegida_vs_v1") or {}
     extra = diferencias_md(diferencias_v1(filas, mapa)) if mapa else []
-    extra += seccion_comparabilidad_md(evaluadas, cfg["conjuntos"])
+    extra += seccion_comparabilidad_md(evaluadas, cfg["conjuntos"]) + seccion_intervalos_md(filas)
     with open(rutas["md"], "w", encoding="utf-8") as f:
         f.write(tabla_md(filas) + "\n\n" + "\n".join(extra))
     guardar_csv(filas, rutas["csv"])

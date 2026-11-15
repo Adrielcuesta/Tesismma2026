@@ -4,7 +4,7 @@ evaluar.evaluar) y calcular la precisión con tabla_comparativa.
 
 Uso (lo corre el usuario: lee datos/Resultados):
   python -m evaluacion.preparar_extras --config "gpt-oss-120b esfuerzo bajo (elegida)" [--ofertas P3 P4] [--archivo-config evaluacion/config_reeval.json]
-                                       [--pendientes evaluacion/diagnosticos/extras_pendientes_gptoss_P3P4.csv]
+                                       [--salida <csv de pendientes>] [--forzar]
   (--ofertas P1 P2 para las de desarrollo; por defecto P3 P4)
 
 Por cada oferta escribe <json>_extras.csv junto al JSON. Columnas que lee tabla_comparativa (evaluar.evaluar_archivo): oferta, seccion, norma, articulo, cita, titulo, clase y valido (sí/no;
@@ -13,14 +13,15 @@ tipo_brecha (la fuente de la clasificación: DESVIO, EXCEPCION_NO_ACREDITADA, IN
 Etiquetas válidas, como las del juez: VALIDA, NO_VALIDA, DUDOSA. «valido» se deriva de ellas (VALIDA = sí, NO_VALIDA = no; DUDOSA no se puede contar y queda vacío hasta decidirla).
 Herencia: si en la carpeta del JSON hay CSV ya etiquetados (*_extras.csv, extras_revision.csv), se hereda la etiqueta de la fila que coincide en norma, artículo y cita normalizada con
 evaluar.norm (origen «heredada», con el archivo en «nota»); si no, origen «pendiente». Si dos archivos se contradicen no se hereda ninguna y la nota lo dice.
-Las pendientes de todas las ofertas pedidas se juntan en --pendientes (por defecto evaluacion/diagnosticos/extras_pendientes_gptoss_P3P4.csv) para etiquetarlas en un solo archivo;
+Las pendientes de todas las ofertas pedidas se juntan en --salida (por defecto evaluacion/diagnosticos/extras_pendientes_<configuración>_<ofertas>.csv, p. ej. extras_pendientes_gpt-oss-120b-esfuerzo-bajo-elegida_P1P2.csv; --pendientes es un alias) para etiquetarlas en un solo archivo;
 aplicar_etiquetas.py vuelca esas etiquetas a cada <json>_extras.csv.
-NUNCA pisa un archivo que ya existe (ni los <json>_extras.csv ni el de pendientes). No corras evaluar.py sobre un CSV ya etiquetado: guardar_extras_csv lo reescribe con sus 8 columnas
+NUNCA pisa un <json>_extras.csv que ya existe; el de pendientes tampoco, salvo con --forzar. No corras evaluar.py sobre un CSV ya etiquetado: guardar_extras_csv lo reescribe con sus 8 columnas
 de siempre (conserva «valido» pero pierde las demás)."""
 import argparse
 import csv
 import glob
 import os
+import re
 import sys
 
 from . import evaluar as E
@@ -28,7 +29,7 @@ from . import evaluar as E
 AQUI = E.AQUI
 RAIZ = os.path.dirname(AQUI)
 CONFIG_REEVAL = os.path.join(AQUI, "config_reeval.json")
-PENDIENTES = os.path.join(AQUI, "diagnosticos", "extras_pendientes_gptoss_P3P4.csv")
+DIAGNOSTICOS = os.path.join(AQUI, "diagnosticos")
 LARGO_ARTICULO = 800
 ETIQUETAS = ("VALIDA", "NO_VALIDA", "DUDOSA")
 VALIDO_DE = {"VALIDA": "sí", "NO_VALIDA": "no", "DUDOSA": ""}            # lo que lee tabla_comparativa en «valido»
@@ -105,9 +106,20 @@ def filas_de_extras(extras: list, brechas: list, etiquetas: dict) -> list:
     return filas
 
 
-def _escribir_nuevo(filas: list, columnas: list, ruta: str) -> None:
-    """Escribe el CSV solo si no existe («x» falla si apareció entre medio): nunca pisa."""
-    with open(ruta, "x", encoding="utf-8-sig", newline="") as f:
+def nombre_pendientes(configuracion: str, ofertas: list) -> str:
+    """Nombre del archivo unificado de pendientes: extras_pendientes_<configuración>_<ofertas>.csv; la configuración va en [a-z0-9.-] y las ofertas pegadas
+    (p. ej. «gpt-oss-120b esfuerzo bajo (elegida)» con P1 y P2 -> extras_pendientes_gpt-oss-120b-esfuerzo-bajo-elegida_P1P2.csv)."""
+    modelo = re.sub(r"[^a-z0-9.\-]+", "-", configuracion.lower()).strip("-") or "config"
+    return f"extras_pendientes_{modelo}_{''.join(sorted(ofertas))}.csv"
+
+
+def ruta_pendientes(configuracion: str, ofertas: list, carpeta: str = None) -> str:
+    return os.path.join(carpeta or DIAGNOSTICOS, nombre_pendientes(configuracion, ofertas))
+
+
+def _escribir_nuevo(filas: list, columnas: list, ruta: str, forzar: bool = False) -> None:
+    """Escribe el CSV solo si no existe («x» falla si apareció entre medio): nunca pisa, salvo con `forzar`."""
+    with open(ruta, "w" if forzar else "x", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=columnas, delimiter=";", extrasaction="ignore")
         w.writeheader()
         w.writerows(filas)
@@ -151,7 +163,9 @@ def main(argv=None):
     p.add_argument("--config", required=True, help="nombre de la configuración en el archivo de configuración, p. ej. «gpt-oss-120b esfuerzo bajo (elegida)»")
     p.add_argument("--ofertas", nargs="+", default=["P3", "P4"], help="ofertas a preparar (por defecto P3 P4; P1 P2 para las de desarrollo)")
     p.add_argument("--archivo-config", default=CONFIG_REEVAL, help="config de tabla_comparativa de donde salen los JSON (por defecto evaluacion/config_reeval.json)")
-    p.add_argument("--pendientes", default=PENDIENTES, help="CSV unificado con las pendientes de todas las ofertas (no se pisa si existe)")
+    p.add_argument("--salida", "--pendientes", dest="salida", default=None,
+                   help="CSV unificado con las pendientes de todas las ofertas; por defecto evaluacion/diagnosticos/extras_pendientes_<configuración>_<ofertas>.csv")
+    p.add_argument("--forzar", action="store_true", help="pisa el CSV unificado de pendientes si ya existe (nunca toca los <json>_extras.csv)")
     a = p.parse_args(argv)
     from . import tabla_comparativa as T
     cfg = T.cargar_config(a.archivo_config)
@@ -176,12 +190,13 @@ def main(argv=None):
     if creados:
         print(f"Total: {sum(r['extras'] for r in creados)} extras: {sum(r['heredadas'] for r in creados)} heredadas, {sum(r['pendientes'] for r in creados)} pendientes.")
         pendientes = [f for r in creados for f in r["filas_pendientes"]]
-        if os.path.exists(a.pendientes):
-            print(f"Ya existe {a.pendientes}: no se toca (borralo o usá --pendientes con otro nombre si querés regenerarlo).")
+        destino = a.salida or ruta_pendientes(a.config, a.ofertas)
+        if os.path.exists(destino) and not a.forzar:
+            print(f"Ya existe {destino}: no se toca (usá --forzar para pisarlo o --salida con otro nombre).")
         elif pendientes:
-            os.makedirs(os.path.dirname(os.path.abspath(a.pendientes)), exist_ok=True)
-            _escribir_nuevo(pendientes, COLUMNAS_PENDIENTES, a.pendientes)
-            print(f"Pendientes de todas las ofertas ({len(pendientes)}) en {a.pendientes}. Etiquetá la columna «etiqueta» con VALIDA, NO_VALIDA o DUDOSA y volcalas con aplicar_etiquetas.")
+            os.makedirs(os.path.dirname(os.path.abspath(destino)), exist_ok=True)
+            _escribir_nuevo(pendientes, COLUMNAS_PENDIENTES, destino, forzar=a.forzar)
+            print(f"Pendientes de todas las ofertas ({len(pendientes)}) en {destino}. Etiquetá la columna «etiqueta» con VALIDA, NO_VALIDA o DUDOSA y volcalas con aplicar_etiquetas.")
         print("Después de volcar las etiquetas, corré la tabla:\n  " + COMANDO_TABLA)
     return resultados
 

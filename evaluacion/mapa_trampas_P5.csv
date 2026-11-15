@@ -1,0 +1,14 @@
+﻿id;proyecto;documento;seccion;fragmento_trampa;norma;articulo;severidad;responsable
+P5-01-IF;Proyecto 5;P5_oferta_CMP5000.docx;3.3 Hormigón de la bancada;La bancada se ejecutará con hormigón H-35 elaborado en planta;NORM_01;3.2;Menor;Gerencia de Infraestructura y Vías
+P5-02-IF;Proyecto 5;P5_oferta_CMP5000.docx;4.3 Puesta a tierra;El conductor de protección del centro de mecanizado se dimensionará según cálculo.;NORM_02;5.5;Mayor;Gerencia de Energía e Instalaciones Electromecánicas
+P5-03-IF;Proyecto 5;P5_oferta_CMP5000.docx;5.2 Maniobras;se izará con autogrúa de capacidad adecuada;NORM_03;2.2;Mayor;Gerencia de Seguridad Operacional y Salud Ocupacional
+P5-05-IF;Proyecto 5;P5_oferta_CMP5000.docx;4.6 Anclajes, bulonería y grout;se ejecutará con grout de alta resistencia, fluido y sin contracción;NORM_05;2.9;Menor;Gerencia de Material Rodante y Equipamiento de Talleres
+P5-02-EX;Proyecto 5;P5_oferta_CMP5000.docx;4.3 Puesta a tierra;resistencia global de puesta a tierra ≤ 10 Ω;NORM_02;5.7;Critico;Gerencia de Energía e Instalaciones Electromecánicas
+P5-02-D1;Proyecto 5;P5_oferta_CMP5000.docx;4.3 Puesta a tierra;La verificación de puesta a tierra se limitará a la medición de la resistencia global;NORM_02;5.16;Mayor;Gerencia de Energía e Instalaciones Electromecánicas
+P5-02-D2;Proyecto 5;P5_oferta_CMP5000.docx;4.1 Alimentación eléctrica;será de conductor unipolar tipo VN 2000 de 95 mm² tendido en bandeja perforada;NORM_02;2.6;Mayor;Gerencia de Energía e Instalaciones Electromecánicas
+P5-04-D;Proyecto 5;P5_oferta_CMP5000.docx;4.2 Tablero de la máquina;a 1,95 m del eje de vía, del lado del paso de hombre;NORM_04;1.2;Critico;Gerencia de Infraestructura y Vías
+P5-03-D;Proyecto 5;P5_oferta_CMP5000.docx;5.3 Accesorios de izaje;no se dispone de certificado de fabricante;NORM_03;3.7;Critico;Gerencia de Seguridad Operacional y Salud Ocupacional
+P5-01-D;Proyecto 5;P5_oferta_CMP5000.docx;3.4 Diseño dinámico de la bancada;será inferior a 4,5 mm/s RMS;NORM_01;7.7;Mayor;Gerencia de Infraestructura y Vías
+P5-05-D;Proyecto 5;P5_oferta_CMP5000.docx;6. Montaje y nivelación;se admitirá una variación de nivelación de hasta 0,03 mm/m;NORM_05;2.8;Mayor;Gerencia de Material Rodante y Equipamiento de Talleres
+P5-04-OP;Proyecto 5;P5_oferta_CMP5000.docx;7.1 Unidades y condición de carga;El SAT se ejecutará con cinco bastidores de bogie reales de la flota;NORM_04;3.6;Oportunidad;Gerencia de Material Rodante y Equipamiento de Talleres
+P5-02-OP;Proyecto 5;P5_oferta_CMP5000.docx;4.1 Alimentación eléctrica;conserva una reserva de potencia del 45 %;NORM_02;1.10;Oportunidad;Gerencia de Energía e Instalaciones Electromecánicas

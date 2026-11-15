@@ -52,10 +52,16 @@ def leer_csv(ruta):
 
 
 def cargar_gt(oferta, ruta=GROUND_TRUTH):
+    if oferta == "P5" and ruta == GROUND_TRUTH:      # P5 (conjunto ciego) tiene su propio esquema: evaluacion/p5.py; [] si todavía no está su ground truth
+        from . import p5
+        return p5.cargar_trampas()
     return [r for r in leer_csv(ruta) if r["oferta"] == oferta]
 
 
 def cargar_espejos(oferta, ruta=ESPEJOS):
+    if oferta == "P5" and ruta == ESPEJOS:           # los 13 controles negativos de P5: evaluacion/p5.py
+        from . import p5
+        return p5.cargar_controles()
     numero = re.sub(r"\D", "", oferta)
     proyecto = f"Proyecto {numero}"
     return [r for r in leer_csv(ruta) if r["proyecto"].strip() == proyecto]
@@ -207,6 +213,9 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
 
     alertas = [{"cita": norm(a.get("cita")), "norma": a.get("norma"), "articulo": _articulo(a.get("articulo"))}
                for a in resultado.get("alertas") or [] if a.get("estado") != ESTADO_ALERTA_SIN_RESPUESTA]
+    # P5: las oportunidades no son trampas (no entran al recall); se informan aparte
+    oportunidades_gt = [f for f in gt if f.get("tipo") == "oportunidad"]
+    gt = [f for f in gt if f.get("tipo") != "oportunidad"]
     trampas, confusion, coincidencias = [], {}, []
     for fila in gt:
         frase, pares = norm(fila["fragmento_trampa"]), pares_trampa(fila)
@@ -263,10 +272,28 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
             confusion[(fila["clase"], elegida.get("clase"))] = confusion.get((fila["clase"], elegida.get("clase")), 0) + 1
         trampas.append(t)
 
+    # agrupamiento (P5): un grupo está cubierto si alguna de sus trampas se encontró; el recall estricto sigue siendo por trampa
+    por_grupo = {}
+    for fila, t in zip(gt, trampas):
+        if fila.get("grupo"):
+            por_grupo.setdefault(fila["grupo"], []).append(t)
+    grupos = [{"grupo": g, "ids": [t["id"] for t in ts], "encontradas": sum(t["estado"] == "encontrada" for t in ts), "cubierto": any(t["estado"] == "encontrada" for t in ts)}
+              for g, ts in por_grupo.items()]
+    oportunidades = []
+    for fila in oportunidades_gt:
+        frase, pares = norm(fila["fragmento_trampa"]), pares_trampa(fila)
+        marcada = any(frase in i["cita"] and (not brechas_modo or (i["norma"], i["articulo"]) in pares) for i in items)
+        oportunidades.append({"id": fila["id"], "seccion": fila["seccion"], "norma": fila["norma"], "articulo": fila["articulo"], "marcada": bool(marcada)})
+
+    # una brecha que es la trampa encontrada no cuenta como falsa alarma de un control sin cita (que se cuenta solo por artículo)
+    golpe_de_trampa = [any(norm(f["fragmento_trampa"]) in i["cita"] and (i["norma"], i["articulo"]) in pares_trampa(f) for f in gt) for i in items] if brechas_modo else []
     falsas, marcados = 0, []
     for e in espejos:
         frase, pares = _frase_espejo(e), pares_espejo(e)
-        marcado = any(frase in i["cita"] and (not brechas_modo or (i["norma"], i["articulo"]) in pares) for i in items)
+        if not frase:      # control sin cita: cuenta por artículo (solo en modo brechas)
+            marcado = brechas_modo and any((i["norma"], i["articulo"]) in pares and not golpe_de_trampa[k] for k, i in enumerate(items))
+        else:
+            marcado = any(frase in i["cita"] and (not brechas_modo or (i["norma"], i["articulo"]) in pares) for i in items)
         falsas += marcado
         marcados.append({"seccion": e["seccion"], "cita": e["cita_conforme"], "norma": e["norma"], "articulo": e["articulo"], "marcado": marcado})
 
@@ -295,7 +322,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         "nivel_ok": sum(t["nivel_obtenido"] == t["nivel_esperado"] for t in encontradas),
         "confusion": confusion, "n_espejos": len(espejos), "falsas_alarmas": falsas, "espejos": marcados,
         "extras": extras, "volumen": volumen, "n_riesgo": len(items), "precision": None, "precision_k": None, "precision_n": None, "extras_etiquetados": 0,
-        "juez": None, "pares_juez_humano": [], "control_juez": None}
+        "juez": None, "pares_juez_humano": [], "control_juez": None, "grupos": grupos, "oportunidades": oportunidades}
 
 
 def conteo_precision(ev, revision):
@@ -410,6 +437,8 @@ def combinar(evs):
     ev["juez"] = None if any(e["juez"] is None for e in evs) else {k: sum(e["juez"][k] for e in evs) for k in ("estricta", "amplia", "n")}
     ev["control_juez"] = None if any(e.get("control_juez") is None for e in evs) else {k: sum(e["control_juez"][k] for e in evs) for k in ("n", "no_valida")}
     ev["pares_juez_humano"] = [x for e in evs for x in e["pares_juez_humano"]]
+    ev["grupos"] = [x for e in evs for x in e.get("grupos", [])]
+    ev["oportunidades"] = [x for e in evs for x in e.get("oportunidades", [])]
     return ev
 
 
@@ -510,6 +539,21 @@ def _bloque_perdidas(ev):
     return L + [""]
 
 
+def _bloque_p5(ev):
+    """Solo con P5: grupos de trampas sobre la misma frase y oportunidades (aparte del recall). Vacío si el resultado no trae ninguno."""
+    L = []
+    if ev.get("grupos"):
+        L += ["## Grupos de trampas (P5)", "", "Un grupo está cubierto si se encontró alguna de sus trampas; el recall estricto de arriba sigue siendo por trampa.", "",
+              "| Grupo | Trampas | Encontradas | Cubierto |", "|---|---|---|---|"]
+        L += [f"| {g['grupo']} | {', '.join(g['ids'])} | {g['encontradas']}/{len(g['ids'])} | {'sí' if g['cubierto'] else 'no'} |" for g in ev["grupos"]]
+        L.append("")
+    if ev.get("oportunidades"):
+        L += ["## Oportunidades (P5, fuera del recall)", "", "| Oportunidad | Sección | Artículo | Marcada como brecha |", "|---|---|---|---|"]
+        L += [f"| {o['id']} | {o['seccion']} | {o['norma']} Art. {o['articulo']} | {'sí' if o['marcada'] else 'no'} |" for o in ev["oportunidades"]]
+        L.append("")
+    return L
+
+
 def _segundos_texto(s) -> str:
     return "n/d" if s is None else f"{s:,.1f} s ({int(s) // 3600}:{int(s) % 3600 // 60:02d}:{int(s) % 60:02d})".replace(",", "X").replace(".", ",").replace("X", ".")
 
@@ -581,6 +625,7 @@ def informe_md(ev, comparacion=None) -> str:
         L += ["## Fidelidad", "", "| Métrica | Valor |", "|---|---|", f"| Brechas con alguna marca «{MARCA_NO_VERIFICADO}» | {_pct(ev['marcas_no_verificadas'], nb)} |", "",
               NOTA_FIDELIDAD, ""]
         L += _bloque_recall_por_categoria(ev) + _bloque_falsas_y_volumen(ev) + _bloque_perdidas(ev)
+    L += _bloque_p5(ev)
     L += _bloque_costo(ev)
     L += ["## Detalle por trampa", "",
           "| Trampa | Encontrada | Artículo citado | Artículo verificado | Clase esperada | Clase obtenida | Responsable esperado | Responsable obtenido | Nivel esperado | Nivel obtenido |",

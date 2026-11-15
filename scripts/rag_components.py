@@ -455,7 +455,9 @@ def candidatos_de_consulta(vector_db_instance, consulta: str, k: int) -> List[Do
 def recuperar_con_candidatos(vector_db_instance, consulta: str, k: int, top_n: int, top_densa: int = 0):
     """(candidatos, docs): los k de la búsqueda (densa o híbrida) en su orden (antes del reranker) y los finales: los top_n del reranker y,
     con top_densa > 0, también los top_densa primeros de la densa (unión, ordenada por puntaje del reranker; todos llevan relevance_score).
-    Sin reranker, docs son los primeros max(top_n, top_densa) de los candidatos."""
+    Sin reranker, docs son los primeros max(top_n, top_densa) de los candidatos.
+    En el perfil elegido (top_n 0, top_densa = k) el reranker no cambia el conjunto recuperado; ordena y elige el fragmento de mayor puntaje por artículo
+    (en unir_fragmentos). Única excepción: si la unión de las subsecciones de una sección supera el tope (VERIFICAR_TOPE), el corte se hace por ese puntaje."""
     candidatos = candidatos_de_consulta(vector_db_instance, consulta, k)
     if not config.USE_RERANKER:
         return candidatos, candidatos[:max(top_n, top_densa)]
@@ -633,6 +635,19 @@ def get_llm_instance(model_id: str, formato: Optional[dict] = None, razonamiento
                 **({"format": formato} if formato else {})
             )
 
+        elif provider == "deepinfra":
+            # Mismo cliente que scripts.nube (json_schema estricto, razonamiento bajo de gpt-oss, conteo de tokens y tope de gasto PRESUPUESTO_USD por cliente)
+            from .nube import ClienteNube, Gasto     # import tardío: nube importa este módulo
+            proveedor = model_config.get("proveedor_nube", "deepinfra")
+            gasto = Gasto(config.PRECIOS_NUBE[model_id], config.PRESUPUESTO_USD)
+            sistema = config.NUBE_MODELOS_RAZONAMIENTO_FIJO.get(model_id)
+            if formato:
+                cliente = ClienteNube(get_llm_openai_compatible(proveedor, model_id, esquema=formato), gasto, respaldo=get_llm_openai_compatible(proveedor, model_id),
+                                      nombre=formato.get("title", "respuesta"), sistema=sistema)
+            else:
+                cliente = ClienteNube(get_llm_openai_compatible(proveedor, model_id, texto=True), gasto, nombre="texto", sistema=sistema)
+            return cliente.runnable()
+
         elif provider == "google":
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
@@ -688,10 +703,11 @@ def get_llm_instance(model_id: str, formato: Optional[dict] = None, razonamiento
         return None
 
 
-def get_llm_openai_compatible(proveedor: str, modelo: str, razonamiento: bool = False, esquema=None):
+def get_llm_openai_compatible(proveedor: str, modelo: str, razonamiento: bool = False, esquema=None, texto: bool = False):
     """Cliente del proveedor genérico openai_compatible (perfil en config.PERFILES_NUBE, clave desde el .env). Temperatura 0 (0,6 con razonamiento),
-    seed fija y razonamiento desactivado salvo `razonamiento`. Salida: con `esquema` (modelo pydantic) response_format json_schema estricto, igual que
-    el format=<json schema> de Ollama; sin esquema, json_object. Los 429 y 5xx los reintenta el cliente (hasta NUBE_MAX_REINTENTOS) respetando retry-after."""
+    seed fija y razonamiento desactivado salvo `razonamiento`. Salida: con `esquema` (modelo pydantic o su JSON schema como dict) response_format json_schema
+    estricto, igual que el format=<json schema> de Ollama; sin esquema, json_object; con `texto`, sin response_format (respuesta en texto libre).
+    Los 429 y 5xx los reintenta el cliente (hasta NUBE_MAX_REINTENTOS) respetando retry-after."""
     perfil = config.PERFILES_NUBE.get(proveedor)
     if not perfil:
         raise ValueError(f"Proveedor desconocido: {proveedor!r} (perfiles: {', '.join(config.PERFILES_NUBE)})")
@@ -699,14 +715,20 @@ def get_llm_openai_compatible(proveedor: str, modelo: str, razonamiento: bool = 
     if not clave:
         raise ValueError(f"Falta la clave {perfil['api_key_env']} en el archivo .env")
     from langchain_openai import ChatOpenAI
+    if texto:
+        formato_salida = {}
+    elif esquema is not None:
+        nombre, schema = (esquema.get("title", "respuesta"), esquema) if isinstance(esquema, dict) else (esquema.__name__, esquema.model_json_schema())
+        formato_salida = {"response_format": {"type": "json_schema", "json_schema": {"name": nombre, "schema": schema, "strict": True}}}
+    else:
+        formato_salida = {"response_format": {"type": "json_object"}}
     fijo = modelo in config.NUBE_MODELOS_RAZONAMIENTO_FIJO      # razonamiento que no se apaga (gpt-oss): sin enable_thinking y con el tope de max_tokens de razonamiento
     return ChatOpenAI(
         model=modelo, api_key=clave, base_url=perfil["base_url"], seed=config.OLLAMA_SEED,
         temperature=config.VERIF_TEMPERATURE if razonamiento else 0,
         max_tokens=config.NUBE_MAX_TOKENS_THINKING if (razonamiento or fijo) else config.NUBE_MAX_TOKENS,
         max_retries=config.NUBE_MAX_REINTENTOS, timeout=config.NUBE_TIMEOUT_S,
-        model_kwargs={"response_format": {"type": "json_schema", "json_schema": {"name": esquema.__name__, "schema": esquema.model_json_schema(), "strict": True}}
-                      if esquema is not None else {"type": "json_object"}},
+        model_kwargs=formato_salida,
         extra_body=None if fijo else {"chat_template_kwargs": {"enable_thinking": bool(razonamiento)}})
 
 

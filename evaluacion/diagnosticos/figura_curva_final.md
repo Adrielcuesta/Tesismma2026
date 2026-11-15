@@ -23,9 +23,9 @@ Mínimos cuadrados sobre los 57 puntos de la serie: **a = 176,1406**, **b = 1,11
 | elegido | 10 | 677 | 27/30 (90%; 74%–97%) | 0,35 | 3,6 |
 | codo (Kneedle) | 15 | 890 | 28/30 (93%; 79%–98%) | 0,46 | 4,8 |
 | **configuración elegida** (constante) | 10 (cupo 15, tope 39) | 721 | 28/30 (93%; 79%–98%) | 0,37 | 3,9 |
-| validación de la elegida en P3+P4 (constante) | — | 613 | 26/30 (87%; 70%–95%) | 0,31 | 3,3 |
+| validación de la elegida en P3+P4 (leída de la tabla) | — | 613 | 26/30 (87%; 70%–95%) | 0,31 | 3,3 |
 
-Origen de las constantes: la elegida (28/30, 721 pares, K=10, cupo 15, tope 39) es la del commit 9e7a8ab y del informe de la curva; el 26/30 en P3+P4 es la validación de la elegida y dibuja en 613 pares («Qwen3-32B (elegida)», conjunto «P3–P4 prueba (segunda evaluación: el conjunto ya fue visto en v1)»: 306 pares por oferta × 2).
+Origen de los datos: la elegida (28/30, 721 pares, K=10, cupo 15, tope 39) es la del commit 9e7a8ab y del informe de la curva (constante); la validación en P3+P4 (26/30) se lee de la tabla comparativa: Recall@artículo de la recuperación elegida: 26/30, igual en las 3 configuraciones con perfil elegido y ofertas P3+P4 (qwen3:8b local (elegida), Qwen3-32B (elegida), gpt-oss-120b esfuerzo bajo (elegida)), de evaluacion\resultados_reeval\tabla_comparativa.csv; se dibuja en 613 pares («Qwen3-32B (elegida)», conjunto «P3–P4 prueba (segunda evaluación: el conjunto ya fue visto en v1)»: 306 pares por oferta × 2).
 
 ## Verificación de los K de referencia
 

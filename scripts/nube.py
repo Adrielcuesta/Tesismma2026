@@ -171,7 +171,7 @@ def _abrir_chroma():
 # --- Ejecución por secciones ---
 
 def _correr_seccion(seccion, docs, cadena_verif, cadena_clasif, cliente_verif, cliente_clasif, lin):
-    llamadas, t_sec = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0}), {"id": seccion["id"]}
+    llamadas, t_sec = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0, "correccion_formato": 0}), {"id": seccion["id"]}
     try:
         brechas, alertas, registro = _verificar_seccion(seccion, docs, cadena_verif, cadena_clasif, cliente_verif, cliente_clasif, lin, t_sec, llamadas)
         # los pares descartados por formato inválido (tras el reintento de formato) también son llamadas fallidas
@@ -242,7 +242,7 @@ def sufijo_corrida(proveedor: str, modelo: str, thinking: bool, perfil=None, max
 
 
 def _unir_llamadas(resultados: list) -> Llamadas:
-    total = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0})
+    total = Llamadas({"verificacion": 0, "clasificacion": 0, "comentario": 0, "lista": 0, "correccion_formato": 0})
     for _, r in resultados:
         ll = r["llamadas"]
         for k, v in ll.items():
@@ -281,7 +281,7 @@ def armar_reporte(local, secciones, docs_por_seccion, resultados, lin, modelo, p
                seed=config.OLLAMA_SEED, thinking_verificacion=bool(thinking), razonamiento_esfuerzo=config.NUBE_MODELOS_RAZONAMIENTO_FIJO.get(modelo),
                recuperacion_reusada=True, max_pares=max_pares,
                huella_pares=huella_recuperacion.huella_de_pares(local.get("secciones") or []),
-               llamadas_llm={k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario")},
+               llamadas_llm={k: v for k, v in llamadas.items() if k in ("verificacion", "clasificacion", "comentario", "correccion_formato")},
                llamadas_fallidas=llamadas.get("fallidas", 0), costo_computacional=costo_comp, hardware=hardware, llamadas_detalle=llamadas.detalle,
                tokens_generados_por_tipo=_estadisticas_tokens(llamadas), tiempos_s={"total": round(tiempo_total, 2), "por_seccion": por_seccion})
     return RiskReport(
@@ -298,7 +298,7 @@ def buscar_pdf(nombre: str):
     return None
 
 
-def correr_oferta(ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, lin, indice, proveedor, modelo, concurrencia, thinking, max_pares) -> dict:
+def correr_oferta(ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, lin, indice, proveedor, modelo, concurrencia, thinking, max_pares, salida_dir=None) -> dict:
     with open(ruta_local, encoding="utf-8") as f:
         local = json.load(f)
     pdf = ruta_pdf or buscar_pdf(local.get("nombre_archivo_original") or "")
@@ -325,7 +325,7 @@ def correr_oferta(ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, li
     perfil = (local.get("configuracion_analisis") or {}).get("perfil_recuperacion")    # solo los JSON de scripts.recuperar lo traen
     sufijo = sufijo_corrida(proveedor, modelo, thinking, perfil, max_pares)
     marca = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{sufijo}"
-    ruta_html = _guardar_y_generar_dashboard(reporte, os.path.basename(pdf), marca)
+    ruta_html = _guardar_y_generar_dashboard(reporte, os.path.basename(pdf), marca, carpeta_base=salida_dir)
     ruta_json = os.path.join(os.path.dirname(os.path.join(config.PROJECT_ROOT, ruta_html)), os.path.basename(ruta_html).replace("dashboard_", "analisis_riesgos_", 1)[:-5] + ".json")
     return {"oferta": os.path.basename(pdf), "html": ruta_html, "json": ruta_json if os.path.isfile(ruta_json) else None, "gasto": gasto_oferta, "detenida": detenida,
             "resumen": resumen_humo(reporte.registro_tecnico, gasto_oferta), "brechas": len(reporte.registro_brechas), "riesgos": len(reporte.riesgos), "alertas": len(reporte.alertas)}
@@ -341,6 +341,8 @@ def main(argv=None) -> int:
     p.add_argument("--max-pares", type=int, help="corre solo los primeros N pares de cada oferta (prueba de humo)")
     p.add_argument("--concurrencia", type=int, default=config.NUBE_CONCURRENCIA)
     p.add_argument("--estimar", action="store_true", help="solo imprime los pares y el costo estimado (sin llamar a la API ni leer la clave) y sale")
+    p.add_argument("--salida-dir", help="carpeta base de la salida (<carpeta>/<oferta>/); por defecto datos/Resultados. Para corridas que no deben entrar en la tabla "
+                                        "oficial (p. ej. la repetición de estabilidad): los «auto» de config_reeval.json solo buscan en datos/Resultados/<oferta>/")
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 
@@ -370,7 +372,8 @@ def main(argv=None) -> int:
                 break
             logger.info(f"--- {os.path.basename(ruta)} con {a.proveedor}:{a.modelo} (concurrencia {a.concurrencia}) ---")
             try:
-                salidas.append(correr_oferta(ruta, a.pdf[i] if a.pdf else None, cliente_verif, cliente_clasif, gasto, lin, indice, a.proveedor, a.modelo, a.concurrencia, a.thinking, a.max_pares))
+                salidas.append(correr_oferta(ruta, a.pdf[i] if a.pdf else None, cliente_verif, cliente_clasif, gasto, lin, indice, a.proveedor, a.modelo, a.concurrencia, a.thinking, a.max_pares,
+                                             salida_dir=os.path.abspath(a.salida_dir) if a.salida_dir else None))
             except (AnalisisError, ValueError):
                 raise
             except Exception as e:      # imprevisto al armar o guardar una oferta: se avisa y se sigue con la siguiente

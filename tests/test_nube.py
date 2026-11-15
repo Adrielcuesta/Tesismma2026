@@ -360,3 +360,44 @@ def test_estimar_imprime_pares_y_costo_sin_clave_ni_api(tmp_path, capsys, monkey
     assert nube.main(["--estimar", "--reusar-recuperacion", str(ruta), "--modelo", GPT_OSS]) == 0
     salida = capsys.readouterr().out
     assert GPT_OSS in salida and "4 pares" in salida and "USD" in salida
+
+
+# --- --salida-dir: corridas que no entran en la tabla oficial (repetición de estabilidad) ---
+
+def test_guardar_con_carpeta_base_escribe_fuera_de_la_carpeta_oficial(tmp_path, monkeypatch):
+    from scripts import main as M
+    escritos = []
+
+    def guardar(reporte, nombre_pdf, carpeta, sufijo_nombre):
+        ruta = os.path.join(carpeta, f"analisis_riesgos_x{sufijo_nombre}.json")
+        open(ruta, "w", encoding="utf-8").write("{}")
+        escritos.append(ruta)
+        return ruta
+    monkeypatch.setattr(M.report_utils, "formatear_y_guardar_reporte", guardar)
+    monkeypatch.setattr(M.dashboard_generator, "generar_dashboard_html", lambda ruta_json_resultados, ruta_output_dashboard_html, info_tesis_config:
+                        open(ruta_output_dashboard_html, "w", encoding="utf-8").write("<html>"))
+    monkeypatch.setattr(config, "DIRECTORIO_RESULTADOS_BASE", str(tmp_path / "oficial"))
+    M._guardar_y_generar_dashboard(None, "P3_oferta_X.docx", "20261115_000000_m", carpeta_base=str(tmp_path / "estabilidad"))
+    assert os.path.dirname(escritos[0]) == str(tmp_path / "estabilidad" / "P3_oferta_X") and not (tmp_path / "oficial").exists()
+    M._guardar_y_generar_dashboard(None, "P3_oferta_X.docx", "20261115_000001_m")              # sin carpeta_base: la de siempre
+    assert os.path.dirname(escritos[1]) == str(tmp_path / "oficial" / "P3_oferta_X")
+
+
+def test_main_pasa_salida_dir_absoluta_a_cada_oferta_y_sin_ella_none(tmp_path, monkeypatch):
+    monkeypatch.setenv("DEEPINFRA_API_KEY", "clave-falsa")
+    monkeypatch.setattr(config, "THINKING_VERIFICACION", config.THINKING_VERIFICACION)
+    monkeypatch.setattr(nube.lineamientos, "cargar_lineamientos", lambda carpeta: LIN)
+    monkeypatch.setattr(nube, "_abrir_chroma", lambda: type("C", (), {"get": lambda self, include: {"documents": [], "metadatas": []}})())
+    pedidas = []
+
+    def correr(ruta, *args, salida_dir=None):
+        pedidas.append((ruta, salida_dir))
+        return {"oferta": ruta, "resumen": {"pares": 0, "json_ok": 0}, "brechas": 0, "riesgos": 0, "alertas": 0,
+                "gasto": {"entrada": 0, "cacheados": 0, "salida": 0, "usd": 0.0}, "json": None, "html": "x.html", "detenida": False}
+    monkeypatch.setattr(nube, "correr_oferta", correr)
+    monkeypatch.chdir(tmp_path)
+    assert nube.main(["--reusar-recuperacion", "a.json", "b.json", "--modelo", GPT_OSS, "--salida-dir", os.path.join("datos", "Resultados", "estabilidad")]) == 0
+    esperado = str(tmp_path / "datos" / "Resultados" / "estabilidad")
+    assert pedidas == [("a.json", esperado), ("b.json", esperado)]
+    pedidas.clear()
+    assert nube.main(["--reusar-recuperacion", "a.json", "--modelo", GPT_OSS]) == 0 and pedidas == [("a.json", None)]

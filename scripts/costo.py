@@ -43,6 +43,7 @@ def resumen_costo(detalle: list, tiempo_total_s: float, modelo: str, hardware: d
     return {
         "modelo": modelo, "hardware": hardware, "pares_verificados": n,
         "llamadas_totales": sum(d.get("intentos", 1) for d in detalle), "llamadas_fallidas": sum(not d.get("exitosa", True) for d in detalle),
+        "llamadas_correccion_formato": sum(1 for d in detalle if d.get("tipo") == "correccion_formato"),
         "tiempo_total_s": tiempo_total_s,
         "segundos_por_par": {"mediana": percentil(segundos.values(), 50), "p90": percentil(segundos.values(), 90)},
         "tokens_entrada_total": entrada_total, "tokens_salida_total": salida_total,
