@@ -6,6 +6,7 @@ Uso (lo corre el usuario: lee datos/Resultados):
   python -m evaluacion.preparar_extras --config "gpt-oss-120b esfuerzo bajo (elegida)" [--ofertas P3 P4] [--archivo-config evaluacion/config_reeval.json]
                                        [--salida <csv de pendientes>] [--forzar]
   (--ofertas P1 P2 para las de desarrollo; por defecto P3 P4)
+  P6–P12 (prueba externa): --ofertas P6 P7 P8 P9 P10 P11 P12 --archivo-config evaluacion/config_p6p12.json (el ground truth sale de evaluacion/externas.py)
 
 Por cada oferta escribe <json>_extras.csv junto al JSON. Columnas que lee tabla_comparativa (evaluar.evaluar_archivo): oferta, seccion, norma, articulo, cita, titulo, clase y valido (sí/no;
 la clave de cada extra es sección, norma, artículo y cita). Más, para etiquetar sin abrir nada más: id, texto_articulo (hasta 800 caracteres), veredicto_verificador, explicacion_verificador,
@@ -110,7 +111,8 @@ def nombre_pendientes(configuracion: str, ofertas: list) -> str:
     """Nombre del archivo unificado de pendientes: extras_pendientes_<configuración>_<ofertas>.csv; la configuración va en [a-z0-9.-] y las ofertas pegadas
     (p. ej. «gpt-oss-120b esfuerzo bajo (elegida)» con P1 y P2 -> extras_pendientes_gpt-oss-120b-esfuerzo-bajo-elegida_P1P2.csv)."""
     modelo = re.sub(r"[^a-z0-9.\-]+", "-", configuracion.lower()).strip("-") or "config"
-    return f"extras_pendientes_{modelo}_{''.join(sorted(ofertas))}.csv"
+    numero = lambda o: (int(m.group()) if (m := re.search(r"\d+", o)) else 0, o)          # P6 < P10 (orden por número, no alfabético)
+    return f"extras_pendientes_{modelo}_{''.join(sorted(ofertas, key=numero))}.csv"
 
 
 def ruta_pendientes(configuracion: str, ofertas: list, carpeta: str = None) -> str:
@@ -161,7 +163,7 @@ def preparar_oferta(oferta: str, ruta_json: str, gt: list, espejos: list) -> dic
 def main(argv=None):
     p = argparse.ArgumentParser(description="Prepara el <json>_extras.csv de una configuración para etiquetar sus extras (nunca pisa un archivo existente)")
     p.add_argument("--config", required=True, help="nombre de la configuración en el archivo de configuración, p. ej. «gpt-oss-120b esfuerzo bajo (elegida)»")
-    p.add_argument("--ofertas", nargs="+", default=["P3", "P4"], help="ofertas a preparar (por defecto P3 P4; P1 P2 para las de desarrollo)")
+    p.add_argument("--ofertas", nargs="+", default=["P3", "P4"], help="ofertas a preparar (por defecto P3 P4; P1 P2 para las de desarrollo; P6 ... P12 con config_p6p12.json)")
     p.add_argument("--archivo-config", default=CONFIG_REEVAL, help="config de tabla_comparativa de donde salen los JSON (por defecto evaluacion/config_reeval.json)")
     p.add_argument("--salida", "--pendientes", dest="salida", default=None,
                    help="CSV unificado con las pendientes de todas las ofertas; por defecto evaluacion/diagnosticos/extras_pendientes_<configuración>_<ofertas>.csv")

@@ -7,7 +7,10 @@ El comentario general usa la plantilla (sin llamada al modelo). Las secciones co
 Uso:
   python -m scripts.nube --reusar-recuperacion <json_local> [<json_local> ...] [--proveedor deepinfra] [--modelo Qwen/Qwen3-32B]
          [--max-pares N] [--thinking] [--concurrencia N] [--pdf <oferta> ...] [--estimar]
---estimar imprime los pares y el costo estimado y sale, sin API. Un modelo de config.NUBE_MODELOS_RAZONAMIENTO_FIJO (gpt-oss) recibe su esfuerzo en un mensaje de sistema.
+  python -m scripts.nube --reusar-recuperacion <json_recuperacion> --reintentar-fallidas <json_resultados> [--proveedor ... --modelo ...] [--estimar]
+--estimar imprime los pares y el costo estimado y sale, sin API. --reintentar-fallidas vuelve a llamar solo a los pares sin respuesta válida de una corrida (tiempo agotado,
+formato inválido tras reintentar o sección caída entera, p. ej. por un 402) y escribe <...>-reintento.json con el conjunto fusionado; si la corrida original no coincide
+(huella de pares, perfil, modelo, proveedor, lineamientos), no arranca. Un modelo de config.NUBE_MODELOS_RAZONAMIENTO_FIJO (gpt-oss) recibe su esfuerzo en un mensaje de sistema.
 Las claves se leen del .env (DEEPINFRA_API_KEY, GROQ_API_KEY)."""
 import argparse
 import datetime
@@ -224,10 +227,15 @@ def estimar_costo(rutas_locales: list, modelo: str, thinking: bool = False) -> d
     for ruta in rutas_locales:
         with open(ruta, encoding="utf-8") as f:
             pares.append(len(pares_de_json(json.load(f))))
+    por_par, tokens = costo_por_par(modelo, thinking)
+    return {"pares_por_oferta": pares, "pares": sum(pares), "usd_por_par": por_par, "usd": sum(pares) * por_par, "tokens_por_par": tokens}
+
+
+def costo_por_par(modelo: str, thinking: bool = False) -> tuple:
+    """(USD estimados por par, (tokens de entrada, tokens de salida) por par) con config.NUBE_TOKENS_POR_PAR y el precio del modelo."""
     entrada, salida = config.NUBE_TOKENS_POR_PAR["con_razonamiento" if (thinking or modelo in config.NUBE_MODELOS_RAZONAMIENTO_FIJO) else "sin_razonamiento"]
     precios = config.PRECIOS_NUBE[modelo]
-    por_par = (entrada * precios["entrada"] + salida * precios["salida"]) / 1_000_000
-    return {"pares_por_oferta": pares, "pares": sum(pares), "usd_por_par": por_par, "usd": sum(pares) * por_par, "tokens_por_par": (entrada, salida)}
+    return (entrada * precios["entrada"] + salida * precios["salida"]) / 1_000_000, (entrada, salida)
 
 
 # --- Reporte ---
@@ -331,6 +339,238 @@ def correr_oferta(ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, li
             "resumen": resumen_humo(reporte.registro_tecnico, gasto_oferta), "brechas": len(reporte.registro_brechas), "riesgos": len(reporte.riesgos), "alertas": len(reporte.alertas)}
 
 
+# --- Reintento de los pares sin respuesta válida (--reintentar-fallidas) ---
+
+ESTADOS_SECCION_CAIDA = ("seccion_fallida", "presupuesto_agotado")
+SUFIJO_REINTENTO = "-reintento"
+
+
+def _clave_par(x) -> tuple:
+    """(norma, artículo) de un fragmento, un registro, una alerta o una brecha."""
+    return (str(x.get("norma") or ""), str(x.get("articulo") or ""))
+
+
+def es_par_fallido(r: dict) -> bool:
+    """¿Este registro técnico es de un par sin respuesta válida? Verificación: agotó los reintentos (tiempo_agotado: 429, 5xx, timeout o corte por largo) o el formato
+    siguió inválido tras el reintento de formato (descartada, sin veredicto). Clasificación: agotó los reintentos o el formato falló (clasificacion_fallida)."""
+    estado = r.get("estado")
+    if r.get("etapa") == "clasificacion":
+        return estado in ("tiempo_agotado", "clasificacion_fallida")
+    if r.get("etapa"):
+        return False
+    return estado == "tiempo_agotado" or (estado == "descartada" and r.get("veredicto") is None)
+
+
+def pares_fallidos(secciones: list, registro: list) -> dict:
+    """{id de sección: [(norma, artículo)]} de los pares sin respuesta válida, en el orden de secciones[].fragmentos. Una sección caída entera (seccion_fallida, p. ej. por un
+    402 o un error imprevisto; presupuesto_agotado) aporta todos sus pares: se perdió su resultado completo, también el de los pares que ya habían respondido."""
+    caidas = {r.get("seccion") for r in registro if r.get("estado") in ESTADOS_SECCION_CAIDA}
+    sueltos = {(r.get("seccion"), *_clave_par(r)) for r in registro if es_par_fallido(r)}
+    salida = {}
+    for s in secciones:
+        for f in s.get("fragmentos") or []:
+            if s["id"] in caidas or (s["id"], *_clave_par(f)) in sueltos:
+                salida.setdefault(s["id"], {})[_clave_par(f)] = None
+    return {sid: list(claves) for sid, claves in salida.items()}
+
+
+def contar_pares(fallidos: dict) -> int:
+    return sum(len(v) for v in fallidos.values())
+
+
+def comprobar_coincidencia(original: dict, local: dict, proveedor: str, modelo: str, thinking: bool, lin: dict) -> list:
+    """Diferencias entre la corrida original y lo que pide el reintento (lista vacía = coinciden): huella de pares y perfil de recuperación (contra el JSON de recuperación),
+    modelo, proveedor, razonamiento, esfuerzo, seed y huella de los lineamientos. No se reintenta un parcial ni una prueba de humo."""
+    cfg = original.get("configuracion_analisis") or {}
+    cfg_local = local.get("configuracion_analisis") or {}
+    problemas = []
+    if cfg.get("parcial"):
+        problemas.append("el JSON es un parcial (_parcial), no una corrida completa")
+    if cfg.get("max_pares"):
+        problemas.append(f"es una prueba de humo (max_pares={cfg['max_pares']})")
+    if not cfg.get("recuperacion_reusada"):
+        problemas.append("no es una corrida de scripts.nube (sin recuperación reusada)")
+    comparaciones = [
+        ("modelo", cfg.get("modelo_llm_usado"), f"{proveedor}:{modelo}"),
+        ("proveedor", (cfg.get("costo_computacional") or {}).get("proveedor"), proveedor),
+        ("razonamiento (--thinking)", bool(cfg.get("thinking_verificacion")), bool(thinking)),
+        ("esfuerzo de razonamiento", cfg.get("razonamiento_esfuerzo"), config.NUBE_MODELOS_RAZONAMIENTO_FIJO.get(modelo)),
+        ("seed", cfg.get("seed"), config.OLLAMA_SEED),
+        ("huella de pares", cfg.get("huella_pares"), huella_recuperacion.huella_de_pares(local.get("secciones") or [])),
+        ("perfil de recuperación", cfg.get("perfil_recuperacion"), cfg_local.get("perfil_recuperacion")),
+        ("huella de los lineamientos", (original.get("lineamientos") or {}).get("huella"), lin["huella"])]
+    problemas += [f"{nombre}: la corrida original tiene «{o}» y el reintento usaría «{n}»" for nombre, o, n in comparaciones if o != n]
+    return problemas
+
+
+def fusionar(original: dict, resultados: list, fallidos: dict, orden_secciones: list) -> tuple:
+    """Fusiona el reintento con la corrida original. Una sección del reintento que se completó (sin presupuesto_agotado ni seccion_fallida) reemplaza, en registro_brechas,
+    alertas y registro_tecnico, todo lo de sus pares reintentados (y la marca de sección caída); lo nuevo va al final del bloque de su sección. Lo que ya estaba bien queda
+    igual y en el mismo orden. Una sección del reintento que no se completó no reemplaza nada: sus pares siguen como estaban (fallidos).
+    Devuelve ({registro_brechas, alertas, registro_tecnico}, [ids de sección del reintento que no se completaron])."""
+    completas = {sid: r for sid, r in resultados if not r["incompleta"] and not any(x.get("estado") in ESTADOS_SECCION_CAIDA for x in r["registro"])}
+    sin_completar = [sid for sid, _ in resultados if sid not in completas]
+
+    def reemplazado(x):
+        sid = x.get("seccion")
+        return sid in completas and (_clave_par(x) in fallidos.get(sid, []) or x.get("estado") in ESTADOS_SECCION_CAIDA)
+
+    salida = {}
+    for campo, nuevo in (("registro_brechas", "brechas"), ("alertas", "alertas"), ("registro_tecnico", "registro")):
+        quedan = [x for x in original.get(campo) or [] if not reemplazado(x)]
+        bloques, sueltos = {sid: [] for sid in orden_secciones}, []
+        for x in quedan:
+            bloques[x.get("seccion")].append(x) if x.get("seccion") in bloques else sueltos.append(x)
+        for sid, r in completas.items():
+            bloques.setdefault(sid, []).extend(r[nuevo])
+        salida[campo] = [x for sid in bloques for x in bloques[sid]] + sueltos
+    return salida, sin_completar
+
+
+def armar_reporte_fusionado(original, local, secciones, docs_por_seccion, fusion, resultados, lin, modelo, proveedor, concurrencia, gasto_r, tiempo_r, thinking,
+                            detenida, normalizaciones, formatos, reintento: dict) -> RiskReport:
+    """El reporte del conjunto fusionado: riesgos, solicitudes, resumen y comentario se rearman con armar_reporte (mismas reglas que la corrida normal) sobre las brechas,
+    alertas y registro fusionados. Costo, tokens, llamadas y tiempo suman la corrida original y el reintento (el detalle de llamadas va completo); llamadas_fallidas
+    refleja el estado final (pares que siguen sin respuesta válida) y el bloque «reintento» guarda la historia."""
+    llamadas_r = _unir_llamadas(resultados)
+    unico = [("fusion", {"brechas": fusion["registro_brechas"], "alertas": fusion["alertas"], "registro": fusion["registro_tecnico"], "llamadas": llamadas_r, "t_sec": {}})]
+    reporte = armar_reporte(local, secciones, docs_por_seccion, unico, lin, modelo, proveedor, concurrencia, gasto_r, tiempo_r, thinking, None, detenida, normalizaciones, formatos)
+    cfg_o, cfg = original.get("configuracion_analisis") or {}, reporte.configuracion_analisis
+    cc_o = cfg_o.get("costo_computacional") or {}
+    detalle = list(cfg_o.get("llamadas_detalle") or []) + llamadas_r.detalle
+    tiempo_total = ((cfg_o.get("tiempos_s") or {}).get("total") or 0) + tiempo_r
+    suma = lambda campo, valor: (cc_o.get(campo) or 0) + valor
+    costo_comp = costo.resumen_costo(detalle, tiempo_total, f"{proveedor}:{modelo}", cfg["hardware"])
+    costo_comp.update(proveedor=proveedor, concurrencia=concurrencia, costo_usd=round(suma("costo_usd", gasto_r["usd"]), 6), tokens_cacheados=suma("tokens_cacheados", gasto_r["cacheados"]),
+                      llamadas_cobradas=suma("llamadas_cobradas", gasto_r["llamadas"]), presupuesto_usd=config.PRESUPUESTO_USD, detenida_por_presupuesto=detenida,
+                      normalizaciones_formato=suma("normalizaciones_formato", normalizaciones), formato_respuesta=formatos or {}, llamadas_fallidas=reintento["pares_siguen_fallidos"])
+    llamadas_o = cfg_o.get("llamadas_llm") or {}
+    cfg.update(llamadas_detalle=detalle, costo_computacional=costo_comp, llamadas_fallidas=reintento["pares_siguen_fallidos"],
+               llamadas_llm={k: llamadas_o.get(k, 0) + v for k, v in cfg["llamadas_llm"].items()}, tokens_generados_por_tipo=cfg_o.get("tokens_generados_por_tipo"),
+               tiempos_s={"total": round(tiempo_total, 2), "por_seccion": (cfg_o.get("tiempos_s") or {}).get("por_seccion") or [], "reintento": [r["t_sec"] for _, r in resultados]},
+               reintento=reintento)
+    return reporte
+
+
+def _leer_json(ruta: str) -> dict:
+    with open(ruta, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _pendientes_de_reintento(ruta_resultado: str, ruta_local: str, proveedor: str, modelo: str, thinking: bool, lin: dict) -> tuple:
+    """(original, local, pares fallidos) si la corrida original coincide con lo que pide el reintento; si no, AnalisisError con todas las diferencias (no arranca)."""
+    original, local = _leer_json(ruta_resultado), _leer_json(ruta_local)
+    problemas = comprobar_coincidencia(original, local, proveedor, modelo, thinking, lin)
+    if problemas:
+        raise AnalisisError(f"{os.path.basename(ruta_resultado)} no coincide con el reintento pedido; no se arranca:\n  - " + "\n  - ".join(problemas))
+    return original, local, pares_fallidos(local.get("secciones") or [], original.get("registro_tecnico") or [])
+
+
+def reintentar_oferta(ruta_resultado, ruta_local, ruta_pdf, cliente_verif, cliente_clasif, gasto, lin, indice, proveedor, modelo, concurrencia, thinking) -> dict:
+    """Vuelve a llamar al modelo solo para los pares sin respuesta válida de una corrida de scripts.nube, con los mismos prompts, contexto y parámetros, y guarda el conjunto
+    fusionado como un JSON nuevo (y su dashboard) con el sufijo -reintento junto al original. Los pares que estaban bien no se vuelven a llamar ni se tocan."""
+    original, local, fallidos = _pendientes_de_reintento(ruta_resultado, ruta_local, proveedor, modelo, thinking, lin)
+    n = contar_pares(fallidos)
+    salida = {"original": os.path.basename(ruta_resultado), "reintentados": n, "siguen_fallidos": 0, "json": None, "html": None, "gasto": None, "detenida": False}
+    if not n:
+        logger.info(f"{os.path.basename(ruta_resultado)}: no hay pares sin respuesta válida; no se llama al modelo ni se escribe nada.")
+        return salida
+    pdf = ruta_pdf or buscar_pdf(local.get("nombre_archivo_original") or "")
+    if not pdf:
+        raise AnalisisError(f"No se encontró la oferta «{local.get('nombre_archivo_original')}» bajo {config.DIRECTORIO_PROYECTO_ANALIZAR}: indicala con --pdf.")
+    secciones = document_utils.dividir_en_secciones(document_utils.extraer_texto_oferta(pdf))
+    if [(s["id"], s["titulos"]) for s in secciones] != [(s["id"], s["titulos"]) for s in local.get("secciones") or []]:
+        raise AnalisisError(f"La división en secciones de {os.path.basename(pdf)} no coincide con la del JSON de recuperación: no es la misma oferta.")
+    docs_todos = {s["id"]: documentos_de_seccion(s.get("fragmentos") or [], indice) for s in local["secciones"]}
+    docs_reintento = {sid: [d for d in docs if _clave_par(d.metadata) in fallidos.get(sid, [])] for sid, docs in docs_todos.items()}
+    # mismo contexto: el texto de cada artículo a reintentar tiene que ser el que recibió la corrida original (si no, se reindexó la KB entre medio)
+    contenidos = {f.get("contenido") for f in original.get("fragmentos_fuente") or []}
+    distintos = sorted({f"{d.metadata.get('norma')} Art. {d.metadata.get('articulo')}" for docs in docs_reintento.values() for d in docs if d.page_content not in contenidos})
+    if distintos:
+        raise AnalisisError(f"El texto en ChromaDB de {', '.join(distintos)} no es el que usó la corrida original (¿se reindexó la KB?); no se arranca.")
+    if (local_sha := huella_recuperacion.sha256_archivo(ruta_local)) != (original.get("configuracion_analisis") or {}).get("recuperacion_json_sha256"):
+        logger.warning("El archivo de recuperación no es byte a byte el de la corrida original, aunque los pares y el perfil coinciden; se sigue.")
+    logger.info(f"{os.path.basename(ruta_resultado)}: se reintentan {n} pares en {len(fallidos)} secciones; los demás no se tocan.")
+    antes, normalizaciones_antes, t0 = gasto.foto(), normalizaciones_formato(), time.perf_counter()
+    resultados = ejecutar_secciones(secciones, docs_reintento, cliente_verif, cliente_clasif, lin, concurrencia)
+    tiempo_r, despues = time.perf_counter() - t0, gasto.foto()
+    gasto_r = {k: despues[k] - antes[k] for k in ("entrada", "salida", "cacheados", "llamadas", "usd")}
+    detenida = any(r["incompleta"] for _, r in resultados)
+    fusion, sin_completar = fusionar(original, resultados, fallidos, [s["id"] for s in local["secciones"]])
+    siguen = contar_pares(pares_fallidos(local["secciones"], fusion["registro_tecnico"]))
+    cfg_o = original.get("configuracion_analisis") or {}
+    reintento = {"json_original": os.path.basename(ruta_resultado), "sha256_original": huella_recuperacion.sha256_archivo(ruta_resultado),
+                 "fecha": datetime.datetime.now().isoformat(timespec="seconds"), "pares_reintentados": n, "pares_siguen_fallidos": siguen, "pares_recuperados": n - siguen,
+                 "secciones_reintentadas": list(fallidos), "secciones_sin_completar": sin_completar, "llamadas_fallidas_original": cfg_o.get("llamadas_fallidas"),
+                 "intentos_fallidos_reintento": _unir_llamadas(resultados).get("fallidas", 0), "costo_usd_reintento": round(gasto_r["usd"], 6), "tiempo_s_reintento": round(tiempo_r, 2)}
+    reporte = armar_reporte_fusionado(original, local, secciones, docs_todos, fusion, resultados, lin, modelo, proveedor, concurrencia, gasto_r, tiempo_r, thinking, detenida,
+                                      normalizaciones_formato() - normalizaciones_antes, {"verificacion": cliente_verif.formato, "clasificacion": cliente_clasif.formato}, reintento)
+    reporte.configuracion_analisis["recuperacion_json_sha256"] = local_sha
+    sufijo = sufijo_corrida(proveedor, modelo, thinking, (local.get("configuracion_analisis") or {}).get("perfil_recuperacion")) + SUFIJO_REINTENTO
+    marca = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{sufijo}"
+    carpeta_base = os.path.dirname(os.path.dirname(os.path.abspath(ruta_resultado)))      # junto al JSON original (<base>/<oferta>/)
+    ruta_html = _guardar_y_generar_dashboard(reporte, os.path.basename(pdf), marca, carpeta_base=carpeta_base)
+    ruta_json = os.path.join(os.path.dirname(os.path.join(config.PROJECT_ROOT, ruta_html)), os.path.basename(ruta_html).replace("dashboard_", "analisis_riesgos_", 1)[:-5] + ".json")
+    salida.update(siguen_fallidos=siguen, json=ruta_json if os.path.isfile(ruta_json) else None, html=ruta_html, gasto=gasto_r, detenida=detenida, sin_completar=sin_completar)
+    return salida
+
+
+def estimar_reintento(rutas_resultado: list, rutas_locales: list, proveedor: str, modelo: str, thinking: bool, lin: dict) -> dict:
+    """Pares sin respuesta válida de cada corrida y costo estimado de reintentarlos (mismo costo por par que --estimar). Sin API; también comprueba la coincidencia."""
+    pares = [contar_pares(_pendientes_de_reintento(r, l, proveedor, modelo, thinking, lin)[2]) for r, l in zip(rutas_resultado, rutas_locales)]
+    por_par, tokens = costo_por_par(modelo, thinking)
+    return {"pares_por_oferta": pares, "pares": sum(pares), "usd_por_par": por_par, "usd": sum(pares) * por_par, "tokens_por_par": tokens}
+
+
+def _crear_clientes(a, gasto):
+    """Clientes de verificación y clasificación: json_schema estricto como el format= de Ollama; si el proveedor lo rechaza, cae a json_object."""
+    def cliente_de(esquema):
+        def llm(e): return rag_components.get_llm_openai_compatible(a.proveedor, a.modelo, razonamiento=a.thinking, esquema=e)
+        return ClienteNube(llm(esquema), gasto, respaldo=llm(None), nombre=esquema.__name__, sistema=config.NUBE_MODELOS_RAZONAMIENTO_FIJO.get(a.modelo))
+    return cliente_de(VerificacionArticulo), cliente_de(ClasificacionRiesgo)
+
+
+def _main_reintento(a) -> int:
+    """--reintentar-fallidas: comprueba la coincidencia con cada corrida original (si no coincide, no arranca), y con --estimar solo cuenta los pares sin respuesta y estima
+    el costo; si no, los reintenta con el mismo tope de gasto de siempre (config.PRESUPUESTO_USD por invocación)."""
+    if len(a.reintentar_fallidas) != len(a.reusar_recuperacion):
+        print("--reintentar-fallidas tiene que traer un JSON de resultados por cada JSON de --reusar-recuperacion, en el mismo orden.", file=sys.stderr)
+        return 2
+    if a.max_pares:
+        print("--max-pares no se combina con --reintentar-fallidas: se reintentan todos los pares fallidos o ninguno.", file=sys.stderr)
+        return 2
+    try:
+        lin = lineamientos.cargar_lineamientos(config.DIRECTORIO_LINEAMIENTOS)
+        if a.estimar:
+            e = estimar_reintento(a.reintentar_fallidas, a.reusar_recuperacion, a.proveedor, a.modelo, a.thinking, lin)
+            print(f"{a.modelo}: {e['pares']} pares sin respuesta válida ({', '.join(map(str, e['pares_por_oferta']))} por oferta), costo estimado del reintento {e['usd']:.4f} USD "
+                  f"({e['tokens_por_par'][0]} + {e['tokens_por_par'][1]} tokens por par; tope de la corrida {config.PRESUPUESTO_USD} USD por invocación)")
+            return 0
+        config.THINKING_VERIFICACION = a.thinking
+        gasto = Gasto(config.PRECIOS_NUBE[a.modelo], config.PRESUPUESTO_USD)
+        cliente_verif, cliente_clasif = _crear_clientes(a, gasto)
+        indice = indice_de_articulos(_abrir_chroma().get(include=["documents", "metadatas"]))
+        salidas = []
+        for i, (ruta, local) in enumerate(zip(a.reintentar_fallidas, a.reusar_recuperacion)):
+            if salidas and salidas[-1]["detenida"]:
+                break
+            salidas.append(reintentar_oferta(ruta, local, a.pdf[i] if a.pdf else None, cliente_verif, cliente_clasif, gasto, lin, indice, a.proveedor, a.modelo,
+                                             a.concurrencia, a.thinking))
+    except (AnalisisError, ValueError, lineamientos.LineamientosError) as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    for s in salidas:
+        print(f"\n{s['original']}: {s['reintentados']} pares reintentados | recuperados {s['reintentados'] - s['siguen_fallidos']} | siguen fallidos {s['siguen_fallidos']}")
+        if s["gasto"]:
+            print(f"  costo del reintento {s['gasto']['usd']:.4f} USD | JSON fusionado: {s['json']}\n  Dashboard: {s['html']}")
+        if s.get("sin_completar"):
+            print(f"  Secciones del reintento que no se completaron (quedan como estaban): {', '.join(s['sin_completar'])}")
+        if s["detenida"]:
+            print("  DETENIDA: se alcanzó el presupuesto; los pares que no llegaron a reintentarse siguen fallidos.")
+    print(f"\nGasto total del reintento: {gasto.usd:.4f} USD de {config.PRESUPUESTO_USD} USD")
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Verificación y clasificación en la nube sobre los mismos pares de una corrida local.")
     p.add_argument("--reusar-recuperacion", nargs="+", required=True, metavar="JSON_LOCAL", help="JSON(s) de la corrida local con la recuperación a reusar")
@@ -343,6 +583,9 @@ def main(argv=None) -> int:
     p.add_argument("--estimar", action="store_true", help="solo imprime los pares y el costo estimado (sin llamar a la API ni leer la clave) y sale")
     p.add_argument("--salida-dir", help="carpeta base de la salida (<carpeta>/<oferta>/); por defecto datos/Resultados. Para corridas que no deben entrar en la tabla "
                                         "oficial (p. ej. la repetición de estabilidad): los «auto» de config_reeval.json solo buscan en datos/Resultados/<oferta>/")
+    p.add_argument("--reintentar-fallidas", nargs="+", metavar="JSON_RESULTADO",
+                   help="JSON(s) de resultados de una corrida de scripts.nube, uno por cada JSON de --reusar-recuperacion y en el mismo orden: vuelve a llamar solo a los pares sin "
+                        "respuesta válida y escribe <...>-reintento.json con el conjunto fusionado. Con --estimar solo cuenta esos pares y estima el costo")
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 
@@ -352,19 +595,18 @@ def main(argv=None) -> int:
     if a.pdf and len(a.pdf) != len(a.reusar_recuperacion):
         print("--pdf tiene que traer una oferta por cada JSON de --reusar-recuperacion.", file=sys.stderr)
         return 2
+    if a.reintentar_fallidas:
+        return _main_reintento(a)
     if a.estimar:
         e = estimar_costo(a.reusar_recuperacion, a.modelo, a.thinking)
         print(f"{a.modelo}{' (razonamiento)' if a.thinking else ''}: {e['pares']} pares ({', '.join(map(str, e['pares_por_oferta']))} por oferta), "
               f"costo estimado {e['usd']:.2f} USD ({e['tokens_por_par'][0]} + {e['tokens_por_par'][1]} tokens por par; tope de la corrida {config.PRESUPUESTO_USD} USD por invocación)")
         return 0
     try:
-        def cliente_de(esquema):    # json_schema estricto como el format= de Ollama; si el proveedor lo rechaza, cae a json_object
-            def llm(e): return rag_components.get_llm_openai_compatible(a.proveedor, a.modelo, razonamiento=a.thinking, esquema=e)
-            return ClienteNube(llm(esquema), gasto, respaldo=llm(None), nombre=esquema.__name__, sistema=config.NUBE_MODELOS_RAZONAMIENTO_FIJO.get(a.modelo))
         lin = lineamientos.cargar_lineamientos(config.DIRECTORIO_LINEAMIENTOS)
         config.THINKING_VERIFICACION = a.thinking
         gasto = Gasto(config.PRECIOS_NUBE[a.modelo], config.PRESUPUESTO_USD)
-        cliente_verif, cliente_clasif = cliente_de(VerificacionArticulo), cliente_de(ClasificacionRiesgo)
+        cliente_verif, cliente_clasif = _crear_clientes(a, gasto)
         indice = indice_de_articulos(_abrir_chroma().get(include=["documents", "metadatas"]))
         salidas, fallos = [], []
         for i, ruta in enumerate(a.reusar_recuperacion):

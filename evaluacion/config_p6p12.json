@@ -1,0 +1,10 @@
+{"configuraciones": {"gpt-oss-120b esfuerzo bajo (elegida)": {
+   "P6": "datos/Resultados/P6_oferta_BPD/analisis_riesgos_P6_oferta_BPD_20261123_081544_deepinfra-gpt-oss-120b-elegido.json",
+   "P7": "datos/Resultados/P7_oferta_PG25/analisis_riesgos_P7_oferta_PG25_20261124_170510_deepinfra-gpt-oss-120b-elegido-reintento.json",
+   "P8": "datos/Resultados/P8_oferta_IND/analisis_riesgos_P8_oferta_IND_20261123_215609_deepinfra-gpt-oss-120b-elegido.json",
+   "P9": "datos/Resultados/P9_oferta_LAV/analisis_riesgos_P9_oferta_LAV_20261124_000000_deepinfra-gpt-oss-120b-elegido.json",
+   "P10": "datos/Resultados/P10_oferta_TVP/analisis_riesgos_P10_oferta_TVP_20261124_015909_deepinfra-gpt-oss-120b-elegido.json",
+   "P11": "datos/Resultados/P11_oferta_COL/analisis_riesgos_P11_oferta_COL_20261124_040345_deepinfra-gpt-oss-120b-elegido.json",
+   "P12": "datos/Resultados/P12_oferta_MII/analisis_riesgos_P12_oferta_MII_20261124_054334_deepinfra-gpt-oss-120b-elegido.json"}},
+ "conjuntos": {"P6–P12 (prueba externa, generador distinto)": ["P6", "P7", "P8", "P9", "P10", "P11", "P12"]},
+ "salida": "evaluacion/resultados_p6p12"}

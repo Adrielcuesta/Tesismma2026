@@ -1,5 +1,5 @@
 # evaluacion/oferta_texto.py
-"""Texto de las ofertas P1–P4 y sus oraciones numeradas tal como las ve el verificador (segmentación de scripts.document_utils, sin LLM ni embeddings).
+"""Texto de las ofertas (P1–P12) y sus oraciones numeradas tal como las ve el verificador (segmentación de scripts.document_utils, sin LLM ni embeddings).
 Lo usan diff_trampas.py y verificar_gt_literal.py. Lee datos/ProyectoAnalizar, así que solo lo corre el usuario; los imports de scripts van tardíos (son pesados)."""
 import glob
 import os
@@ -9,11 +9,13 @@ RAIZ = os.path.dirname(AQUI)
 CARPETA_OFERTAS = os.path.join(RAIZ, "datos", "ProyectoAnalizar")
 
 
-def ruta_oferta(oferta: str, carpeta: str = CARPETA_OFERTAS) -> str:
-    """Archivo de la oferta («P1» → P1_oferta_*.pdf o .docx en datos/ProyectoAnalizar); error claro si no está."""
-    candidatos = sorted(glob.glob(os.path.join(carpeta, f"{oferta}_oferta_*.pdf")) + glob.glob(os.path.join(carpeta, f"{oferta}_oferta_*.docx")))
+def ruta_oferta(oferta: str, carpeta: str = CARPETA_OFERTAS, extension: str = None) -> str:
+    """Archivo de la oferta («P1» → P1_oferta_*.pdf o .docx en datos/ProyectoAnalizar; con `extension`, solo ese formato, para leer el mismo archivo que la corrida);
+    error claro si no está. Sin `extension` y con los dos formatos, el primero en orden alfabético (.docx)."""
+    extensiones = (extension.lstrip("."),) if extension else ("pdf", "docx")
+    candidatos = sorted(r for e in extensiones for r in glob.glob(os.path.join(carpeta, f"{oferta}_oferta_*.{e}")))
     if not candidatos:
-        raise FileNotFoundError(f"No hay un archivo {oferta}_oferta_*.pdf/.docx en {carpeta}")
+        raise FileNotFoundError(f"No hay un archivo {oferta}_oferta_*.{'/.'.join(extensiones)} en {carpeta}")
     return candidatos[0]
 
 

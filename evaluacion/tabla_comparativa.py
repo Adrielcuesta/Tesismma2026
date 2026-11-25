@@ -26,6 +26,7 @@ import sys
 from scripts import elegir_json, huella_recuperacion
 
 from . import evaluar as E
+from . import externas
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 SALIDA = os.path.join(AQUI, "resultados_finales")
@@ -266,6 +267,8 @@ def seccion_intervalos_md(filas: list) -> list:
          "| Configuración | Conjunto total | Recall total | Recall P3+P4 | Falsas alarmas | Precisión humana | Recall por oferta (rango) |", "|---|---|---|---|---|---|---|"]
     for nombre in dict.fromkeys(f["configuracion"] for f in filas):
         propias = [f for f in filas if f["configuracion"] == nombre]
+        # P6–P12 (prueba externa) no se mezcla con P1–P5: si la configuración tiene otros conjuntos, el total sale de esos
+        propias = [f for f in propias if not es_conjunto_externo(f["ofertas"].split("+"))] or propias
         total = max(propias, key=lambda f: len(f["ofertas"].split("+")))
         prueba = next((f for f in propias if f["ofertas"] == "P3+P4"), None)
         precision = _pct_ic(total["precision_humana_k"], total["precision_humana_n"]) if total["precision_humana"] is not None else "n/d"
@@ -276,8 +279,83 @@ def seccion_intervalos_md(filas: list) -> list:
     return L
 
 
+CONJUNTO_EXTERNO = "P6–P12 (prueba externa, generador distinto)"
+
+
+def es_conjunto_externo(ofertas: list) -> bool:
+    """Un conjunto de la prueba externa: todas sus ofertas son de P6–P12 (otro generador de ofertas)."""
+    return bool(ofertas) and all(externas.es_externa(o) for o in ofertas)
+
+
+SEVERIDADES = ("Alta", "Media", "Baja")
+
+
+def sensibilidad_externa_md(trampas: list) -> list:
+    """Dos líneas de sensibilidad (análisis posterior, no cambian la cifra principal, que es el recall estricto): recall por frase (la frase de la trampa citada por una brecha
+    de su sección, con cualquier artículo; por_frase_seccion de evaluar) y recall estricto por severidad (columna «severidad» del ground truth), con IC 95 % de Wilson."""
+    n = len(trampas)
+    k_frase = sum(bool(t.get("por_frase_seccion")) for t in trampas)
+    por_sev = []
+    for s in SEVERIDADES:
+        grupo = [t for t in trampas if t.get("severidad") == s]
+        if grupo:
+            k = sum(t["estado"] == "encontrada" for t in grupo)
+            por_sev.append(f"{s} {_ic(k, len(grupo), E.wilson(k, len(grupo)))}")
+    return ["Análisis posterior (sensibilidad; la cifra principal sigue siendo el recall estricto):",
+            f"- Recall por frase (fragmento de la trampa citado en su sección, con cualquier artículo): {_ic(k_frase, n, E.wilson(k_frase, n))}",
+            f"- Recall estricto por severidad: {'; '.join(por_sev) if por_sev else 'n/d (el ground truth no trae severidad)'}", ""]
+
+
+def seccion_externa_md(evaluadas: dict, conjuntos: dict) -> list:
+    """Bloque aparte para cada conjunto de la prueba externa (P6–P12): por configuración, una fila por oferta y el total, con el recall estricto e IC 95 % de Wilson,
+    las falsas alarmas sobre los casos conformes, las brechas y los riesgos agrupados, y los pares sin respuesta del modelo. Misma detección que P1–P5; solo agrega."""
+    L = []
+    for conjunto, ofertas in conjuntos.items():
+        if not es_conjunto_externo(ofertas):
+            continue
+        for nombre, por_oferta in evaluadas.items():
+            evs = [por_oferta[o] for o in ofertas if o in por_oferta]
+            if not evs:
+                continue
+            t = E.combinar(evs)
+            L += [f"## {conjunto}: detalle por oferta, {nombre}", "",
+                  "| Oferta | Recall estricto (IC 95 %) | Falsas alarmas sobre casos conformes (IC 95 %) | Brechas (registro) | Riesgos agrupados | Pares sin respuesta |", "|---|---|---|---|---|---|"]
+            L += [f"| {e['oferta']} | {_ic(e['encontradas'], e['n_trampas'], E.wilson(e['encontradas'], e['n_trampas']))} | "
+                  f"{_ic(e['falsas_alarmas'], e['n_espejos'], E.wilson(e['falsas_alarmas'], e['n_espejos']))} | {e['n_riesgo']} | {e['volumen'].get('riesgos agrupados', 0)} | "
+                  f"{e.get('sin_respuesta', 0)} |" for e in evs]
+            L.append(f"| **Total {t['oferta']}** | {_ic(t['encontradas'], t['n_trampas'], E.wilson(t['encontradas'], t['n_trampas']))} | "
+                     f"{_ic(t['falsas_alarmas'], t['n_espejos'], E.wilson(t['falsas_alarmas'], t['n_espejos']))} | {t['n_riesgo']} ({t['n_riesgo'] / len(evs):.1f} / oferta) | "
+                     f"{t['volumen'].get('riesgos agrupados', 0)} ({t['volumen'].get('riesgos agrupados', 0) / len(evs):.1f} / oferta) | {sum(e.get('sin_respuesta', 0) for e in evs)} |")
+            L += [""] + sensibilidad_externa_md(t["trampas"])
+            faltan = [o for o in ofertas if o not in por_oferta]
+            L += [""] + ([f"Faltan {', '.join(faltan)} (sin JSON): el total es solo de las ofertas listadas.", ""] if faltan else [])
+        L += ["Prueba externa: ofertas escritas por otro generador, con su propio ground truth (P<n>_trampas_v2.csv y P<n>_conformes_v2.csv). Se evalúan con la misma lógica de "
+              "detección que P1–P5 (frase y artículo) y se informan aparte: no se suman a P1–P5. Pares sin respuesta: pares (sección, artículo) que quedaron sin respuesta válida "
+              "del modelo (tiempo agotado o formato inválido tras reintentar).", ""]
+    return L
+
+
 # columnas que se agregaron después de la primera versión: van al final para no mover ninguna de las anteriores
 CAMPOS_AGREGADOS = ["perfil_recuperacion", "precision_humana_n", "precision_humana_ic_inf", "precision_humana_ic_sup", "recall_por_oferta", "recall_oferta_min", "recall_oferta_max"]
+
+
+CAMPOS_DETALLE_TRAMPAS = ["configuracion", "oferta", "id", "severidad", "seccion", "articulo_gt", "estado", "articulo_citado", "perdida", "verificacion", "clasificacion",
+                          "como_alerta", "por_frase"]
+
+
+def guardar_detalle_trampas(evaluadas: dict, ruta: str):
+    """detalle_trampas.csv: una fila por trampa, configuración y oferta, tal como la evaluó evaluar(). por_frase: la frase citada por una brecha de su sección con cualquier
+    artículo (la misma definición que el recall por frase de la sensibilidad)."""
+    with open(ruta, "w", encoding="utf-8-sig", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=CAMPOS_DETALLE_TRAMPAS, delimiter=";")
+        w.writeheader()
+        for nombre, por_oferta in evaluadas.items():
+            for oferta, ev in por_oferta.items():
+                for t in ev["trampas"]:
+                    w.writerow({"configuracion": nombre, "oferta": oferta, "id": t["id"], "severidad": t.get("severidad", ""), "seccion": t.get("seccion", ""),
+                                "articulo_gt": f"{t['norma']} {t['articulo']}", "estado": t["estado"], "articulo_citado": t.get("articulo_citado", ""), "perdida": t["perdida"],
+                                "verificacion": t.get("veredicto_verificacion", ""), "clasificacion": t.get("veredicto_clasificacion", ""),
+                                "como_alerta": int(bool(t["como_alerta"])), "por_frase": int(bool(t.get("por_frase_seccion")))})
 
 
 def guardar_csv(filas: list, ruta: str):
@@ -351,10 +429,11 @@ def grafico_recall_falsas(filas: list, ruta: str, dev: str, prueba: str, aviso: 
     nombres = list(dict.fromkeys(f["configuracion"] for f in filas))
     fig, ejes = plt.subplots(1, 2, figsize=(16, 7))
     ancho = 0.38
+    series = list(dict.fromkeys((dev, prueba)))       # con un solo conjunto generar() pasa dev == prueba: una sola serie, no la misma dos veces
     for eje, titulo, num, den, ic in ((ejes[0], "Recall estricto", "encontradas", "trampas", "recall_ic"), (ejes[1], "Falsas alarmas sobre casos conformes", "falsas_alarmas", "espejos", "falsas_ic"),):
-        for k, (conjunto, color) in enumerate(((dev, AZUL), (prueba, NARANJA))):
+        for k, (conjunto, color) in enumerate(zip(series, (AZUL, NARANJA))):
             datos = _por_configuracion(filas, conjunto)
-            xs = [i + (k - 0.5) * ancho for i, n in enumerate(nombres) if n in datos]
+            xs = [i + (k - (len(series) - 1) / 2) * ancho for i, n in enumerate(nombres) if n in datos]
             vs = [datos[n][num] / datos[n][den] for n in nombres if n in datos]
             errores = [[v - datos[n][ic][0] for v, n in zip(vs, [n for n in nombres if n in datos])], [datos[n][ic][1] - v for v, n in zip(vs, [n for n in nombres if n in datos])]]
             eje.bar(xs, vs, ancho * 0.92, color=color, label=conjunto, yerr=errores, ecolor="#555555", capsize=4)
@@ -399,6 +478,59 @@ def grafico_embudo(filas: list, ruta: str, conjunto: str, aviso: str = "", nombr
     _poner_aviso(fig, aviso, eje)
     fig.savefig(ruta, dpi=200, bbox_inches="tight")
     plt.close(fig)
+
+
+ETAPAS_EMBUDO = ("Trampas", "Recuperadas\n(el artículo llega al verificador)", "Verificadas como\nIncumple o Revisar", "Encontradas\ncon su artículo")
+
+
+def etapas_embudo(trampas: list) -> dict:
+    """Conteos del embudo de la prueba externa a partir de las trampas de evaluar(): total; recuperadas (el par sección-artículo de la trampa tiene veredicto de verificación);
+    verificadas como Incumple o Revisar (lo que pasa a la clasificación; incluye Revisar para que el embudo no crezca: una trampa encontrada siempre pasó por uno de los dos);
+    encontradas con su artículo (recall estricto) y, aparte, con otro artículo."""
+    def incumple(t):
+        return bool({v.strip() for v in str(t.get("veredicto_verificacion") or "").split(",")} & {"Incumple", "Revisar"})
+    return {"trampas": len(trampas), "recuperadas": sum(bool(t["verificado"]) for t in trampas), "incumple": sum(incumple(t) for t in trampas),
+            "encontradas": sum(t["estado"] == "encontrada" for t in trampas), "otro_articulo": sum(t["estado"] == "otro artículo" for t in trampas)}
+
+
+def grafico_embudo_externo(evaluadas: dict, ofertas: list, nombres: list, ruta: str, conjunto: str = "", aviso: str = "") -> bool:
+    """Embudo de la prueba externa: trampas → recuperadas → verificadas como Incumple o Revisar → encontradas con su artículo (+ con otro artículo, apilado y rayado).
+    Una barra por configuración en cada etapa, con k/n encima. False si ninguna configuración tiene todas las ofertas con registro técnico."""
+    plt = _plt()
+    datos = {}
+    for n in nombres:
+        evs = _evs(evaluadas, n, ofertas)
+        if evs and all(e.get("hay_registro") for e in evs):
+            datos[n] = etapas_embudo(E.combinar(evs)["trampas"])
+    if not datos:
+        return False
+    colores = [AZUL, NARANJA, AQUA, MAGENTA, AMARILLO, GRIS]
+    fig, eje = plt.subplots(figsize=(14, 7))
+    ancho = 0.8 / len(datos)
+    for i, (n, d) in enumerate(datos.items()):
+        color = colores[i % len(colores)]
+        xs = [j + (i - (len(datos) - 1) / 2) * ancho for j in range(len(ETAPAS_EMBUDO))]
+        vs = [d["trampas"], d["recuperadas"], d["incumple"], d["encontradas"]]
+        eje.bar(xs, vs, ancho * 0.92, color=color, label=_corta(n), edgecolor="white", linewidth=2)
+        eje.bar(xs[-1], d["otro_articulo"], ancho * 0.92, bottom=vs[-1], color="white", edgecolor=color, hatch="//", linewidth=1.5,
+                label="con otro artículo" if i == 0 else None)
+        for x, v in zip(xs, vs):
+            eje.text(x, v + (d["otro_articulo"] if x == xs[-1] else 0) + d["trampas"] * 0.01, f"{v}/{d['trampas']}", ha="center", va="bottom", fontsize=13)
+        if d["otro_articulo"]:
+            eje.text(xs[-1], vs[-1] + d["otro_articulo"] / 2, f"+{d['otro_articulo']}", ha="center", va="center", fontsize=12,
+                     bbox={"boxstyle": "round,pad=0.15", "fc": "white", "ec": "none"})
+    eje.set_xticks(range(len(ETAPAS_EMBUDO)), ETAPAS_EMBUDO, fontsize=12)
+    eje.set_ylabel("Trampas")
+    eje.set_ylim(0, max(d["trampas"] for d in datos.values()) * 1.15)
+    eje.grid(axis="y", color="#e5e5e5")
+    eje.set_axisbelow(True)
+    eje.set_title(f"Embudo de las trampas ({conjunto})", loc="left")
+    eje.legend(frameon=False, loc="upper right", fontsize=12)
+    fig.tight_layout(rect=(0, 0.04 if aviso else 0, 1, 1))
+    _poner_aviso(fig, aviso)
+    fig.savefig(ruta, dpi=200)
+    plt.close(fig)
+    return True
 
 
 OFFSETS_ETIQUETA = [(12, 8), (12, -20), (12, 34), (12, -46), (-12, 8), (-12, -20), (12, 60), (12, -72), (-12, 34), (-12, -46), (12, 86), (12, -98), (-12, 60), (-12, -72),
@@ -774,10 +906,12 @@ def generar(cfg: dict, salida: str, graficos: bool = True) -> dict:
     rutas = {"md": os.path.join(salida, "tabla_comparativa.md"), "csv": os.path.join(salida, "tabla_comparativa.csv")}
     mapa = (cfg.get("reeval") or {}).get("elegida_vs_v1") or {}
     extra = diferencias_md(diferencias_v1(filas, mapa)) if mapa else []
-    extra += seccion_comparabilidad_md(evaluadas, cfg["conjuntos"]) + seccion_intervalos_md(filas)
+    extra += seccion_externa_md(evaluadas, cfg["conjuntos"]) + seccion_comparabilidad_md(evaluadas, cfg["conjuntos"]) + seccion_intervalos_md(filas)
     with open(rutas["md"], "w", encoding="utf-8") as f:
         f.write(tabla_md(filas) + "\n\n" + "\n".join(extra))
     guardar_csv(filas, rutas["csv"])
+    rutas["detalle_trampas"] = os.path.join(salida, "detalle_trampas.csv")
+    guardar_detalle_trampas(evaluadas, rutas["detalle_trampas"])
     comparacion = comparacion_sin_rag(cfg, evaluadas)
     if comparacion:
         rutas["sin_rag"] = os.path.join(salida, "comparacion_sin_rag.md")
@@ -796,13 +930,20 @@ def generar(cfg: dict, salida: str, graficos: bool = True) -> dict:
             grafico_recall_falsas(filas, rutas["a"], dev, prueba, aviso(dev, prueba))
         amplio = _conjunto_amplio(filas)
         conjunto_c = prueba if any(f["conjunto"] == prueba for f in filas) else amplio
-        rutas["c"] = os.path.join(salida, "grafico_c_recall_costo_tiempo.png")
-        if not mapa:        # con la reevaluación el embudo va separado (elegidas por un lado, v1 por otro), sin mezclar
-            rutas["b"] = os.path.join(salida, "grafico_b_embudo.png")
-            grafico_embudo(filas, rutas["b"], amplio, aviso(amplio))
-        grafico_recall_costo_tiempo(filas, rutas["c"], conjunto_c, aviso(conjunto_c))
         ofertas_amplio = cfg["conjuntos"][amplio]
         completas = [n for n in evaluadas if _evs(evaluadas, n, ofertas_amplio)]
+        if not mapa:        # con la reevaluación el embudo va separado (elegidas por un lado, v1 por otro), sin mezclar
+            rutas["b"] = os.path.join(salida, "grafico_b_embudo.png")
+            if es_conjunto_externo(ofertas_amplio):      # P6–P12: trampas → recuperadas → Incumple/Revisar → encontradas (+ otro artículo)
+                if not grafico_embudo_externo(evaluadas, ofertas_amplio, completas, rutas["b"], amplio, aviso(amplio)):
+                    rutas.pop("b")
+            else:
+                grafico_embudo(filas, rutas["b"], amplio, aviso(amplio))
+        if len(_por_configuracion(filas, conjunto_c)) > 1:
+            rutas["c"] = os.path.join(salida, "grafico_c_recall_costo_tiempo.png")
+            grafico_recall_costo_tiempo(filas, rutas["c"], conjunto_c, aviso(conjunto_c))
+        else:       # un solo punto: no hay nada que comparar
+            print(f"Aviso: no se genera grafico_c_recall_costo_tiempo.png: «{conjunto_c}» tiene una sola configuración.", file=sys.stderr)
         rutas["d"], rutas["f"] = os.path.join(salida, "grafico_d_errores_por_criticidad.png"), os.path.join(salida, "grafico_f_confusion_clase.png")
         if not grafico_errores_por_criticidad(evaluadas, ofertas_amplio, completas, rutas["d"], amplio, aviso(amplio)):
             rutas.pop("d")

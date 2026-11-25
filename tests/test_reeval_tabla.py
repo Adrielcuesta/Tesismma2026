@@ -406,3 +406,47 @@ def test_el_csv_agrega_las_columnas_nuevas_al_final_sin_mover_las_anteriores(tmp
     assert campos.index("perdida_otra_causa") == len(campos) - len(tc.CAMPOS_AGREGADOS) - 1
     assert (fila["perfil_recuperacion"], fila["recall_por_oferta"], fila["recall_oferta_min"], fila["recall_oferta_max"]) == ("elegido", "P3 2/4; P4 1/4", "0.25", "0.5")
     assert float(fila["precision_humana_ic_inf"]) == pytest.approx(ev.wilson(3, 3)[0]) and fila["encontradas"] == "3" and fila["recall"] == "0.375"
+
+
+def _figuras_guardadas(monkeypatch) -> list:
+    """Las figuras que los gráficos cierran (plt.close no las destruye durante el test), para inspeccionarlas después."""
+    pytest.importorskip("matplotlib")
+    plt = tc._plt()
+    figuras = []
+    monkeypatch.setattr(plt, "close", lambda fig=None: figuras.append(fig))
+    return figuras
+
+
+def _etiquetas_repetidas(figuras: list) -> list:
+    """(eje, etiqueta) de cada serie que aparece más de una vez con la misma etiqueta en un mismo eje."""
+    repetidas = []
+    for fig in figuras:
+        for i, eje in enumerate(fig.axes):
+            etiquetas = [e for e in eje.get_legend_handles_labels()[1] if not e.startswith("_")]
+            repetidas += [(i, e) for e in dict.fromkeys(etiquetas) if etiquetas.count(e) > 1]
+    return repetidas
+
+
+@pytest.mark.parametrize("conjuntos", [{"P9 solo": ["P9"]}, {"P9 solo": ["P9"], "P9 otra vez": ["P9"]}])
+def test_ningun_grafico_tiene_dos_series_con_la_misma_etiqueta(monkeypatch, tmp_path, conjuntos):
+    figuras = _figuras_guardadas(monkeypatch)
+    filas = tc.calcular_filas({"elegida": {"P9": A}, "v1": {"P9": B}}, conjuntos)
+    dev, prueba = list(conjuntos)[0], list(conjuntos)[-1]          # con un solo conjunto, dev == prueba (como en generar)
+    tc.grafico_recall_falsas(filas, str(tmp_path / "a.png"), dev, prueba)
+    tc.grafico_embudo(filas, str(tmp_path / "b.png"), dev)
+    tc.grafico_recall_costo_tiempo(filas, str(tmp_path / "c.png"), dev)
+    tc.grafico_errores_por_criticidad({"elegida": {"P9": A}, "v1": {"P9": B}}, ["P9"], ["elegida", "v1"], str(tmp_path / "d.png"), dev)
+    tc.grafico_confusion_clase({"elegida": {"P9": A}, "v1": {"P9": B}}, ["P9"], ["elegida", "v1"], str(tmp_path / "f.png"), dev)
+    assert len(figuras) == 5
+    assert _etiquetas_repetidas(figuras) == []
+    leyenda_a = figuras[0].axes[0].get_legend_handles_labels()[1]
+    assert leyenda_a == list(conjuntos)          # una serie por conjunto, sin repetir
+
+
+def test_con_una_sola_configuracion_no_se_genera_el_grafico_c(monkeypatch, tmp_path, capsys):
+    pytest.importorskip("matplotlib")
+    monkeypatch.setattr(tc, "evaluar_configuraciones", lambda cfg: {"a": {"P9": A}})
+    r = tc.generar({"configuraciones": {"a": {}}, "conjuntos": CONJUNTOS}, str(tmp_path))
+    assert "c" not in r["rutas"] and not (tmp_path / "grafico_c_recall_costo_tiempo.png").exists()
+    err = capsys.readouterr().err
+    assert err.count("grafico_c_recall_costo_tiempo.png") == 1 and "una sola configuración" in err

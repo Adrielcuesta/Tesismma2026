@@ -59,7 +59,7 @@ def test_el_cliente_usa_el_perfil_temperatura_0_seed_json_y_sin_razonamiento(mon
     monkeypatch.setenv("DEEPINFRA_API_KEY", "clave-falsa")
     llm = rag_components.get_llm_openai_compatible("deepinfra", "Qwen/Qwen3-32B")
     assert llm.openai_api_base == "https://api.deepinfra.com/v1/openai" and llm.temperature == 0 and llm.seed == config.OLLAMA_SEED
-    assert llm.max_retries == 5 and llm.model_kwargs["response_format"] == {"type": "json_object"}
+    assert llm.max_retries == config.NUBE_MAX_REINTENTOS and llm.model_kwargs["response_format"] == {"type": "json_object"}
     assert llm.extra_body == {"chat_template_kwargs": {"enable_thinking": False}}
     pensando = rag_components.get_llm_openai_compatible("deepinfra", "Qwen/Qwen3-32B", razonamiento=True)
     assert pensando.extra_body == {"chat_template_kwargs": {"enable_thinking": True}} and pensando.temperature == config.VERIF_TEMPERATURE

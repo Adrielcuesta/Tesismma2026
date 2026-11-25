@@ -55,6 +55,9 @@ def cargar_gt(oferta, ruta=GROUND_TRUTH):
     if oferta == "P5" and ruta == GROUND_TRUTH:      # P5 (conjunto ciego) tiene su propio esquema: evaluacion/p5.py; [] si todavía no está su ground truth
         from . import p5
         return p5.cargar_trampas()
+    from . import externas
+    if externas.es_externa(oferta) and ruta == GROUND_TRUTH:     # P6–P12 (prueba externa): P<n>_trampas_v2.csv, evaluacion/externas.py
+        return externas.cargar_trampas(oferta)
     return [r for r in leer_csv(ruta) if r["oferta"] == oferta]
 
 
@@ -62,6 +65,9 @@ def cargar_espejos(oferta, ruta=ESPEJOS):
     if oferta == "P5" and ruta == ESPEJOS:           # los 13 controles negativos de P5: evaluacion/p5.py
         from . import p5
         return p5.cargar_controles()
+    from . import externas
+    if externas.es_externa(oferta) and ruta == ESPEJOS:          # P6–P12: P<n>_conformes_v2.csv
+        return externas.cargar_conformes(oferta)
     numero = re.sub(r"\D", "", oferta)
     proyecto = f"Proyecto {numero}"
     return [r for r in leer_csv(ruta) if r["proyecto"].strip() == proyecto]
@@ -240,6 +246,8 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         revisados = [r for r in verificados if en_seccion(r) and (r.get("norma"), _articulo(r.get("articulo"))) in pares]
         reclasificados = [r for r in clasificados if en_seccion(r) and (r.get("norma"), _articulo(r.get("articulo"))) in pares]
         como_alerta = brechas_modo and any(frase in a["cita"] and (a["norma"], a["articulo"]) in pares for a in alertas)
+        # sensibilidad (análisis posterior): la frase citada por una brecha de su sección, con cualquier artículo
+        por_frase_seccion = any(en_seccion(i["brecha"]) for i in con_frase) if brechas_modo else bool(con_frase)
         veredictos = {norm(r["veredicto"]) for r in revisados}
         # pereza de verificación: el artículo llegó a la sección y la verificación dijo solo Cumple o No aplica
         pereza_v = bool(revisados) and estado != "encontrada" and veredictos <= {"cumple", "no aplica"}
@@ -259,7 +267,8 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
             perdida = "perdida en clasificación"
         else:
             perdida = "otra causa"   # verificada como Incumple o Revisar y clasificada como riesgo, pero ninguna brecha cita la trampa (o se descartó)
-        t = {"id": fila["id"], "estado": estado, "como_alerta": bool(como_alerta), "por_frase": bool(con_frase), "norma": fila["norma"], "articulo": fila["articulo"],
+        t = {"id": fila["id"], "estado": estado, "como_alerta": bool(como_alerta), "por_frase": bool(con_frase), "por_frase_seccion": por_frase_seccion,
+             "severidad": fila.get("severidad") or "", "seccion": fila.get("seccion") or "", "norma": fila["norma"], "articulo": fila["articulo"],
              "articulo_citado": citado, "verificado": bool(revisados), "perezosa": pereza_v, "perezosa_clasificacion": pereza_c, "perdida": perdida,
              "subcausa": subcausa_otra_causa(estado, bool(como_alerta), brechas_par, reclasificados) if perdida == "otra causa" else None,
              "veredicto_verificacion": ", ".join(sorted({r["veredicto"] for r in revisados})) or "—",
@@ -308,6 +317,9 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
                                "cita": b.get("cita"), "titulo": b.get("titulo"), "clase": b.get("clase"), "valido": ""})
 
     encontradas = [t for t in trampas if t["estado"] == "encontrada"]
+    # informativo: pares (sección, artículo) que quedaron sin respuesta válida del modelo (tiempo agotado o formato inválido tras reintentar, en verificación o clasificación)
+    sin_respuesta = sum(r.get("estado") in ("tiempo_agotado", "clasificacion_fallida") or (r.get("estado") == "descartada" and r.get("veredicto") is None)
+                        for r in resultado.get("registro_tecnico") or [])
     volumen = ({"brechas": len(items), "riesgos agrupados": len(resultado.get("riesgos") or []), "solicitudes": len(resultado.get("solicitudes") or []),
                 "alertas": len(resultado.get("alertas") or [])} if brechas_modo else {"riesgos": len(items)})
     return {
@@ -322,7 +334,7 @@ def evaluar(resultado, gt, espejos, oferta="P1") -> dict:
         "nivel_ok": sum(t["nivel_obtenido"] == t["nivel_esperado"] for t in encontradas),
         "confusion": confusion, "n_espejos": len(espejos), "falsas_alarmas": falsas, "espejos": marcados,
         "extras": extras, "volumen": volumen, "n_riesgo": len(items), "precision": None, "precision_k": None, "precision_n": None, "extras_etiquetados": 0,
-        "juez": None, "pares_juez_humano": [], "control_juez": None, "grupos": grupos, "oportunidades": oportunidades}
+        "juez": None, "pares_juez_humano": [], "control_juez": None, "grupos": grupos, "oportunidades": oportunidades, "sin_respuesta": sin_respuesta}
 
 
 def conteo_precision(ev, revision):
@@ -703,11 +715,11 @@ def guardar_coincidencias_sinrag_csv(ev, ruta):
 # --- Línea de comandos ---
 
 def _oferta_de_ruta(ruta):
-    """('P2', ruta) para 'P2=ruta'; si no, la oferta se toma de la ruta (P1, P2... como palabra suelta, no dentro de 'TBP01')."""
-    m = re.match(r"^(P\d)=(.+)$", ruta)
+    """('P2', ruta) para 'P2=ruta'; si no, la oferta se toma de la ruta (P1, P2... P12 como palabra suelta, no dentro de 'TBP01')."""
+    m = re.match(r"^(P\d+)=(.+)$", ruta)
     if m:
         return m.group(1), m.group(2)
-    m = re.search(r"(?<![A-Za-z0-9])(P\d)(?!\d)", ruta)
+    m = re.search(r"(?<![A-Za-z0-9])(P\d+)(?!\d)", ruta)
     if not m:
         raise SystemExit(f"No se pudo deducir la oferta de «{ruta}»: usá P1=ruta, P2=ruta...")
     return m.group(1), ruta
@@ -739,7 +751,7 @@ def evaluar_archivo(ruta, oferta, gt, espejos, revision=None) -> dict:
 def main(argv=None):
     p = argparse.ArgumentParser(description="Evalúa un resultado contra el ground truth v3 (trampas) y los casos conformes")
     p.add_argument("--resultado", help="JSON del resultado")
-    p.add_argument("--oferta", help="P1, P2, P3 o P4 (con --resultado)")
+    p.add_argument("--oferta", help="P1 a P12 (con --resultado); P5 y P6–P12 leen sus propios archivos (p5.py, externas.py)")
     p.add_argument("--agregado", nargs="+", metavar="JSON", help="JSON de varias ofertas: las métricas se calculan sobre el total de trampas")
     p.add_argument("--revision", help="CSV de extras con la columna 'valido' completa (sí/no); por defecto <json>_extras.csv")
     p.add_argument("--comparar", nargs="+", metavar="JSON_SIN_RAG", help="resultado(s) sin RAG: agrega la tabla con RAG / sin RAG")
